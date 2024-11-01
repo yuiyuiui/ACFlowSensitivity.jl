@@ -1,0 +1,13 @@
+name = "ACFlowSensitivity"
+uuid = "8a6e248d-7a2c-4c1b-8e6e-100729c4ec99"
+authors = ["yuiyuiui"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
