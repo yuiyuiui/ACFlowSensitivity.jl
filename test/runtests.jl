@@ -1,6 +1,6 @@
-using ACFlowSensitivity
 using Test
+using ACFlowSensitivity
 
-@testset "ACFlowSensitivity.jl" begin
-    # Write your tests here.
+@testset "AAATest" begin
+    include("AAATest.jl")
 end
