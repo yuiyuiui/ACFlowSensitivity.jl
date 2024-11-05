@@ -1,4 +1,4 @@
-include("Method.jl")
+using ACFlowSensitivity
 using Plots
 
 #计算离散格林函数
@@ -22,7 +22,7 @@ function viz(A,density, mesh)
     #得到对应的连续的格林函数, benchmark_GF is the ground truth
     limit_G = benchmark_GF(A , last(mesh))
 
-    plot(mesh, G,label="P.V. value of Green Function with poles gap =$(1/density)")
+    plot(mesh, G,label="Green Function with poles gap =$(1/density)")
     plot!(limit_G[1],limit_G[2],label="Bnechmark Green Function")
     xlims!(first(mesh), last(mesh))
     ylims!(-10, 10)

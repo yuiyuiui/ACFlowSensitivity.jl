@@ -33,5 +33,13 @@ res=points_to_poles.*bary_func.(points_to_poles)
 
 
 #-------------------------
+#example with poles
+N=10
+γ=rand(N)*2;
+
+reγ=DireInverse_check(β,N,γ);
 
 
+
+println(γ)
+println(reγ)
