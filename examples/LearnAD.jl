@@ -6,6 +6,8 @@ using LinearAlgebra
 
 
 
+# Example for AD doesn't work for svd
+
 function my_max(vec::Vector{Float64})
     return maximum(abs.(vec))
 end
@@ -60,6 +62,7 @@ dx=Tuple(dx)
 my_minsvd(x)
 
 autodiff(ForwardWithPrimal, x->my_minsvd(x), BatchDuplicated(x, dx))
+autodiff(ForwardWithPrimal, x->my_max(x), BatchDuplicated(x, dx))
 
 
 bx = [0.0, 0.0]

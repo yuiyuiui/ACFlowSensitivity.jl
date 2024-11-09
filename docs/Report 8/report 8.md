@@ -60,8 +60,14 @@ And then input $\bar{G}_j^{(k+1)},~j=k+1,..,m$ and calculate $\{\widetilde{P}_{k
 
 
 --------
-   
-$\rm 2. ~Where ~difficult ~to~ apply ~AD$
+
+$\rm 2.~Introdunction ~to ~AD$
+(1) ForwardDiff.jl :  The way it realizes AD is to use dual number and store the derivatives of the basic functions in advance.
+
+If you have a basic function $f(x)$, then ForwardDiff.jl apply $(f,f'$) on dual number $(a,b)$ to get $(f(a),f'(a)b)$.
+
+--------
+$\rm 3. ~Where ~difficult ~to~ apply ~AD$
 1. svd
 2. eigenval in function poles!
 3. E\B in function poles
