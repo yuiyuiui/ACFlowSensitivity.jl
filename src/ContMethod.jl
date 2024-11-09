@@ -119,6 +119,8 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
             best_index=copy(chosen_index)
         end
 
+     #   @show n,best_n
+
         # Do we end the iteration?
         if (best_error<tol*max_values)||(n>=max_degree)||
             ((n-best_n>=lookaheaad)&&(best_error<1e-2*max_values))
@@ -132,45 +134,6 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
 
     return best_weight,grid[best_index],values[best_index]
 
-end
-
-function permu(v::Vector;direction=:left::Symbol)
-    n=length(v)
-    res=similar(v,n)
-    if direction==:left
-        for i=1:n-1
-            res[i]=v[i+1]
-        end
-        res[n]=v[1]
-    else
-        for i=1:n-1
-            res[i+1]=v[i]
-        end
-        res[i]=v[n]
-    end
-    return res
-end
-
-function permu_closest(v::Vector,target::Int64)
-    N=length(v)
-    res=similar(v,N)
-    @assert target>=1&&target<=N
-    idx=1
-    res[1]=v[target]
-    for k=1:N
-        if target-k<=0||target+k>N
-            break
-        end
-        res[idx+1]=v[target-k]
-        res[idx+2]=v[target+k]
-        idx+=2
-    end
-    if target<=(1+N)/2
-        res[idx+1:N]=v[2*target:N]
-    else
-        res[idx+1:N]=v[2*target-N-1:-1:1]
-    end
-    return res
 end
 
 #---------

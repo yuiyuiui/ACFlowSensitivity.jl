@@ -2,13 +2,13 @@ using ACFlowSensitivity
 using Plots
 
 
-μ=[0.5,-2.5];σ=[0.2,0.8];peak=[1.0,0.3];
+μ=3*rand(2).-1.5;σ=rand(2);peak=4*rand(2);
 A=continous_spectral_density(μ,σ,peak);
 β=10.0;
 N=20;
 output_bound=5.0;
 output_number=801;
-Amesh,reconstruct_A,_=aaa_check(A;β,N,output_bound,output_number)
+Amesh,reconstruct_A,_=aaa_check(A;β,N,output_bound,output_number);
 
 # draw the pictures
 plot(Amesh,reconstruct_A.(Amesh),label="reconstruct spectral density")

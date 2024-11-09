@@ -1,5 +1,2 @@
-1. AD对贪心迭代生效
-2. 对于不可导点，AD是当作右连续函数计算右导数，对左连续导数则前向微分会出现各种奇奇怪怪对错误（后向微分则会好很多）。但是由于不可导点（或者说会使得迭代过程变化的样本取值）是零测的，所以可以暂时忽略这一点
-
-但是我现在质疑的一个地方在于，对于aaa这种算法，AD是否是必要的。因为对于一个一组给定的样本值
-$$G(iw_n),~n=1,..,N$$
+1. Why for rand 2 Gauss waves, the iteration times are all 7 ?
+2. How add AD into greedy iteration and scd ?
