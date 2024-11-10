@@ -137,7 +137,6 @@ function gradient_via_fd(f,x)
     @inbounds for i in eachindex(x)
         ϵ=max(s*abs(x[i]),s)
 
-        # real part : real(∂f/∂x_i)=real( (f(z+ϵ_i)-f(z-ϵ_i))/2ϵ ) = u'x_i
         xxi=x[i]
         xx[i]=xxi+ϵ
         δf=f(xx)
@@ -146,16 +145,13 @@ function gradient_via_fd(f,x)
         xx[i]=xxi
         ∇f[i]= real(δf / ( 2 * ϵ ) )
 
-        # imag part : real(∂f/∂y_i)=real( ((f(z+imϵ_i)-f(z-imϵ_i))/2ϵ) )=u'y_i
         xx[i]=xxi+im*ϵ
         δf=f(xx)
         xx[i]=xxi-im*ϵ
         δf-=f(xx)
         xx[i]=xxi
         ∇f[i] += imag(δf / ( 2 * ϵ ) )
-        # What we get is u'x+iu'y becuase f is a function that:
-        # f: z → u((z+z*)/2, (z-z*)/2i)
-        # ⟹ ∂f/∂z=u'x+iu'y
+        # What we get is u'x+iu'y becuase it's the definition of complex gradient.
 
     end
 

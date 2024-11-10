@@ -1,8 +1,10 @@
 using Enzyme
 
+
+# The perturbation does not affect the choice.
 function my_greedy(vec::Vector{Float64})
-    pick=similar(vec)
-    best_pick=similar(vec)
+    pick=fill(0.0,length(vec))
+    best_pick=fill(0.0,length(vec))
     wait_set=Set(vec)
     n=0
     partsum=0.0
@@ -24,8 +26,8 @@ function my_greedy(vec::Vector{Float64})
             break
         end
     end
-    #@show best_n,n,best_error
-    return sum(best_pick.^2)
+    @show best_n,n,best_error
+    return sum(abs.(best_pick))
 end
 
 function my_max(vec::Vector{Float64})
@@ -38,17 +40,18 @@ vec=sign.(vec).*sqrt.(abs.(vec))
 my_greedy(vec)
 
 
-
-
-x=2*rand(N)
+x=2*rand(N).-1
 dx=Vector{Vector{Float64}}(undef,N)
 for i=1:N
     dx[i]=fill(0.0,N)
     dx[i][i]=1.0
 end
-dx=Tuple(dx)
+dx=Tuple(dx);
 
 my_greedy(x)
 
 autodiff(ForwardWithPrimal, x->my_max(x), BatchDuplicated(x, dx))
 autodiff(ForwardWithPrimal, x->my_greedy(x), BatchDuplicated(x, dx))
+
+
+# The perturbation affects the choice.

@@ -17,7 +17,7 @@ But with this method , you can only get $N/2$ poles as most and they can't be ac
 
 So can we directly set poles as $\{\omega_n\}$ ?
 
-$\rm 2.~$
+$\rm 2.~(Done)$
 Can AD works for greedy algorithm?
 
 An example for AD doesn't work for greedy algorithm is in `examples/ADforGreedy.jl`
@@ -78,6 +78,9 @@ my_greedy(x)
 autodiff(ForwardWithPrimal, x->my_max(x), BatchDuplicated(x, dx))
 autodiff(ForwardWithPrimal, x->my_greedy(x), BatchDuplicated(x, dx))
 ```
+
+Solution: replace `fill(0.0,length(vec))` with `similar(vec)` and make program think it a variable.
+
 $$~$$
 
 $\rm 3.~$
@@ -87,3 +90,9 @@ $$~$$
 
 $\rm 4.~$
 How to apply AD for svd ?
+
+$$~$$
+
+$\rm 5.~$
+How to get all amplitudes of poles with high accuracy?
+
