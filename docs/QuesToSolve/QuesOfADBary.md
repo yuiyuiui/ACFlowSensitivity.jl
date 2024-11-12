@@ -84,15 +84,38 @@ Solution: replace `fill(0.0,length(vec))` with `similar(vec)` and make program t
 $$~$$
 
 $\rm 3.~$
-Why for rand 2 Gauss waves, the iteration times are all 7 ?
+Usualy when does aaa algorithm break?
 
 $$~$$
 
-$\rm 4.~$
+$\rm 4.~(Done)$
 How to apply AD for svd ?
 
 $$~$$
 
 $\rm 5.~$
 How to get all amplitudes of poles with high accuracy?
+
+$$~$$
+
+$\rm 6.~(Done)$
+Why slight noise can break the aaa algorithm greatly?
+
+Because the svd() function ACFlow use will throw $V[:,n+1:m]$ for ${\rm size}(A)=n\times m$ when $m\geq n$
+
+$$~$$
+
+$\rm 7.~$
+How to rule AD by self-defined function?.
+
+$$~$$
+
+$\rm 8.~$
+How to improve the accuracy when do Unitary decomposition on $$L_{sub}'*L_{sub}$$ 
+
+Sol: Svd on $L_{sub}$ is better than svd on $L_{sub}'*L_{sub}$ and eigen on $L_{sub}'*L_{sub}$.
+
+Optimize may be a good idea.
+
+$$~$$
 

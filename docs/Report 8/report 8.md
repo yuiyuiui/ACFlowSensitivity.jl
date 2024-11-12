@@ -1,3 +1,11 @@
+$\rm 0.~A~wrong~in~aaa~and~barycentric~method~in~ACFlow$
+I find that for original ACFlow when we put in some noisy, this method works so bad. With debug I find the min sigularity of the chosen submatrix of the original  Lowner matrix doesn't tend to be zero. It's impossible in theory.
+
+The I realize that the svd() function in LinearAlgebra will throw rows (or columns, according to the definition of svd) in $U$ and $V$ corresponding to zero singular values. So even if the submatrix is not row full rank, $V[:,{\rm end}]$ got form svd() isn't corresponding to the smallest (that is to say, zero) singular value.
+
+In fact, there is no need to do svd decomposition. we can just do Orthogonal decomposition on $Lsub'*Lsub$. I have done this with code and it worls well with adding noise.
+
+
 $\rm 1.~ How ~ACFlow ~~brc ~algorithm ~find~ poles ~with~ delts ~type ~spectral~ density$
 
 The way barycentric algorithm get poles and corresponding amplitudes is function poles!(). 
@@ -127,19 +135,60 @@ $\rm 3. ~Where ~difficult ~to~ apply ~AD$
 
    $~$
    (4) Introduction to AD for svd
+   Denote $$\bar{A}=\frac{\partial Loss}{\partial A}$$
+
+   Assume that $L(A)$ is a real gauge loss function. Gauge means for a svd composition $$A=USV^{\dagger}$$
+
+   $$Loss(A)=Loss(U,S,V)$$
+
+   has nothing with the choose of $U,V$.
+
+   And assume that $A$ is a matrix  has no zero or same eigenvalue.
+
+   Then we have:
+   $$dLoss={\rm Tr}(\bar{A}^TdA+c.c)$$
+
+   $$\Longrightarrow\nabla f(A)=2(\bar{A})^*=2\left(A_s+A_J+A_K+A_O\right)^*$$
+
+   $$A_s^*=U(\bar{S})^*V^{\dagger}\\ A_J^*=U(J^*+J^T)SV^{\dagger}\\ A_K^*=US(K^*+K^T)V^{\dagger}\\ A_O^*=\frac{1}{2}US^{-1}(O-O^{\dagger})V^{\dagger}$$
+
+   $$J=F\circ (U^T\bar{U})\\ K=F\circ (V^T\bar{V})\\ O=I\circ (V^T\bar{V})$$
+
+   $$F=\frac{1}{s_j^2-s_i^2}\chi_{i\neq j}$$
+
+   In formulas above, $\circ$ is:
+   $$(a_{ij})_{n\times n}\circ (b_{ij})_{n\times n}=(a_{ij}b_{ij})_{n\times n}$$
+
+   $I$ is identity matrix.
+
 
    $~$
    (5) Theoretical validation of method effectiveness.
       (a) Gauge freedom
+      Arbitrary given 
+      $$\operatorname{diag}\{e^{i\theta_1},..,e^{i\theta_m}\},~V=[v_1,..,v_m]$$
+
+      $$\Longrightarrow V{\rm diag}=[..,e^{i\theta_m}v_m]$$
+
+      $$\Longrightarrow \|{\rm Bary}(v_me^{i\theta_m})-A\|_2^2=\|{\rm Bary}(v_m)-A\|_2^2=Loss$$
+
 
       $~$
       (b) Different eigenvalues
+      In practice, input green function values take some noise and therefore we can assume that all submatrices of $L$ without zero eigenvalues are non-singular with probability 1.
 
       $~$
       (c) non-zero eigenvalues
+      Denote size of $L$ is $N\times N$ and size of $L_{sub}$ is $(N-m)\times m$.
+      For equation:
+      $$L_{sub}w=G_{sub}$$
+
+      In practice, G_{sub} has noise so if $m\leq N/2$ and not full column rank, this equation has no solution with probability 1. 
+
+      So if $m\leq N/2$, we can think that $L_{sub}$ is full column and therefore has no zero eigenvalue.
 
 $$~$$
-2. greedy algorithm
+1. greedy algorithm
    (1) The perturbation does not affect the choice.
    AD obviously works. Refer an example in examples/ADforGreedy.jl
 

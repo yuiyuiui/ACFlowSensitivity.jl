@@ -3,10 +3,13 @@ include("DeltaMethod.jl")
 
 
 # function for examine effect of methods
-function aaa_check(A;β::Float64=10.0,N::Int64=20,output_bound::Float64=5.0,output_number::Int64=801)
+function aaa_check(A;β::Float64=10.0,N::Int64=20,output_bound::Float64=5.0,output_number::Int64=801,noise=0.0::Float64)
     
     #generate green function values on image axis
     G_values_image=generate_G_values_cont(β,N,A)
+    for i in eachindex(G_values_image)
+        G_values_image[i]+=G_values_image[i]*noise*rand()*exp(2π*im*rand())
+    end
     input_grid=im*(collect(0:N-1).+0.5)*2π/β;
 
     # calculate reconstruct output mesh and spectral density and green function

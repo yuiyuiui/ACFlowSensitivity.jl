@@ -102,7 +102,8 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
             C[i, n] = iszero(δ) ? 1 / eps() : 1 / δ
             L[i, n] = (values[i] - active_values[n]) * C[i, n]
         end
-        _, _, V=svd(L[collect(wait_index),1:n])
+
+        _, S, V=svd(L[collect(wait_index),1:n])
         w=V[:,end]
 
         wait_active_C=view(C,collect(wait_index),1:n)
@@ -118,14 +119,14 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
             best_weight=w
             best_index=copy(chosen_index)
         end
-
-     #   @show n,best_n
+        
 
         # Do we end the iteration?
-        if (best_error<tol*max_values)||(n>=max_degree)||
+        if (best_error<tol*max_values) || (n>=max_degree)||
             ((n-best_n>=lookaheaad)&&(best_error<1e-2*max_values))
             break
         end
+        if n>=(m>>1) break end
 
         push!(chosen_index,next_index)
         delete!(wait_index,next_index)
