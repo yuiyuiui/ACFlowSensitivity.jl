@@ -1,3 +1,13 @@
+# svd() in LinearAlgebra.jl is different from the real svd() decomposition in math that the origin aaa algorithm uses.
+# It throws those rows and columns not corresponding to the singularities.
+# That is to say, if you have a matirx A with size m*n and m<n, then in LinearAlgebra.jl, operate (U,S,V)=svd(A) and the V you get is a m*n matrix,
+# but not a n*n matrix. That means it lost the last column of V corresponding to the minimum eigenvalue 0 od A^H*A
+
+# To avoid it, we just need stop the iteration of aaa algorithm at the N>>1 turn.
+
+# But don't use eigen(A'A) or svd(A'A) to get the last column of V, because it is numerically inaccurate.
+
+
 using ACFlow, Plots, DelimitedFiles, Test
 
 @testset "correct aaa" begin
