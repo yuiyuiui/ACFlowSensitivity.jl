@@ -1,6 +1,7 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra
+using LinearAlgebra, Zygote
+using Zygote:@adjoint
 
 # export interfaces
 export continous_spectral_density, kernel,aaa_check,kernel

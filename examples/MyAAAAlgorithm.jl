@@ -1,6 +1,5 @@
 using ACFlowSensitivity
 using Plots
-using LinearAlgebra
 
 
 #μ=3*rand(2).-1.5;σ=rand(2);peak=4*rand(2);
@@ -10,7 +9,7 @@ A=continous_spectral_density(μ,σ,peak);
 N=20;
 output_bound=5.0;
 output_number=801;
-noise=1e-3;
+noise=1e-4;
 Amesh,reconstruct_A,_=aaa_check(A;β,N,output_bound,output_number,noise);
 
 # draw the pictures

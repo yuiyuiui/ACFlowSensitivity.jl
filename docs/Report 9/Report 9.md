@@ -39,4 +39,6 @@ $$\nabla L_{\mathcal{G_0}}(\mathcal{G_0})=\nabla f_4(\widetilde{A_{\mathcal{G_0}
 
 Here $e$ is the column vector of all ones.
 
+And in fact we combine function 2 to 4 as a whole function to apply AD on complex svd.
+
 
