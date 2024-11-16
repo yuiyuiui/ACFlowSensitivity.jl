@@ -93,9 +93,29 @@ end
 
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
 	value = f(Giwn, L0)
+    loss=Loss(f.iwn, f.f0, f.int_low, f.int_up, f.step)
+    ∂Giwn,∂weight=gradient(loss, (Giwn, L0))
+    S=svd(L0).S
+    F=Matrix{Float64}(undef, length(S), length(S))
+    for i=1:length(S)
+        for j=1:length(S)
+            if i!=j
+            end
+        end
+    end
+
 end
 
+# Combine GiwnToL0 and GiwnL0ToLoss to get GiwnToLoss
+struct GiwnToLoss <: Function
+    f1::GiwnToL0
+    f2::GiwnL0ToLoss
+end
 
+function (f::GiwnToLoss)(Giwn::Vector{ComplexF64})
+    L0=f.f1(Giwn)
+    return f.f2(Giwn, L0)
+end
 
 
 # Perform once aaa algorithm and get constants needed for ADaaa
