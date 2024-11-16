@@ -123,7 +123,7 @@ gradient(a->height(a),Point(1,2))
 gradient(a->dist(a),Point(1,2))[1]
 
 #Reach the real pair
-@adjoint Point(a,b) = Point(a,b), p-> (p.x,p.y)
+@adjoint Point(a,b) = Point(a,b), p->  (p.x,p.y)
 gradient(x->dist(Point(x,1)),1)
 
 # x->(nothing, f(x)) means don't get the gradient of the first argument
