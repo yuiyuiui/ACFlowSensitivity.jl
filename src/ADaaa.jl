@@ -2,9 +2,9 @@
 
 # Barycentric interpolation
 struct BarycentricFunction <: Function
+	weights::Vector{ComplexF64}
 	iwn::Vector{ComplexF64}
 	Giwn::Vector{ComplexF64}
-	weights::Vector{ComplexF64}
 end
 
 function (r::BarycentricFunction)(z::Number)
@@ -31,10 +31,10 @@ struct GiwnToL0 <: Function
 end
 
 function (f::GiwnToL0)(Giwn::Vector{ComplexF64})
-	n = length(f.Index0)
+	n = length(f.iwn)
 	Lowner = zeros(ComplexF64, n, n)
-	for i ∈ 1:n
-		for j ∈ 1:n
+	for i = 1:n
+		for j = 1:n
 			if i != j
 				Lowner[i, j] = (Giwn[i] - Giwn[j]) / (f.iwn[i] - f.iwn[j])
 			end
@@ -53,6 +53,7 @@ end
 # Compute Loss function 
 struct Loss <: Function
 	iwn::Vector{ComplexF64}
+	Index0::Vector{Vector{Int64}}
 	f0::BarycentricFunction
 	int_low::Float64 
 	int_up::Float64 
@@ -60,25 +61,28 @@ struct Loss <: Function
 end
 
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
-	int_field = collect(int_low:step:int_up)
-	n = length(int_field)
-	values0 = Vector{ComplexF64}(undef, n)
-	w_times_f = weights .* Giwn
-	for i = 1:n
-		z = int_field[i]
-		C = 1 ./ (z .- iwn)
-		values0[i] = sum(C .* w_times_f) / sum(C .* weights)
-	end
-	values = abs.(values0 .- f.f0.(int_field))
-	values1 = view(values, 1:n-1)
-	values2 = view(values, 2:n)
-	return sum((values1 + values2) * f.step / 2)
+    iwn0 = f.iwn[f.Index0[2]]
+    G0 = Giwn[f.Index0[2]]
+
+    int_field = collect(f.int_low:f.step:f.int_up)
+    n = length(int_field)
+    values0 = map(int_field) do z
+        C = 1 ./ (z .- iwn0)
+        w_times_f = weights .* G0
+        return sum(C .* w_times_f) / sum(C .* weights)
+    end
+    
+    values = abs.(imag.( values0 - f.f0.(int_field) ))/π
+    values1 = view(values, 1:n-1)
+    values2 = view(values, 2:n)
+    return sum((values1 + values2) * f.step / 2)
 end
 
 
 # Compute Loss function from Giwn and L0
 struct GiwnL0ToLoss <: Function
 	iwn::Vector{ComplexF64}
+	Index0::Vector{Vector{Int64}}
 	f0::BarycentricFunction
 	int_low::Float64 
 	int_up::Float64 
@@ -86,24 +90,34 @@ struct GiwnL0ToLoss <: Function
 end
 
 function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
-	weights = svd(L0).Vt[:, end]
-	loss = Loss(f.iwn, f.f0, f.int_low, f.int_up, f.step)
+	#println(L0)
+	#println("GiwnL0ToLoss")
+	weights = svd(L0).V[:, end]
+	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
 	return loss(Giwn, weights)
 end
 
+
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
 	value = f(Giwn, L0)
-    loss=Loss(f.iwn, f.f0, f.int_low, f.int_up, f.step)
-    ∂Giwn,∂weight=gradient(loss, (Giwn, L0))
-    S=svd(L0).S
+    loss=Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
+	U,S,V=svd(L0)
+    ∂Giwn,∂weight=gradient(loss, Giwn, V[:,end])
     F=Matrix{Float64}(undef, length(S), length(S))
-    for i=1:length(S)
-        for j=1:length(S)
+    for i=axes(F,1)
+        for j=axes(F,2)
             if i!=j
+				F[i,j]=1/(S[j]^2-S[i]^2)
             end
         end
     end
-
+	V̄=zero(V)
+	V̄[:,end]=∂weight
+	K=F.*(transpose(V)*V̄)
+	conj_AK=U*diagm(S)*(conj(K)+transpose(conj(K)))*V'
+	O=I(length(S)).*(transpose(V)*V̄)
+	conj_AO=U*diagm(1 ./S)*(O-O')*V'/2
+	return value, Δ->(Δ*∂Giwn,2*Δ*(conj_AO+conj_AK))
 end
 
 # Combine GiwnToL0 and GiwnL0ToLoss to get GiwnToLoss
@@ -113,9 +127,9 @@ struct GiwnToLoss <: Function
 end
 
 function (f::GiwnToLoss)(Giwn::Vector{ComplexF64})
-    L0=f.f1(Giwn)
-    return f.f2(Giwn, L0)
+    return f.f2(Giwn, f.f1(Giwn))
 end
+
 
 
 # Perform once aaa algorithm and get constants needed for ADaaa
@@ -129,156 +143,31 @@ end
 
 function ADaaaBase(wn::Vector{Float64}, Giwn::Vector{ComplexF64})
 	@assert length(wn) == length(Giwn)
-	w, g, v, bi = aaa(im * wn, Giwn; isAD = true)
+	w, g, v, bi = my_aaa(im * wn, Giwn; isAD = true)
 	brcF = BarycentricFunction(w, g, v)
 	Index0 = [setdiff(1:length(wn), bi), bi]
 	return ADaaaBase(wn, im * wn, Giwn, Index0, brcF)
 end
 
 # Main function for applying AD on aaa algorithm
-function ADaaa(wn::Vector{Float64}, Giwn::Vector{ComplexF64})
+function ADaaa(wn::Vector{Float64}, Giwn::Vector{ComplexF64};int_low=-8.0,int_up=8.0,step=1e-4)
+	@assert length(wn) == length(Giwn)
+	ada = ADaaaBase(wn, Giwn)
+	f1=GiwnToL0(ada.iwn,ada.Index0)
+	f2=GiwnL0ToLoss(ada.iwn,ada.Index0,ada.brcF,int_low,int_up,step)
+	f=GiwnToLoss(f1,f2)
+	return gradient(f,ada.Giwn)[1]
+end
+
+function my_func(wn::Vector{Float64}, Giwn::Vector{ComplexF64};int_low=-5.0,int_up=5.0,step=1e-4)
 	@assert length(wn) == length(Giwn)
 	ada = ADaaaBase(wn, Giwn)
 
+	f1=GiwnToL0(ada.iwn,ada.Index0)
+	#println(f1(Giwn))
+	#println("my_func")
+	f2=GiwnL0ToLoss(ada.iwn,ada.Index0,ada.brcF,int_low,int_up,step)
 
+	f=GiwnToLoss(f1,f2)
+	return f(Giwn)
 end
-
-
-
-
-
-
-
-
-
-
-
-# Test adjoint
-
-struct test_func <: Function
-	x::Real
-	y::Real
-end
-function (f::test_func)(z::Real)
-	return f.x * z + f.y
-end
-
-f = test_func(1.0, 2.0)
-f(3.0)
-
-my_func3(x) = [x[1]^2, x[2] * x[1]]
-jacobian(my_func3, [1.0, 2.0])
-
-
-
-
-#------------
-using Zygote
-using Zygote: @adjoint
-function my_func(A::Matrix{Float64})
-	return sum(abs.(A) .^ 2)
-end
-
-function my_func1(vec::Vector{Float64})
-	return [vec[1] vec[2]; vec[3] vec[1]+vec[2]]
-end
-
-gradient(my_func, [1.0 2.0; 3.0 4.0])[1]
-
-jacobian(my_func1, [1.0, 2.0, 3.0])[1]
-
-my_func2(x, y) = x^2 + y^2
-
-@adjoint my_func2(x, y) = my_func2(x, y), Δ -> (2 * Δ[1], 2 * Δ[2])
-
-vec(jacobian(x -> x[1]^2, [1.0, 2.0])[1])
-
-my_func3(x) = x[1]^2 + x[2] * x[1]
-
-@adjoint my_func3(x) = my_func3(x), x -> (2 * x[1] + x[2], x[1])
-
-gradient(my_func3, [1.0, 2.0])[1]
-
-
-mul(x) = x[1] * x[2]
-@adjoint mul(x) = mul(x), y -> (y * [x[2], x[1]], nothing)
-
-gradient(mul, [2.0, 3.0])[1]
-
-mul(x) = x[1] * x[2]
-@adjoint mul(x) = mul(x), Δ -> (Δ .* [x[2], x[1]],)
-
-function my_func4(x, y)
-	return x[1] + 2 * x[2] + 3 * y[1] + 4 * y[2]
-end
-
-gradient(my_func4, [1.0, 2.0], [3.0, 4.0])
-
-
-function my_func5(x)
-	function y(t)
-		return x[1] + x[2] * t
-	end
-
-	@adjoint my_func5(x) = my_func5(x), Δ -> (Δ .* [0, x[2]],)
-	Zygote.refresh()
-	return gradient(y, 3.0)[1]
-end
-
-using Zygote
-using Zygote: @adjoint
-
-struct my_func6 <: Function
-	a::Real
-	b::Real
-end
-
-function (f::my_func6)(t)
-	return f.a + f.b * t^2
-end
-
-@adjoint my_func6(t) = my_func6(t), Δ -> (Δ * 2*t*my_func6.b,)
-
-@adjoint function (f::my_func6)(t)
-	value = f(t)
-	pullback(Δ) = (nothing, Δ * 2 * t * f.b)
-	return value, pullback
-end
-
-gradient(my_func6(1.0, 2.0), 3.0)[1]
-
-my_func6(1.0,2.0)(3.0)
-
-function my_func5(x)
-	return my_func6(x)
-end
-
-
-@adjoint f::typeof(my_func5(x::Vector{Float64}))(t) = f(t), Δ -> (Δ .* [0, x[2]],)
-
-
-my_func6 = my_func5([1.0, 2.0])
-
-gradient(my_func6, 3.0)[1]
-
-struct my_func7 <: Function
-    a::Real
-    b::Real
-    my_func7(a::Real, 
-    b::Real=1.0) = new(a, b)
-end
-
-function (f::my_func7)(t)
-    return f.a + f.b * t
-end
-
-mf7 = my_func7(7.0)
-
-mf7(4.0)
-
-
-function my_func8(a,b)
-    return a^2 + b^2
-end
-
-gradient(my_func8, 1.0, 2.0)[1]

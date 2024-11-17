@@ -1,6 +1,6 @@
 include("aaa.jl")
 include("math.jl")
-icnlude("ADaaa.jl")
+include("ADaaa.jl")
 
 
 

@@ -8,6 +8,7 @@ export continous_spectral_density, kernel,aaa_check,kernel
 export discrete_GF,benchmark_GF
 export generate_G_values_cont,AD_aaa
 export DireInverse_check,generate_G_values_delta,DireInverse
+export ADaaa, my_func
 
 
 
