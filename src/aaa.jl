@@ -19,41 +19,16 @@ function aaa_check(A;β::Float64=10.0,N::Int64=20,output_bound::Float64=5.0,outp
 end
 
 # generate values of G(iw_n)
-function generate_G_values_cont(β::Float64,N::Int64, A)
-    grid=(collect(0:N-1).+0.5)*2π/β
-    step = 1e-3
-    boundary = 20
-    Int_stp_num = trunc(Int64, boundary / step)  
+function generate_G_values_cont(β::Float64,N::Int64, A;int_low::Float64=-20.0,int_up::Float64=20.0)
+    grid=(collect(0:N-1).+0.5)*2π/β  
     n = length(grid)
     res = zeros(ComplexF64, n)
-    
     for i = 1:n
-        # 计算每个 \hat{G}(w_n)=\int_R A(x)/(iw_n-x)dx
-        
-        # 辛普森法的积分
-        integral = 0.0
-        for j = -Int_stp_num:Int_stp_num
-            x = j * step
-            coeff = 1.0
-            
-            # 使用辛普森法的权重
-            if j == -Int_stp_num || j == Int_stp_num
-                coeff = 1  # 端点的权重为 1
-            elseif j % 2 == 0
-                coeff = 2  # 偶数点的权重为 2
-            else
-                coeff = 4  # 奇数点的权重为 4
-            end
-            
-            integral += coeff * A(x) / (im * grid[i] - x)
-        end
-        
-        integral *= step / 3  # 最后乘以步长 / 3
-        res[i] = integral
+        res[i] = quadgk(x -> A(x) / (im * grid[i] - x), int_low, int_up)[1]
     end
-    
     return res
 end
+
 
 # reconstruct spectral density
 function reconstruct_spectral_density(input_grid::Vector{ComplexF64},input_values::Vector{ComplexF64})

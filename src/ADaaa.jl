@@ -1,5 +1,7 @@
 # AD for aaa algorithm on continuous spectral density
 
+#Backward mode
+
 # Barycentric interpolation
 struct BarycentricFunction <: Function
 	weights::Vector{ComplexF64}
@@ -90,9 +92,9 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 
 	int_field = collect(f.int_low:f.step:f.int_up)
 	n = length(int_field)
+	w_times_f = weights .* G0
 	values0 = map(int_field) do z
 		C = 1 ./ (z .- iwn0)
-		w_times_f = weights .* G0
 		return sum(C .* w_times_f) / sum(C .* weights)
 	end
 
@@ -125,7 +127,8 @@ end
 	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
 	U, S, V = svd(L0)
 	∂Giwn, ∂weight = gradient(loss, Giwn, V[:, end])
-	F = Matrix{Float64}(undef, length(S), length(S))
+	F=zeros(ComplexF64,length(S),length(S))
+	# F = Matrix{Float64}(undef, length(S), length(S))
 	for i ∈ axes(F, 1)
 		for j ∈ axes(F, 2)
 			if i != j
@@ -136,7 +139,7 @@ end
 	V̄ = zero(V)
 	V̄[:, end] = ∂weight
 	K = F .* (transpose(V) * V̄)
-	conj_AK = U * diagm(S) * (conj(K) + transpose(conj(K))) * V'
+	conj_AK = U * diagm(S) * ( conj(K) + transpose(K) ) * V'
 	O = I(length(S)) .* (transpose(V) * V̄)
 	conj_AO = U * diagm(1 ./ S) * (O - O') * V' / 2
 	return value, Δ -> (nothing, Δ * ∂Giwn, 2 * Δ * (conj_AO + conj_AK))
@@ -151,7 +154,6 @@ end
 function (f::GiwnToLoss)(Giwn::Vector{ComplexF64})
 	return f.f2(Giwn, f.f1(Giwn))
 end
-
 
 
 # Perform once aaa algorithm and get constants needed for ADaaa
@@ -191,3 +193,4 @@ function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0,
 	f = GiwnToLoss(f1, f2)
 	return f(Giwn)
 end
+

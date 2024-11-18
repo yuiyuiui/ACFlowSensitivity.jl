@@ -1,6 +1,6 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra, Zygote
+using LinearAlgebra, Zygote, QuadGK
 using Zygote:@adjoint
 
 # export interfaces
