@@ -7,7 +7,9 @@ A=continous_spectral_density(μ,σ,peak);
 
 Giwn=generate_G_values_cont(β,N,A);
 wn=(collect(0:N-1).+0.5)*2π/β;
-my_func(wn,Giwn)
+
+
+# 记得看一下svd的实现方式，并且设计出符合自己需求的svd 
 
 ADaaa(wn,Giwn)
 

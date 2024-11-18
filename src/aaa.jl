@@ -151,10 +151,6 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
     end
     
     if isAD
-        #println(L[setdiff(1:m,best_index),1:best_n])
-        #println("my_aaa")
-        #println(best_index)
-        #println(best_weight)
 
         return best_weight,grid[best_index],values[best_index],best_index
     end
