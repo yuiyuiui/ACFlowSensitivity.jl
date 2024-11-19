@@ -5,7 +5,7 @@ $${\rm Input:}~\mathcal{G_0}=\{G_{0}(iw_k)\}_{k=1}^N$$
 $${\rm Output:}~\nabla L_{\mathcal{G_0}}(\mathcal{G_0}) \\ L_{\mathcal{G_0}}=\int_{\mathbb{R}}\left|\widetilde{A_{\mathcal{G_0}}}(\mathcal{G},x)-\widetilde{A}(\mathcal{G_0},x)\right|^2dx $$
 
 -------
-$\rm STEP:$
+$\rm STEP~FOR~BACKWARD~AD:$
 
 $\rm Step 1:$ 
 Input $\{iw_k\}_{k=1}^N,~\mathcal{G_0}$, get corresponding Lowner Matrix 
@@ -24,24 +24,56 @@ as a composition of four functions.
 function 1: 
 $$\mathcal{G}\to L(\mathcal{G})[I(\mathcal{G_0})]$$
 
+Short for $L_0$
+
 function 2: 
-$${\rm svd:}~L(\mathcal{G})[I(\mathcal{G_0})] \to (\_,\_,V_{\mathcal{G_0}}(\mathcal{G}))$$.
+$$L(\mathcal{G})[I(\mathcal{G_0})] \to {\rm svd}\left(V_{\mathcal{G_0}}(\mathcal{G})\right).V[:,end]$$.
 
 function 3: 
-$$V_{\mathcal{G_0}}(\mathcal{G})[:,end]\to \widetilde{A_{\mathcal{G_0}}}(\mathcal{G},x)=-\frac{1}{\pi}{\rm Im}\widetilde{G_{\mathcal{G_0}}}(\mathcal{G},x)$$
+$$\mathcal{G},w_{\mathcal{G_0}}(\mathcal{G})\to \widetilde{A_{\mathcal{G_0}}}(\mathcal{G},x)=-\frac{1}{\pi}{\rm Im}\widetilde{G_{\mathcal{G_0}}}(\mathcal{G},x)$$
 
 function 4:
 $$\widetilde{A_{\mathcal{G_0}}}(\mathcal{G},x) \to L_{\mathcal{G_0}}(\mathcal{G})=\int_{\mathbb{R}}\left|\widetilde{A_{\mathcal{G_0}}}(\mathcal{G},x)-\widetilde{A}(\mathcal{G_0},x)\right|^2dx$$
 
+$~$
 $\rm Step 3:$
-Calculate 
-$$\nabla L_{\mathcal{G_0}}(\mathcal{G_0})=\nabla f_4(\widetilde{A_{\mathcal{G_0}}}(\mathcal{G_0},x))*\nabla f_3(V_{\mathcal{G_0}}(\mathcal{G_0})[:,end])*\nabla f_2(L(\mathcal{G_0})[I(\mathcal{G_0})])*\nabla f_1(\mathcal{G_0})*e$$
 
-Here $e$ is the column vector of all ones.
+$$L_{\mathcal{G_0}}(\mathcal{G_0})=f_4\circ f_3\left(\mathcal{G},f_2\circ f_1(\mathcal{G})\right)$$
 
-And in fact we combine function 2 to 4 as a whole function to apply AD on complex svd.
+Calculate: 
+$$\nabla L_{\mathcal{G_0}}(\mathcal{G_0})=2\frac{\partial f_4\circ f_3}{\partial \mathcal{G^*}}(\mathcal{G},f_2\circ f_1(\mathcal{G_0}))+2\frac{\partial f_4\circ f_3(\mathcal{G_0},f_2)}{\partial L_0^*}\cdot\frac{\partial L_0^*}{\partial \mathcal{G^*}}$$
+
+And in fact we combine function 2 to 4 as a whole function to apply AD on complex svd, as well as function 3 and 4.
+
+
+The formular is right because for 
+$$f,g:\mathbb{C}\to \mathbb{C},~g~{\rm or}~f \rm ~is ~analytic$$
+
+$$\Longrightarrow \nabla g(f(z)) = 2\frac{\partial g}{\partial f^*}\cdot\frac{\partial f^*}{\partial z^*}$$
+
+And for general complex function
+$$g=A(x,y)+iB(x,y),~f(x,y)=u(x,y)+iv(x,y)$$
+
+If we see matrix
+$$\begin{bmatrix}
+a&b\\c&d
+\end{bmatrix}~{\rm as~a~complex ~number~} a-d+i(b+c)$$
+
+Then we have 
+$$\nabla g(f(z))=\begin{bmatrix}
+\frac{\partial A(u,v)}{\partial u} & \frac{\partial A(u,v)}{\partial v}\\
+\frac{\partial B(u,v)}{\partial u} & \frac{\partial B(u,v)}{\partial v}
+\end{bmatrix}*\begin{bmatrix}
+\frac{\partial u}{\partial x} & \frac{\partial u}{\partial y}\\
+\frac{\partial v}{\partial x} & \frac{\partial v}{\partial y}
+\end{bmatrix}=\nabla g ~{\rm matrix~product~}\nabla f$$
+
+So if we denote such matrix product as $*_m$, then we have 
+$$\nabla g(f(z))=\nabla g *_m\nabla f$$
 
 ------
-Meaning of definition about gradient of $\mathbb{C}\to \mathbb{C}$ :
+
+$\rm STEP~FOR~FORWARD~AD:$
+
 
 

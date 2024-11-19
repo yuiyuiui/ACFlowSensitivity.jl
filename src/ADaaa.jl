@@ -1,5 +1,19 @@
 # AD for aaa algorithm on continuous spectral density
 
+function ADaaa(solver::Solver,wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -8.0, int_up = 8.0, step = 1e-4)
+	if solver.Atype=="cont"
+		if solver.Ward=="backward"
+			return ADaaa_cont_backward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
+		elseif solver.Ward=="forward"
+			return ADaaa_cont_forward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
+		end
+	elseif solver.Atype=="delta"
+		if solver.Ward=="backward"
+			return ADaaa_delta_backward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
+		end
+	end
+end
+
 #Backward mode
 
 # Barycentric interpolation
@@ -174,7 +188,7 @@ function ADaaaBase(wn::Vector{Float64}, Giwn::Vector{ComplexF64})
 end
 
 # Main function for applying AD on aaa algorithm
-function ADaaa(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -8.0, int_up = 8.0, step = 1e-4)
+function ADaaa_cont_backward(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64, int_up::Float64, step::Float64)
 	@assert length(wn) == length(Giwn)
 	ada = ADaaaBase(wn, Giwn)
 	f1 = GiwnToL0(ada.iwn, ada.Index0)
@@ -183,6 +197,8 @@ function ADaaa(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -8.0, in
 	return gradient(f, ada.Giwn)[1]
 end
 
+
+#=
 function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0, int_up = 5.0, step = 1e-4)
 	@assert length(wn) == length(Giwn)
 	ada = ADaaaBase(wn, Giwn)
@@ -193,4 +209,10 @@ function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0,
 	f = GiwnToLoss(f1, f2)
 	return f(Giwn)
 end
+=#
+
+
+
+# ----------------------------------------------------------------
+# Check the correctness of  backward ADaaa by ForwardAD
 

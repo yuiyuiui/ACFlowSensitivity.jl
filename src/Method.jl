@@ -1,6 +1,16 @@
-include("aaa.jl")
 include("math.jl")
+include("aaa.jl")
 include("ADaaa.jl")
+include("maxent.jl")
+include("ADmaxent.jl")
+include("sac.jl")
+include("ADsac.jl")
+
+struct Solver
+    method::String
+    Atype::String
+    Ward::String
+end
 
 
 
