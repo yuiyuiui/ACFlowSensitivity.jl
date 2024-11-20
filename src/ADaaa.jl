@@ -1,14 +1,14 @@
 # AD for aaa algorithm on continuous spectral density
 
-function ADaaa(solver::Solver,wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -8.0, int_up = 8.0, step = 1e-4)
-	if solver.Atype=="cont"
-		if solver.Ward=="backward"
+function ADaaa(solver::Solver, wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -8.0, int_up = 8.0, step = 1e-4)
+	if solver.Atype == "cont"
+		if solver.Ward == "backward"
 			return ADaaa_cont_backward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
-		elseif solver.Ward=="forward"
+		elseif solver.Ward == "forward"
 			return ADaaa_cont_forward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
 		end
-	elseif solver.Atype=="delta"
-		if solver.Ward=="backward"
+	elseif solver.Atype == "delta"
+		if solver.Ward == "backward"
 			return ADaaa_delta_backward(wn, Giwn; int_low = int_low, int_up = int_up, step = step)
 		end
 	end
@@ -63,13 +63,13 @@ end
 	value = f(Giwn)
 	n = length(Giwn)
 	m = length(f.Index0[2])
-	jac = Matrix{ComplexF64}(undef, m*(n - m), n)
+	jac = Matrix{ComplexF64}(undef, m * (n - m), n)
 	# L0的 jth列
-	count=0
+	count = 0
 	for j ∈ 1:m
 		# L0的 ith行
 		for i ∈ 1:n-m
-			count+=1
+			count += 1
 			# 对Giwn[k]求导
 			for k ∈ 1:n
 				if k == f.Index0[1][i]
@@ -100,6 +100,8 @@ struct Loss <: Function
 	step::Float64
 end
 
+
+# L1 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	iwn0 = f.iwn[f.Index0[2]]
 	G0 = Giwn[f.Index0[2]]
@@ -117,6 +119,27 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	values2 = view(values, 2:n)
 	return sum((values1 + values2) * f.step / 2)
 end
+
+#= L2 norm version loss function
+function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
+	iwn0 = f.iwn[f.Index0[2]]
+	G0 = Giwn[f.Index0[2]]
+
+	int_field = collect(f.int_low:f.step:f.int_up)
+	n = length(int_field)
+	w_times_f = weights .* G0
+	values0 = map(int_field) do z
+		C = 1 ./ (z .- iwn0)
+		return sum(C .* w_times_f) / sum(C .* weights)
+	end
+
+	values = abs.(imag.(values0 - f.f0.(int_field))) / π
+	values=values.^2
+	values1 = view(values, 1:n-1)
+	values2 = view(values, 2:n)
+	return sum((values1 + values2) * f.step / 2)^0.5
+end
+=#
 
 
 # Compute Loss function from Giwn and L0
@@ -140,8 +163,8 @@ end
 	value = f(Giwn, L0)
 	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
 	U, S, V = svd(L0)
-	∂Giwn, ∂weight = gradient(loss, Giwn, V[:, end])
-	F=zeros(ComplexF64,length(S),length(S))
+	∂Giwn, ∂weight = Zygote.gradient(loss, Giwn, V[:, end])
+	F = zeros(ComplexF64, length(S), length(S))
 	# F = Matrix{Float64}(undef, length(S), length(S))
 	for i ∈ axes(F, 1)
 		for j ∈ axes(F, 2)
@@ -153,7 +176,7 @@ end
 	V̄ = zero(V)
 	V̄[:, end] = ∂weight
 	K = F .* (transpose(V) * V̄)
-	conj_AK = U * diagm(S) * ( conj(K) + transpose(K) ) * V'
+	conj_AK = U * diagm(S) * (conj(K) + transpose(K)) * V'
 	O = I(length(S)) .* (transpose(V) * V̄)
 	conj_AO = U * diagm(1 ./ S) * (O - O') * V' / 2
 	return value, Δ -> (nothing, Δ * ∂Giwn, 2 * Δ * (conj_AO + conj_AK))
@@ -194,7 +217,7 @@ function ADaaa_cont_backward(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_
 	f1 = GiwnToL0(ada.iwn, ada.Index0)
 	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
 	f = GiwnToLoss(f1, f2)
-	return gradient(f, ada.Giwn)[1]
+	return (Zygote.gradient(f, ada.Giwn)[1],f(ada.Giwn))
 end
 
 
@@ -211,8 +234,105 @@ function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0,
 end
 =#
 
+# ----------------------------------------------------------------
+# Foeward mode
+
+
+
+function ADaaa_cont_forward(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64, int_up::Float64, step::Float64)
+	@assert length(wn) == length(Giwn)
+	ada = ADaaaBase(wn, Giwn)
+	f1 = GiwnToL0(ada.iwn, ada.Index0)
+	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
+	f = GiwnToLoss(f1, f2)
+	return ForwardAD(f, ada.Giwn)
+end
+
+function ForwardAD(f::GiwnToLoss, Giwn::Vector{ComplexF64})
+	∂f1, L0 = ForwardAD(f.f1, Giwn)
+	∂f2, loss_value = ForwardAD(f.f2, Giwn, L0)
+	∂f = ∂f2[1] + transpose(∂f1[1]) * vec(∂f2[2])
+	return ∂f, loss_value
+end
+
+function ForwardAD(f::GiwnToL0, Giwn::Vector{ComplexF64})
+	L0 = f(Giwn)
+	n = length(Giwn)
+	m = length(f.Index0[2])
+	jac = Matrix{ComplexF64}(undef, m * (n - m), n)
+	# L0的 jth列
+	count = 0
+	for j ∈ 1:m
+		# L0的 ith行
+		for i ∈ 1:n-m
+			count += 1
+			# 对Giwn[k]求导
+			for k ∈ 1:n
+				if k == f.Index0[1][i]
+					jac[(j-1)*(n-m)+i, k] = 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
+				elseif k == f.Index0[2][j]
+					jac[(j-1)*(n-m)+i, k] = -1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
+				else
+					jac[(j-1)*(n-m)+i, k] = 0
+				end
+			end
+		end
+	end
+
+	return (jac,), L0
+end
+
+function ForwardAD(f::GiwnL0ToLoss, Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
+	loss_value = f(Giwn, L0)
+	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
+	U, S, V = svd(L0)
+	∂Giwn, ∂weight = Zygote.gradient(loss, Giwn, V[:, end])
+	F = zeros(ComplexF64, length(S), length(S))
+	# F = Matrix{Float64}(undef, length(S), length(S))
+	for i ∈ axes(F, 1)
+		for j ∈ axes(F, 2)
+			if i != j
+				F[i, j] = 1 / (S[j]^2 - S[i]^2)
+			end
+		end
+	end
+	V̄ = zero(V)
+	V̄[:, end] = ∂weight
+	K = F .* (transpose(V) * V̄)
+	conj_AK = U * diagm(S) * (conj(K) + transpose(K)) * V'
+	O = I(length(S)) .* (transpose(V) * V̄)
+	conj_AO = U * diagm(1 ./ S) * (O - O') * V' / 2
+	return (∂Giwn, 2 * (conj_AO + conj_AK)), loss_value
+end
+
+
+
+
+
+
+
+
+
 
 
 # ----------------------------------------------------------------
-# Check the correctness of  backward ADaaa by ForwardAD
+# Check the correctness of  backward ADaaa by Finite Difference
+# We give up finite difference method because of it's poor numerical stability
+#=
+function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64=-8.0, int_up::Float64=8.0, step::Float64=1e-4)
+	ε=1e-14
+	n=length(wn)
+	e=Vector{Vector{ComplexF64}}(undef,n)
+	for i in eachindex(e)
+		e[i]=zeros(ComplexF64,n)
+		e[i][i]=1.0+0.0im
+	end
+	_,A0=reconstruct_spectral_density(im*wn,Giwn)
+	_,A1=reconstruct_spectral_density(im*wn,Giwn+ε*e[1])
+	loss_value=quadgk(x->abs( A0(x)-A1(x) )/ε,int_low,int_up)
+	return loss_value
+end
+=#
+
+
 
