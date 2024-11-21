@@ -65,17 +65,15 @@ end
 	m = length(f.Index0[2])
 	jac = Matrix{ComplexF64}(undef, m * (n - m), n)
 	# L0的 jth列
-	count = 0
 	for j ∈ 1:m
 		# L0的 ith行
 		for i ∈ 1:n-m
-			count += 1
 			# 对Giwn[k]求导
 			for k ∈ 1:n
 				if k == f.Index0[1][i]
-					jac[(j-1)*(n-m)+i, k] = 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
+					jac[(j-1)*(n-m)+i, k] = conj( 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) )
 				elseif k == f.Index0[2][j]
-					jac[(j-1)*(n-m)+i, k] = -1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
+					jac[(j-1)*(n-m)+i, k] = -conj( 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) )
 				else
 					jac[(j-1)*(n-m)+i, k] = 0
 				end
@@ -119,6 +117,8 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	values2 = view(values, 2:n)
 	return sum((values1 + values2) * f.step / 2)
 end
+#
+
 
 #= L2 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
@@ -160,26 +160,34 @@ end
 
 
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
+	function vague_reci(a::Number)
+		return a/( a^2+eps(Float64)/2 )
+	end
 	value = f(Giwn, L0)
 	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
 	U, S, V = svd(L0)
+	S=S
+	println(S)
 	∂Giwn, ∂weight = Zygote.gradient(loss, Giwn, V[:, end])
 	F = zeros(ComplexF64, length(S), length(S))
 	# F = Matrix{Float64}(undef, length(S), length(S))
-	for i ∈ axes(F, 1)
-		for j ∈ axes(F, 2)
+	N=length(S)
+	for i ∈ 1:N
+		for j ∈ 1:N
 			if i != j
-				F[i, j] = 1 / (S[j]^2 - S[i]^2)
+				F[i, j] = vague_reci(S[j]^2 - S[i]^2)
 			end
 		end
 	end
 	V̄ = zero(V)
-	V̄[:, end] = ∂weight
-	K = F .* (transpose(V) * V̄)
-	conj_AK = U * diagm(S) * (conj(K) + transpose(K)) * V'
-	O = I(length(S)) .* (transpose(V) * V̄)
-	conj_AO = U * diagm(1 ./ S) * (O - O') * V' / 2
-	return value, Δ -> (nothing, Δ * ∂Giwn, 2 * Δ * (conj_AO + conj_AK))
+	V̄[:, end] = conj(∂weight)/2
+	conj_AK = U * diagm(S) * ( F.* ( V'*conj(V̄) - transpose(V̄)*V ) )*V'
+	O=I(N).*(transpose(V)*V̄)
+	reverseS=diagm(vague_reci.(S))
+	conj_AO=U*reverseS*(O-O')*V'
+	print(norm(conj_AO))
+	println()
+	return value, Δ -> (nothing, Δ * ∂Giwn, Δ * 2 * conj_AK )
 end
 
 # Combine GiwnToL0 and GiwnL0ToLoss to get GiwnToLoss
@@ -236,6 +244,7 @@ end
 
 # ----------------------------------------------------------------
 # Foeward mode
+# To be updated
 
 
 

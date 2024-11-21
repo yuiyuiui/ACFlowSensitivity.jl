@@ -20,9 +20,9 @@
 // Global information configuration
 #let s = (s.methods.info)(
   self: s,
-  title: [Introduction to Applying AD to the AAA Algorithm for Analytic Continuation of the Green's Function],
-
-  author: [Kaiwen Jin],
+  title: [Typst Slide Theme for HKUST(GZ) Based on Touying],
+  subtitle: [基于 Touying 的香港科技大学 Typst 幻灯片模板],
+  author: [Yusheng Zhao],
   date: datetime.today(),
   institution: [香港科技大学],
   others: none
@@ -58,10 +58,10 @@
 #let (slide, empty-slide, title-slide, outline-slide, new-section-slide, ending-slide) = utils.slides(s)
 #show: slides.with()
 
-= Spectral density and Matsubara Green’s function
+= Typst 与 Touying
 
-#tblock(title: [Spectral Density])[
-  
+#tblock(title: [Typst])[
+  Typst 是一门新的基于标记的排版系统，它强大且易于学习。本演示文稿不详细介绍 Typst 的使用，你可以在 Typst 的#link("https://typst.app/docs")[文档]中找到更多信息。
 ]
 
 #tblock(title: [Touying])[
