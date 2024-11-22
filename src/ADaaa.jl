@@ -71,9 +71,9 @@ end
 			# 对Giwn[k]求导
 			for k ∈ 1:n
 				if k == f.Index0[1][i]
-					jac[(j-1)*(n-m)+i, k] = conj( 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) )
+					jac[(j-1)*(n-m)+i, k] =  1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) 
 				elseif k == f.Index0[2][j]
-					jac[(j-1)*(n-m)+i, k] = -conj( 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) )
+					jac[(j-1)*(n-m)+i, k] = - 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) 
 				else
 					jac[(j-1)*(n-m)+i, k] = 0
 				end
@@ -81,7 +81,7 @@ end
 		end
 	end
 	function pullback(Δ)
-		return (nothing, transpose(jac) * vec(Δ))
+		return (nothing, jac' * vec(Δ))
 	end
 
 	return value, pullback
@@ -120,7 +120,7 @@ end
 #
 
 
-#= L2 norm version loss function
+#= L2^2 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	iwn0 = f.iwn[f.Index0[2]]
 	G0 = Giwn[f.Index0[2]]
@@ -132,12 +132,12 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 		C = 1 ./ (z .- iwn0)
 		return sum(C .* w_times_f) / sum(C .* weights)
 	end
+	# values = abs.( imag.( values0 - f.f0.( int_field ) ) / π )
 
-	values = abs.(imag.(values0 - f.f0.(int_field))) / π
-	values=values.^2
+	values = ( imag.( values0 - f.f0.( int_field ) ) / π ).^2
 	values1 = view(values, 1:n-1)
 	values2 = view(values, 2:n)
-	return sum((values1 + values2) * f.step / 2)^0.5
+	return sum((values1 + values2) * f.step / 2)
 end
 =#
 
@@ -161,13 +161,12 @@ end
 
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
 	function vague_reci(a::Number)
-		return a/( a^2+eps(Float64)/2 )
+		# return 1/a
+		return a/( a^2+eps(Float64) )
 	end
 	value = f(Giwn, L0)
 	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
 	U, S, V = svd(L0)
-	S=S
-	println(S)
 	∂Giwn, ∂weight = Zygote.gradient(loss, Giwn, V[:, end])
 	F = zeros(ComplexF64, length(S), length(S))
 	# F = Matrix{Float64}(undef, length(S), length(S))
@@ -229,7 +228,7 @@ function ADaaa_cont_backward(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_
 end
 
 
-#=
+
 function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0, int_up = 5.0, step = 1e-4)
 	@assert length(wn) == length(Giwn)
 	ada = ADaaaBase(wn, Giwn)
@@ -240,7 +239,7 @@ function get_loss(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low = -5.0,
 	f = GiwnToLoss(f1, f2)
 	return f(Giwn)
 end
-=#
+
 
 # ----------------------------------------------------------------
 # Foeward mode
@@ -327,7 +326,7 @@ end
 # ----------------------------------------------------------------
 # Check the correctness of  backward ADaaa by Finite Difference
 # We give up finite difference method because of it's poor numerical stability
-#=
+
 function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64=-8.0, int_up::Float64=8.0, step::Float64=1e-4)
 	ε=1e-14
 	n=length(wn)
@@ -341,7 +340,37 @@ function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}
 	loss_value=quadgk(x->abs( A0(x)-A1(x) )/ε,int_low,int_up)
 	return loss_value
 end
-=#
+
+# ∂L/∂G =  (∂L/∂w)^T * Jw/JG + (∂L/∂w^*)^T * Jw^*/JG 
+function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64=-8.0, int_up::Float64=8.0, step::Float64=1e-4)
+	@assert length(wn) == length(Giwn)
+	ε=1e-6
+	ada = ADaaaBase(wn, Giwn)
+	f1 = GiwnToL0(ada.iwn, ada.Index0)
+	L0 = f1(Giwn)
+	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
+	f = GiwnToLoss(f1, f2)
+	loss = Loss(f2.iwn, f2.Index0, f2.f0, f2.int_low, f2.int_up, f2.step)
+
+	_, _, V = svd(L0)
+	∇Loss_G , ∇Loss_w = Zygote.gradient(loss, Giwn, V[:, end])
+
+	∂LossDiv∂w=conj(∇Loss_w)/2
+	∇w_G=zeros(ComplexF64,length(∇Loss_w),length(Giwn))
+	JwDivJG=zero(∇w_G)
+
+	for j=1:length(Giwn)
+		Giwn1=Giwn .+ ε
+		Giwn2=Giwn .+ ε * im
+		grad_x=( svd( f1(Giwn1) ).V[:,end] - svd( f1(Giwn) ).V[:,end] )/ε
+		grad_y=( svd( f1(Giwn2) ).V[:,end] - svd( f1(Giwn) ).V[:,end] )/ε
+		∇w_G[:,j] = grad_x + grad_y * im
+		JwDivJG[:,j]=( grad_x - grad_y * im )/2
+	end
+	∇Loss_2G=( JwDivJG )' * ∇Loss_w + transpose(∇w_G) * ∂LossDiv∂w
+	return ∇Loss_2G+∇Loss_G
+end
+
 
 
 
