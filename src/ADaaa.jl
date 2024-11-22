@@ -71,9 +71,9 @@ end
 			# 对Giwn[k]求导
 			for k ∈ 1:n
 				if k == f.Index0[1][i]
-					jac[(j-1)*(n-m)+i, k] =  1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) 
+					jac[(j-1)*(n-m)+i, k] = 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
 				elseif k == f.Index0[2][j]
-					jac[(j-1)*(n-m)+i, k] = - 1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]]) 
+					jac[(j-1)*(n-m)+i, k] = -1 / (f.iwn[f.Index0[1][i]] - f.iwn[f.Index0[2][j]])
 				else
 					jac[(j-1)*(n-m)+i, k] = 0
 				end
@@ -96,10 +96,17 @@ struct Loss <: Function
 	int_low::Float64
 	int_up::Float64
 	step::Float64
+	int_field::Vector{Float64}
+end
+
+function Loss(iwn::Vector{ComplexF64}, Index0::Vector{Vector{Int64}}, f0::BarycentricFunction, int_low::Float64, int_up::Float64, step::Float64)
+	n=(length(int_low:step:int_up)>>1)*2+1 # 为了使用simpson积分，需要奇数个点
+	int_field=collect( range(int_low,int_up,n) )
+	return Loss(iwn, Index0, f0, int_low, int_up, step, int_field)
 end
 
 
-# L1 norm version loss function
+#= L1 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	iwn0 = f.iwn[f.Index0[2]]
 	G0 = Giwn[f.Index0[2]]
@@ -117,7 +124,7 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	values2 = view(values, 2:n)
 	return sum((values1 + values2) * f.step / 2)
 end
-#
+=#
 
 
 #= L2^2 norm version loss function
@@ -141,6 +148,31 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 end
 =#
 
+# L2 norm version loss function
+function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
+	iwn0 = f.iwn[f.Index0[2]]
+	G0 = Giwn[f.Index0[2]]
+
+	w_times_f = weights .* G0
+	values0 = map(f.int_field) do z
+		C = 1 ./ (z .- iwn0)
+		return sum(C .* w_times_f) / sum(C .* weights)
+	end
+	values = (imag.(values0 - f.f0.(f.int_field)) / π) .^ 2
+
+	# 辛普森法实现积分
+
+	h = f.step  # 步长
+	I = values[1] + values[end]  # 边界值
+	I += 4 * sum(values[2:2:end-1])  # 奇数项
+	I += 2 * sum(values[3:2:end-2])  # 偶数项
+	I *= h / 3  # 辛普森公式系数
+
+	result = sqrt(I)
+	return result
+end
+#
+
 
 # Compute Loss function from Giwn and L0
 struct GiwnL0ToLoss <: Function
@@ -162,7 +194,7 @@ end
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
 	function vague_reci(a::Number)
 		# return 1/a
-		return a/( a^2+eps(Float64) )
+		return a / (a^2 + 1e-8)
 	end
 	value = f(Giwn, L0)
 	loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
@@ -170,7 +202,7 @@ end
 	∂Giwn, ∂weight = Zygote.gradient(loss, Giwn, V[:, end])
 	F = zeros(ComplexF64, length(S), length(S))
 	# F = Matrix{Float64}(undef, length(S), length(S))
-	N=length(S)
+	N = length(S)
 	for i ∈ 1:N
 		for j ∈ 1:N
 			if i != j
@@ -179,14 +211,14 @@ end
 		end
 	end
 	V̄ = zero(V)
-	V̄[:, end] = conj(∂weight)/2
-	conj_AK = U * diagm(S) * ( F.* ( V'*conj(V̄) - transpose(V̄)*V ) )*V'
-	O=I(N).*(transpose(V)*V̄)
-	reverseS=diagm(vague_reci.(S))
-	conj_AO=U*reverseS*(O-O')*V'
+	V̄[:, end] = conj(∂weight) / 2
+	conj_AK = U * diagm(S) * (F .* (V' * conj(V̄) - transpose(V̄) * V)) * V'
+	O = I(N) .* (transpose(V) * V̄)
+	reverseS = diagm(vague_reci.(S))
+	conj_AO = U * reverseS * (O - O') * V'
 	print(norm(conj_AO))
 	println()
-	return value, Δ -> (nothing, Δ * ∂Giwn, Δ * 2 * conj_AK )
+	return value, Δ -> (nothing, Δ * ∂Giwn, Δ * 2 * conj_AK)
 end
 
 # Combine GiwnToL0 and GiwnL0ToLoss to get GiwnToLoss
@@ -224,7 +256,7 @@ function ADaaa_cont_backward(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_
 	f1 = GiwnToL0(ada.iwn, ada.Index0)
 	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
 	f = GiwnToLoss(f1, f2)
-	return (Zygote.gradient(f, ada.Giwn)[1],f(ada.Giwn))
+	return (Zygote.gradient(f, ada.Giwn)[1], f(ada.Giwn))
 end
 
 
@@ -327,48 +359,69 @@ end
 # Check the correctness of  backward ADaaa by Finite Difference
 # We give up finite difference method because of it's poor numerical stability
 
-function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64=-8.0, int_up::Float64=8.0, step::Float64=1e-4)
-	ε=1e-14
-	n=length(wn)
-	e=Vector{Vector{ComplexF64}}(undef,n)
+function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4)
+	ε = 1e-14
+	n = length(wn)
+	e = Vector{Vector{ComplexF64}}(undef, n)
 	for i in eachindex(e)
-		e[i]=zeros(ComplexF64,n)
-		e[i][i]=1.0+0.0im
+		e[i] = zeros(ComplexF64, n)
+		e[i][i] = 1.0 + 0.0im
 	end
-	_,A0=reconstruct_spectral_density(im*wn,Giwn)
-	_,A1=reconstruct_spectral_density(im*wn,Giwn+ε*e[1])
-	loss_value=quadgk(x->abs( A0(x)-A1(x) )/ε,int_low,int_up)
+	_, A0 = reconstruct_spectral_density(im * wn, Giwn)
+	_, A1 = reconstruct_spectral_density(im * wn, Giwn + ε * e[1])
+	loss_value = quadgk(x -> abs(A0(x) - A1(x)) / ε, int_low, int_up)
 	return loss_value
 end
 
 # ∂L/∂G =  (∂L/∂w)^T * Jw/JG + (∂L/∂w^*)^T * Jw^*/JG 
-function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64=-8.0, int_up::Float64=8.0, step::Float64=1e-4)
+function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4)
 	@assert length(wn) == length(Giwn)
-	ε=1e-6
+	ε = 1e-4
+	println("ε = ", ε)
 	ada = ADaaaBase(wn, Giwn)
 	f1 = GiwnToL0(ada.iwn, ada.Index0)
 	L0 = f1(Giwn)
 	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
-	f = GiwnToLoss(f1, f2)
+	# f = GiwnToLoss(f1, f2)
 	loss = Loss(f2.iwn, f2.Index0, f2.f0, f2.int_low, f2.int_up, f2.step)
 
 	_, _, V = svd(L0)
-	∇Loss_G , ∇Loss_w = Zygote.gradient(loss, Giwn, V[:, end])
+	∇Loss_G, ∇Loss_w = Zygote.gradient(loss, Giwn, V[:, end])
 
-	∂LossDiv∂w=conj(∇Loss_w)/2
-	∇w_G=zeros(ComplexF64,length(∇Loss_w),length(Giwn))
-	JwDivJG=zero(∇w_G)
-
-	for j=1:length(Giwn)
-		Giwn1=Giwn .+ ε
-		Giwn2=Giwn .+ ε * im
-		grad_x=( svd( f1(Giwn1) ).V[:,end] - svd( f1(Giwn) ).V[:,end] )/ε
-		grad_y=( svd( f1(Giwn2) ).V[:,end] - svd( f1(Giwn) ).V[:,end] )/ε
-		∇w_G[:,j] = grad_x + grad_y * im
-		JwDivJG[:,j]=( grad_x - grad_y * im )/2
+	∂LossDiv∂w = conj(∇Loss_w) / 2
+	∇w_G = zeros(ComplexF64, length(∇Loss_w), length(Giwn))
+	JwDivJG = zero(∇w_G)
+	e = Vector{Vector{ComplexF64}}(undef, length(Giwn))
+	for i in eachindex(e)
+		e[i] = zeros(ComplexF64, length(Giwn))
+		e[i][i] = 1.0 + 0.0im
 	end
-	∇Loss_2G=( JwDivJG )' * ∇Loss_w + transpose(∇w_G) * ∂LossDiv∂w
-	return ∇Loss_2G+∇Loss_G
+
+	for j ∈ 1:length(Giwn)
+		w2 = svd(f1(Giwn + ε * im * e[j])).V[:, end]
+		w22 = svd(f1(Giwn - ε * im * e[j])).V[:, end]
+		w1 = svd(f1(Giwn + ε * e[j])).V[:, end]
+		w11 = svd(f1(Giwn - ε * e[j])).V[:, end]
+		w0 = svd(f1(Giwn)).V[:, end]
+		if real(dot(w1, w0)) < 0  # 如果两个向量方向相反
+			w1 = -w1  # 调整符号
+		end
+		if real(dot(w11, w0)) < 0
+			w11 = -w11
+		end
+		if real(dot(w2, w0)) < 0
+			w2 = -w2
+		end
+		if real(dot(w22, w0)) < 0
+			w22 = -w22
+		end
+		grad_x = (w1 - w11) / (2 * ε)
+		grad_y = (w2 - w22) / (2 * ε)
+		∇w_G[:, j] = grad_x + grad_y * im
+		JwDivJG[:, j] = (grad_x - grad_y * im) / 2
+	end
+	∇Loss_2G = (JwDivJG)' * ∇Loss_w + transpose(∇w_G) * ∂LossDiv∂w
+	return ∇Loss_2G + ∇Loss_G
 end
 
 
