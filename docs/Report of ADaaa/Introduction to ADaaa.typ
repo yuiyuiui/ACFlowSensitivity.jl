@@ -20,8 +20,7 @@
 // Global information configuration
 #let s = (s.methods.info)(
   self: s,
-  title: [Introduction to Applying AD to the AAA Algorithm for Analytic Continuation of the Green's Function],
-
+  title: [Introduction to ADaaa],
   author: [Kaiwen Jin],
   date: datetime.today(),
   institution: [香港科技大学],
@@ -58,203 +57,132 @@
 #let (slide, empty-slide, title-slide, outline-slide, new-section-slide, ending-slide) = utils.slides(s)
 #show: slides.with()
 
-= Spectral density and Matsubara Green’s function
+= 1. Spectral density and Matsubara Green’s function
 
 #tblock(title: [Spectral Density])[
+  It has two kinds of forms. 
+  
+  $ 1. quad  A(x)= sum_(k=1)^N delta(x-x_i) $
+
+  $ 2. quad A(x) in  cal(S), quad A(z) in bb(H(C)) $
+
+  Now we nonly consider the second kind.
   
 ]
 
-#tblock(title: [Touying])[
-  Touying 是为 Typst 开发的幻灯片/演示文稿包。Touying 也类似于 LaTeX 的 Beamer，但是得益于 Typst，你可以拥有更快的渲染速度与更简洁的语法。你可以在 Touying 的#link("https://touying-typ.github.io/touying/zh/docs/intro")[文档]中详细了解 Touying。
+#tblock(title: [Green Function])[
+  Define 1. Green function 
 
-  Touying 取自中文里的「投影」，在英文中意为 project。相较而言，LaTeX 中的 beamer 就是德文的投影仪的意思。
+  $ G(z)=∫_bb(R) A(x)/(z-x)d x quad I m z>0, \ quad G(w)=lim_( eta  arrow.r 0^+) ∫A(x)/(w+i eta-x) d x = P.V.∫A(x)/(w-x)d x-i pi A(w) $
+
+  $ A(w)=-  1/pi I m(G(w))  $ 
+
+  Theorem 1. $ lim_( z arrow.r w) ∫A(x)/(z-x) d x=P.V.∫A(x)/(w-x)d x-i pi *s g n (eta)A(w) $
+
+  Proposition 1.1. The green function $G(z)$ on $ I m z>0$ can be analytically continued to the whole complex plane $bb(C)$.
+
+  It means that $G(z)$ has no pole on $bb(C)$.
+
+
+ 
 ]
 
 = Touying 幻灯片动画
 
-== 简单动画
+== 2. Complex Differentiation
+Definition 2. For a function 
 
-使用 ```typ #pause``` #pause 暂缓显示内容。
+$ f: bb(C) arrow.r bb(C), quad f(x,y)=u(x,y)+i v(x,y), quad u,v in C^(infinity) $
 
-#pause
+We define that 
 
-就像这样。
+$ d f =(partial f)/(partial x)d x+(partial f)/(partial y)d y=(partial f)/(partial z)d z+(partial f)/(partial z^*)d z^* $
 
-#meanwhile
+In above formula, 
 
-同时，#pause 我们可以使用 ```typ #meanwhile``` 来 #pause 显示同时其他内容。
+$ d z= d x+ i d y, quad d z^*=d x - i d y $
 
-#speaker-note[
-  使用 ```typ #let s = (s.math.show-notes-on-second-screen)(self: s, right)``` 来启用演讲提示，否则将不会显示。
-]
+$ (partial )/(partial z)=1/2((partial )/(partial x)-i (partial )/(partial y)), quad (partial )/(partial z^*)=1/2((partial )/(partial x)+ i (partial )/(partial y)) $
 
 
-== 复杂动画 - Mark-Style
 
-在子幻灯片 #utils.touying-wrapper((self: none) => str(self.subslide)) 中，我们可以：
 
-使用 #uncover("2-")[```typ #uncover``` 函数]（预留空间）
+== 2. Complex Differentiation
 
-使用 #only("2-")[```typ #only``` 函数]（不预留空间）
+Proposition 2.1 $ ((partial f)/(partial z))^* =  ((partial f^*)/(partial z^*)) $
 
-#alternatives[多次调用 ```typ #only``` 函数 \u{2717}][使用 ```typ #alternatives``` 函数 #sym.checkmark] 从多个备选项中选择一个。
+Proposition 2.2 $ d g(f)=((partial g)/(partial f) (partial f)/(partial z) + (partial g)/(partial f^*)(partial f^*)/(partial z) )d z+ ((partial g)/(partial f) (partial f)/(partial z^*) + (partial g)/(partial f^*)(partial f^*)/(partial z^*) )d z^* $
 
 
-== 复杂动画 - Callback-Style
 
-#slide(repeat: 3, self => [
-  #let (uncover, only, alternatives) = utils.methods(self)
 
-  在子幻灯片 #self.subslide 中，我们可以：
+== 3. AAA algorithm
 
-  使用 #uncover("2-")[```typ #uncover``` 函数]（预留空间）
+It's a interesting algorithm because it's most important idea is not barycentric but deviding a set of points into 2 parts. One of them is insert points set and the second is checking points set.
 
-  使用 #only("2-")[```typ #only``` 函数]（不预留空间）
+The reason is you can't decide the weight just with all ponits as insert points.
 
-  #alternatives[多次调用 ```typ #only``` 函数 \u{2717}][使用 ```typ #alternatives``` 函数 #sym.checkmark] 从多个备选项中选择一个。
-])
+Denote chosen points as $A$, and set of waiting points as $B$. Assume that 
+$ A={z_1,..,z_n}, quad B={z_{n+1},..,z_m} $
 
+Now consider:
+$ L=((G(z_j)-G(z_k))/(z_j-z_k))_(j k) $
 
-== 数学公式动画
+Then we get a sub matrix $L_n$ from it by getting the first $n$ columns and $n+1 , . , m$ rows. 
 
-在 Touying 数学公式中使用 `pause`:
+#image("1.png")
 
-#touying-equation(`
-  f(x)  &= pause x^2 + 2x + 1  \
-        &= pause (x + 1)^2  \
-`)
+Now for 
+$ G(z) approx (N_n(z))/(D_n(z)) $
 
-#meanwhile
+$ N_n(z)= sum_(j=1)^n (w_j G(z_j))/(z-z_j), quad  D_n(z)=sum_(j=1)^n (w_j)/(z-z_j) $
 
-如您所见，#pause 这是 $f(x)$ 的表达式。
+We have 
+$ (G D_n-N_n)(B)=L_n w $
 
-#pause
+$ arrow.double.r min_w ||(G D_n-L_n)(B)||_(L^2)=min_w ||L_n w||=min sigma(L_n) $
 
-通过因式分解，我们得到了结果。
+Then we can use svd to find such $min sigma(L_n)$ and related $w$.
 
-= 与其他 Typst 包集成
+Then we chose 
+$ z_(n e w)=a r g m a x_(z in B) quad ||G(z)-(N_n(z))/(D_n(z))|| $
 
-== CeTZ 动画
+Add $z_(n e w)$ into $A$ and delete it from $B$ and continue iteration.
 
-在 Touying 中集成 CeTZ 动画：
+Get $G(z)$ and then we can reconstruct $A(w)$
 
-#cetz-canvas({
-  import cetz.draw: *
 
-  rect((0,0), (5,5))
 
-  (pause,)
 
-  rect((0,0), (1,1))
-  rect((1,1), (2,2))
-  rect((2,2), (3,3))
 
-  (pause,)
 
-  line((0,0), (2.5, 2.5), name: "line")
-})
+== 4. Calculate $nabla$ Loss
 
+Given $G_0(i w n)$ and $w n$, the way we calcuate Loss function is as following chart and the Loss function is defined as 
 
-== Fletcher 动画
+$ L o s s (G(i w n), w e i g h t)=||A(x)-A_0(x)||_2$
 
-在 Touying 中集成 Fletcher 动画：
 
-#fletcher-diagram(
-  node-stroke: .1em,
-  node-fill: gradient.radial(blue.lighten(80%), blue, center: (30%, 20%), radius: 80%),
-  spacing: 4em,
-  edge((-1,0), "r", "-|>", `open(path)`, label-pos: 0, label-side: center),
-  node((0,0), `reading`, radius: 2em),
-  edge((0,0), (0,0), `read()`, "--|>", bend: 130deg),
-  pause,
-  edge(`read()`, "-|>"),
-  node((1,0), `eof`, radius: 2em),
-  pause,
-  edge(`close()`, "-|>"),
-  node((2,0), `closed`, radius: 2em, extrude: (-2.5, 0)),
-  edge((0,0), (2,0), `close()`, "-|>", bend: -40deg),
-)
+#image("2.png")
 
-== 其他例子
+Finite difference (FD) works awful for calculating derivative of
 
-#tblock(title: [Pinit, MiTeX, Codly, Ctheorems...])[
-  Touying 社区正在探索与更多 Typst 包的集成，详细情况可查阅#link("https://touying-typ.github.io/touying/zh/docs/category/package-integration")[文档]。
-]
+$ L o s s(G,w) $ 
 
-= 其他功能
+So we use AD to calculate $nabla L o s s$
 
-== 双栏布局
+But because $L_0$ is an ill-condition number matrix and the log of its condition number is approximately proportional to the number of $G(i w n)$, formulas of calculating compelx SVD performs disastrously. So we directly use FD and infact  
 
-#slide(composer: (1fr, 1fr))[
-  我仰望星空，
+$ (w e i g h t(G_0+epsilon)-w e i g h t(G_0))/epsilon $
 
-  它是那样辽阔而深邃；
+performs very stably as $epsilon$ changes.
 
-  那无穷的真理，
+Then with proposition 2.2 we have
 
-  让我苦苦地求索、追随。
+Theorem 4.
+$ nabla_G L o s s(G,w(G))=2((∂L)/(∂G))^*  = nabla_1 L + 2((∂L)/(∂w))^(dagger) * ((J w)/(J G))^* + 2((∂L)/(∂w))^T * (J w) /(J G^*) $  
 
-  我仰望星空，
+Here $(J y)/(J x)$ means the jacobian matrix.
 
-  它是那样庄严而圣洁；
 
-  那凛然的正义，
 
-  让我充满热爱、感到敬畏。
-][
-  我仰望星空，
-
-  它是那样自由而宁静；
-
-  那博大的胸怀，
-
-  让我的心灵栖息、依偎。
-
-  我仰望星空，
-
-  它是那样壮丽而光辉；
-
-  那永恒的炽热，
-
-  让我心中燃起希望的烈焰、响起春雷。
-]
-
-
-== 内容跨页
-
-豫章故郡，洪都新府。星分翼轸，地接衡庐。襟三江而带五湖，控蛮荆而引瓯越。物华天宝，龙光射牛斗之墟；人杰地灵，徐孺下陈蕃之榻。雄州雾列，俊采星驰。台隍枕夷夏之交，宾主尽东南之美。都督阎公之雅望，棨戟遥临；宇文新州之懿范，襜帷暂驻。十旬休假，胜友如云；千里逢迎，高朋满座。腾蛟起凤，孟学士之词宗；紫电青霜，王将军之武库。家君作宰，路出名区；童子何知，躬逢胜饯。
-
-时维九月，序属三秋。潦水尽而寒潭清，烟光凝而暮山紫。俨骖騑于上路，访风景于崇阿。临帝子之长洲，得天人之旧馆。层峦耸翠，上出重霄；飞阁流丹，下临无地。鹤汀凫渚，穷岛屿之萦回；桂殿兰宫，即冈峦之体势。
-
-披绣闼，俯雕甍，山原旷其盈视，川泽纡其骇瞩。闾阎扑地，钟鸣鼎食之家；舸舰弥津，青雀黄龙之舳。云销雨霁，彩彻区明。落霞与孤鹜齐飞，秋水共长天一色。渔舟唱晚，响穷彭蠡之滨，雁阵惊寒，声断衡阳之浦。
-
-遥襟甫畅，逸兴遄飞。爽籁发而清风生，纤歌凝而白云遏。睢园绿竹，气凌彭泽之樽；邺水朱华，光照临川之笔。四美具，二难并。穷睇眄于中天，极娱游于暇日。天高地迥，觉宇宙之无穷；兴尽悲来，识盈虚之有数。望长安于日下，目吴会于云间。地势极而南溟深，天柱高而北辰远。关山难越，谁悲失路之人；萍水相逢，尽是他乡之客。怀帝阍而不见，奉宣室以何年？
-
-嗟乎！时运不齐，命途多舛。冯唐易老，李广难封。屈贾谊于长沙，非无圣主；窜梁鸿于海曲，岂乏明时？所赖君子见机，达人知命。老当益壮，宁移白首之心？穷且益坚，不坠青云之志。酌贪泉而觉爽，处涸辙以犹欢。北海虽赊，扶摇可接；东隅已逝，桑榆非晚。孟尝高洁，空余报国之情；阮籍猖狂，岂效穷途之哭！
-
-勃，三尺微命，一介书生。无路请缨，等终军之弱冠；有怀投笔，慕宗悫之长风。舍簪笏于百龄，奉晨昏于万里。非谢家之宝树，接孟氏之芳邻。他日趋庭，叨陪鲤对；今兹捧袂，喜托龙门。杨意不逢，抚凌云而自惜；钟期既遇，奏流水以何惭？
-
-呜呼！胜地不常，盛筵难再；兰亭已矣，梓泽丘墟。临别赠言，幸承恩于伟饯；登高作赋，是所望于群公。敢竭鄙怀，恭疏短引；一言均赋，四韵俱成。请洒潘江，各倾陆海云尔。
-
-#align(center)[
-  滕王高阁临江渚，佩玉鸣鸾罢歌舞。\
-  画栋朝飞南浦云，珠帘暮卷西山雨。\
-  闲云潭影日悠悠，物换星移几度秋。\
-  阁中帝子今何在？槛外长江空自流。
-]
-
-// appendix by freezing last-slide-number
-#let s = (s.methods.appendix)(self: s)
-#let (slide, empty-slide) = utils.slides(s)
-
-== 附注
-
-#slide[
-  - 您可以使用：
-    ```sh
-    typst init @preview/touying-simpl-hkustgz
-    ```
-    来创建基于本模板的演示文稿项目。
-
-  - 本模板仓库位于 #link("https://github.com/exaclior/touying-simpl-hkustgz")，欢迎关注与贡献。
-]
