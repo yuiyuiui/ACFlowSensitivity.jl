@@ -53,6 +53,7 @@ end;
 ∇Loss_A
 ∇Loss_A_FiniDiff
 norm(∇Loss_A-∇Loss_A_FiniDiff)
+norm(∇Loss_A)
 
 
 

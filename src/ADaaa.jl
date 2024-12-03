@@ -359,7 +359,7 @@ end
 # Check the correctness of  backward ADaaa by Finite Difference
 # We give up finite difference method because of it's poor numerical stability
 
-function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4)
+function aaa_cont_FiniteDifference_Direct(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4)
 	ε = 1e-14
 	n = length(wn)
 	e = Vector{Vector{ComplexF64}}(undef, n)
@@ -373,20 +373,23 @@ function aaa_cont_FiniteDifference(wn::Vector{Float64}, Giwn::Vector{ComplexF64}
 	return loss_value
 end
 
+
+
 # ∂L/∂G =  (∂L/∂w)^T * Jw/JG + (∂L/∂w^*)^T * Jw^*/JG 
-function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4)
+function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; int_low::Float64 = -8.0, int_up::Float64 = 8.0, step::Float64 = 1e-4, ε=1e-4)
 	@assert length(wn) == length(Giwn)
-	ε = 1e-4
-	println("ε = ", ε)
 	ada = ADaaaBase(wn, Giwn)
 	f1 = GiwnToL0(ada.iwn, ada.Index0)
 	L0 = f1(Giwn)
+
+    # println(ada.Index0)
+
 	f2 = GiwnL0ToLoss(ada.iwn, ada.Index0, ada.brcF, int_low, int_up, step)
 	# f = GiwnToLoss(f1, f2)
 	loss = Loss(f2.iwn, f2.Index0, f2.f0, f2.int_low, f2.int_up, f2.step)
 
 	_, _, V = svd(L0)
-	∇Loss_G, ∇Loss_w = Zygote.gradient(loss, Giwn, V[:, end])
+	∇Loss_1G, ∇Loss_w = Zygote.gradient(loss, Giwn, V[:, end])
 
 	∂LossDiv∂w = conj(∇Loss_w) / 2
 	∇w_G = zeros(ComplexF64, length(∇Loss_w), length(Giwn))
@@ -397,12 +400,13 @@ function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; 
 		e[i][i] = 1.0 + 0.0im
 	end
 
+	w0 = svd(f1(Giwn)).V[:, end]
+
 	for j ∈ 1:length(Giwn)
 		w2 = svd(f1(Giwn + ε * im * e[j])).V[:, end]
 		w22 = svd(f1(Giwn - ε * im * e[j])).V[:, end]
 		w1 = svd(f1(Giwn + ε * e[j])).V[:, end]
 		w11 = svd(f1(Giwn - ε * e[j])).V[:, end]
-		w0 = svd(f1(Giwn)).V[:, end]
 		if real(dot(w1, w0)) < 0  # 如果两个向量方向相反
 			w1 = -w1  # 调整符号
 		end
@@ -421,7 +425,7 @@ function aaa_cont_FiniDIff_Chain(wn::Vector{Float64}, Giwn::Vector{ComplexF64}; 
 		JwDivJG[:, j] = (grad_x - grad_y * im) / 2
 	end
 	∇Loss_2G = (JwDivJG)' * ∇Loss_w + transpose(∇w_G) * ∂LossDiv∂w
-	return ∇Loss_2G + ∇Loss_G
+	return ∇Loss_2G + ∇Loss_1G
 end
 
 

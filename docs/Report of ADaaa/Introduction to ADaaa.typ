@@ -70,8 +70,8 @@
   
 ]
 
-#tblock(title: [Green Function])[
-  Define 1. Green function 
+#tblock(title: [Matsubara Green Function])[
+  Define 1. Matsubara Green function 
 
   $ G(z)=∫_bb(R) A(x)/(z-x)d x quad I m z>0, \ quad G(w)=lim_( eta  arrow.r 0^+) ∫A(x)/(w+i eta-x) d x = P.V.∫A(x)/(w-x)d x-i pi A(w) $
 
@@ -151,6 +151,17 @@ Add $z_(n e w)$ into $A$ and delete it from $B$ and continue iteration.
 
 Get $G(z)$ and then we can reconstruct $A(w)$
 
+= Numerecal Experment
+Pure signal without noise, with 1e-6 noise and larger 1e-4 noise, 1e-2 noise and 1e-1 noise 
+#image("3.png")
+#image("4.png")
+#image("5.png")
+#image("6.png")
+#image("7.png")
+
+
+
+
 
 
 
@@ -183,6 +194,39 @@ Theorem 4.
 $ nabla_G L o s s(G,w(G))=2((∂L)/(∂G))^*  = nabla_1 L + 2((∂L)/(∂w))^(dagger) * ((J w)/(J G))^* + 2((∂L)/(∂w))^T * (J w) /(J G^*) $  
 
 Here $(J y)/(J x)$ means the jacobian matrix.
+
+
+= Numerecal Check
+We have checked the correctness of the formula we get, and the stablity of calculating $(J w)/(J G)$ by FD. Now we show the variation of $|nabla L(G)|$ as $epsilon$ in FD changes.
+
+When no noise, it's stable around 1840:
+#image("8.png")
+
+But if we add noise even if a little, the AD value break totally. In this condition the only we to get a suitable gradient is calculate a series of $epsilon$ and choose a piece of relatively stable statistic.
+
+#image("9.png")
+#image("10.png")
+
+I gauss that the root cause is aaa algorithm is non-differentiable. The evidence is that, for 
+
+$G i w n arrow.r L_0 $
+
+Even if no noise and we have only 8 $G i w n$ points, when the condition number is only about 1.1e6, but the value of
+
+$||nabla_G L_0(G)||$
+
+is still greatly unstable no matter in a wide or narrow range.
+
+#image("11.png")
+#image("12.png")
+
+The solution I can think of is give a tight and differentiable upper bound. And apply AD on this estimulation.
+
+
+
+
+
+
 
 
 

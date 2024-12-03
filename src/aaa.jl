@@ -114,7 +114,7 @@ function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
         
 
         # Do we end the iteration?
-        if (best_error<tol*max_values) || (n>=max_degree)||
+        if (best_error<tol*max_values) || (n>=max_degree)|| #n>=6 ||
             ((n-best_n>=lookaheaad)&&(best_error<1e-2*max_values))
             break
         end
