@@ -106,7 +106,7 @@ function Loss(iwn::Vector{ComplexF64}, Index0::Vector{Vector{Int64}}, f0::Baryce
 end
 
 
-#= L1 norm version loss function
+# L1 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	iwn0 = f.iwn[f.Index0[2]]
 	G0 = Giwn[f.Index0[2]]
@@ -124,31 +124,11 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	values2 = view(values, 2:n)
 	return sum((values1 + values2) * f.step / 2)
 end
-=#
+#
 
 
-#= L2^2 norm version loss function
-function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
-	iwn0 = f.iwn[f.Index0[2]]
-	G0 = Giwn[f.Index0[2]]
 
-	int_field = collect(f.int_low:f.step:f.int_up)
-	n = length(int_field)
-	w_times_f = weights .* G0
-	values0 = map(int_field) do z
-		C = 1 ./ (z .- iwn0)
-		return sum(C .* w_times_f) / sum(C .* weights)
-	end
-	# values = abs.( imag.( values0 - f.f0.( int_field ) ) / π )
-
-	values = ( imag.( values0 - f.f0.( int_field ) ) / π ).^2
-	values1 = view(values, 1:n-1)
-	values2 = view(values, 2:n)
-	return sum((values1 + values2) * f.step / 2)
-end
-=#
-
-# L2 norm version loss function
+#= L2 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	iwn0 = f.iwn[f.Index0[2]]
 	G0 = Giwn[f.Index0[2]]
@@ -171,7 +151,7 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 	result = sqrt(I)
 	return result
 end
-#
+=#
 
 
 # Compute Loss function from Giwn and L0

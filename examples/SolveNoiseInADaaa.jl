@@ -1,7 +1,9 @@
 using ACFlowSensitivity
 using Plots,LinearAlgebra,Zygote
 
-N=8;
+# it seems that only when N=20, finite difference works
+
+N=20;
 β=10.0;
 μ=[0.5,-2.5]; σ=[0.2,0.8]; peak=[1.0,0.3];
 A=continous_spectral_density(μ,σ,peak);

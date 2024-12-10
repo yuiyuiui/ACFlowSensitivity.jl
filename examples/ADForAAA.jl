@@ -1,7 +1,7 @@
 using ACFlowSensitivity
 using Plots
 
-N=8;
+N=20;
 β=10.0;
 # μ=[0.5,-2.5]  .+ 0.1*rand(2); σ=[0.2,0.8] .+ 0.1*rand(2); peak=[1.0,0.3] .+ 0.1*rand(2)  ;
 μ=[0.5,-2.5]; σ=[0.2,0.8]; peak=[1.0,0.3];
@@ -28,7 +28,7 @@ Grad=zeros(M);
 
 for i=1:M
     println(i)
-    bbb=aaa_cont_FiniDIff_Chain(wn,Giwn,ε[i])
+    bbb=aaa_cont_FiniDIff_Chain(wn,Giwn;ε = ε[i])
     Grad[i]=sum(abs.(bbb).^2)^(0.5)
 end;
 
@@ -37,9 +37,9 @@ plot(ε,Grad,label="size of grad changes as ε changes")
 #--------------------------------------------------------------
 # Add noise 
 M=10
-noise=0.0;
-low_bound=1e-4
-up_bound=1e-2
+noise=1e-4;
+low_bound=0.04
+up_bound=0.1
 ε=exp.( collect( range( log(low_bound), log(up_bound), M ) ) );
 G_noise=copy(Giwn);
 for i in eachindex(G_noise)
@@ -58,3 +58,4 @@ end;
 
 plot(ε,Grad_noise,label="size of grad changes as ε changes with noise:$noise")
 
+# 试试换回L2？

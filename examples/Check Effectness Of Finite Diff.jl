@@ -4,6 +4,9 @@ using LinearAlgebra, Plots,Zygote
 
 # loss_w(w::Vector{ComplexF64}) = sum(abs.(w) .^ 2)^(0.5)
 
+# We notice that complex svd gradient formula equals to finite difference only when we use L1 Loss function 
+# If we use L2, it blows up and we don't know why now.
+
 loss_w(w::Vector{ComplexF64}) = sum( abs.(w) )
 
 # x -> x/( x^2 + ε )
