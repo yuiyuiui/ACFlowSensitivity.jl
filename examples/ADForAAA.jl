@@ -59,3 +59,10 @@ end;
 plot(ε,Grad_noise,label="size of grad changes as ε changes with noise:$noise")
 
 # 试试换回L2？
+
+
+
+
+
+
+

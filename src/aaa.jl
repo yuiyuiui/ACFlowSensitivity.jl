@@ -18,18 +18,6 @@ function aaa_check(A;β::Float64=10.0,N::Int64=20,output_bound::Float64=5.0,outp
     return mesh,reA,construct_bary_func(w,g,v)
 end
 
-# generate values of G(iw_n)
-function generate_G_values_cont(β::Float64,N::Int64, A;int_low::Float64=-20.0,int_up::Float64=20.0)
-    grid=(collect(0:N-1).+0.5)*2π/β  
-    n = length(grid)
-    res = zeros(ComplexF64, n)
-    for i = 1:n
-        res[i] = quadgk(x -> A(x) / (im * grid[i] - x), int_low, int_up)[1]
-    end
-    return res
-end
-
-
 # reconstruct spectral density
 function reconstruct_spectral_density(input_grid::Vector{ComplexF64},input_values::Vector{ComplexF64})
     # construct output mesh
@@ -37,19 +25,6 @@ function reconstruct_spectral_density(input_grid::Vector{ComplexF64},input_value
     return (w,g,v), construct_bf_sd(w,g,v)
 end
 
-# construct combanition of gauss waves
-function continous_spectral_density(μ::Vector{Float64},σ::Vector{Float64},peak::Vector{Float64})
-    @assert length(μ)==length(σ)==length(peak)
-    n=length(μ)
-    function y(x::Float64)
-        res=0
-        for i=1:n
-            res+=peak[i]*exp(-(x-μ[i])^2/(2*σ[i]^2))
-        end
-        return res
-    end
-    return y
-end
 
 # aaa algorithm writen by myself
 function my_aaa(grid::Vector{ComplexF64},values::Vector{ComplexF64};
