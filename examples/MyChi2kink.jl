@@ -13,11 +13,11 @@ output_range=range(-output_bound,output_bound,output_number);
 output_range=collect(output_range);
 iwn=(collect(0:N-1).+0.5)*2π/β * im;
 
-Aout=my_chi2kink(iwn,Gvalue,output_range)
+Aout=chi2kink_v1(iwn,Gvalue,output_range)
 plot(output_range,A.(output_range),label="origin Spectral ",title="noise=$noise")
 plot!(output_range,Aout,label="reconstruct Spectral")
 
-Aout=my_chi2kink(iwn,Gvalue,output_range;singular_space=false)
+Aout=chi2kink_v2(iwn,Gvalue,output_range)
 plot(output_range,A.(output_range))
 plot!(output_range,Aout)
 
