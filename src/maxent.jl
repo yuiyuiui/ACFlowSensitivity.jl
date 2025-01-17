@@ -149,7 +149,7 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	S = S[1:n]
 
 	# defualt model
-	model = exp.(-output_range .^ 2 / 2)
+	model = exp.(-output_range .^ 2 / 4)
 	# 调整参数，归一化
 	model = model / (model' * output_weight)
 
@@ -191,9 +191,13 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	for i in 1:L
 		@show i
 		α = α_vec[i]
-		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), zeros(n))
+		print_out=false
+		if abs(α-1.0)<1e-1
+			print_out = true
+		end
+		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), zeros(n);print_out = print_out)
 		χ²_vec[i] = χ²(u_opt)
-		@show log(α),log(χ²_vec[i])
+		@show log10(α),log10(χ²_vec[i])
 	end
 	idx = findall(isfinite,χ²_vec)
 	α_vec=α_vec[idx]
@@ -201,11 +205,11 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 
 	# 现在进行曲线拟合
 	guess_fit = [0.0, 5.0, 2.0, 0.0]
-	_, _, c, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)
+	_, _, c, dd = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)
 
 
 	# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
-	α_opt = 10.0^c
+	α_opt = 10.0^(c-2.5/dd)
 	u_opt,_ = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), zeros(n))
 
 	#复原返回要求的A

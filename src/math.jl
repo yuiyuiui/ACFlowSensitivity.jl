@@ -128,6 +128,7 @@ function my_newton(
 	fun::Function,
 	grad::Function,
 	guess;
+    print_out = false,
 	maxiter::Int64 = 20000,
 	mixing::Float64 = 0.5,
  )
@@ -166,6 +167,9 @@ function my_newton(
 		feed = feeds[end] + mixing * (backs[end] - feeds[end])
 
 		f = fun(feed)
+        if print_out && counter<=100
+            @show norm(feed)
+        end
 		J = grad(feed)
 		back = _apply(feed, f, J)
 		push!(feeds, feed)
@@ -194,7 +198,7 @@ function my_curve_fit(xx::Vector{Float64}, yy::Vector{Float64}, guess::Vector{Fl
     @assert length(xx)==length(yy)
 	loss(p) = sum((p[1] .+ p[2] ./ (1 .+ exp.(-p[4] * (xx .- p[3]))) - yy) .^ 2)
     L=length(xx)
-    
+
 	# 公式的正确性已被验证
 	function J(p)
 		@assert length(p) == 4
