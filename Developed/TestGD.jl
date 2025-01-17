@@ -202,6 +202,85 @@ norm(∂Sdiv∂u(opt, α))
 
 
 
+# ----------------------------------------------------------------
+# 两种不同的主要的自己写的梯度下降法的比较
+# 自己写的梯度下降法
+function my_GD_v1(f, grad, x0; tol=1e-6, max_iter=2000)
+    res=copy(x0)
+    ite=0
+    while true
+        ratio=norm(grad(res))
+        # 归一化方向
+        direct=-grad(res)/ratio
+        if ratio<tol || ite>=max_iter
+            println("iterations is $ite")
+            return res
+        end
+
+        f_now=f(res)
+        step=1.0
+        while f(res+direct*step)<f_now-step*ratio*2/3
+            step*=2
+        end
+        while f(res+direct*step)>=f_now-step*ratio/3
+            step/=2
+        end
+        res=res+direct*step
+        ite+=1
+    end
+end
+
+
+# 自己写的梯度下降法，斜率的角平分线版本，v2效果一般会比v1好一些
+function my_GD_v2(f, grad, x0; tol = 1e-6, max_iter = 2000)
+	res = copy(x0)
+	ite = 0
+	while true
+		ratio = norm(grad(res))
+		# 归一化方向
+		direct = -grad(res) / ratio
+		if ratio < tol || ite >= max_iter
+			println("iterations is $ite")
+			return res
+		end
+
+		f_now = f(res)
+		step = 1.0
+		mid_div = (sqrt(ratio^2 + 1) - 1) / ratio
+		while f(res + direct * step) < f_now - step * mid_div
+			step *= 2
+		end
+		while f(res + direct * step) >= f_now - step * mid_div
+			step /= 2
+		end
+		list = collect(range(0, 2 * step, 20)[2:end])
+		min_value = f_now
+		for i ∈ 1:19
+			if f(res + direct * list[i]) < min_value
+				step = list[i]
+				min_value = f(res + direct * list[i])
+			end
+		end
+
+
+		res = res + direct * step
+		ite += 1
+		@show ite, f(res), norm(grad(res)), step
+	end
+end
+
+using LinearAlgebra
+mean=rand(30)
+my(x)=sum((x.-mean).^2)
+myJ(x)=2*(x.-mean)
+guess=rand(30)
+u1=my_GD_v1(my,myJ,guess)
+u2=my_GD_v2(my,myJ,guess)
+norm(grad(u1))
+norm(grad(u2))
+
+
+
 
 
 

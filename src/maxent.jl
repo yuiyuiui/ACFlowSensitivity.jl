@@ -31,7 +31,7 @@ function chi2kink_v1(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	σ = 1e-4
 
 	# 设定一列 α, 长度默认为20
-	L = 18
+	L = 16
 	α_vec = Vector{Float64}(undef, L)
 	α_vec[1] = 1e12
 	for i ∈ 2:L
@@ -69,7 +69,12 @@ function chi2kink_v1(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 			@show i
 			u_opt = Optim.minimizer(optimize(u -> -Q(u, α_vec[i]), zeros(n), BFGS(), options))
 			χ²_vec[i] = χ²(u_opt)
+			@show log(α),log(χ²_vec[i])
 		end
+
+		idx = findall(isfinite,χ²_vec)
+	    α_vec=α_vec[idx]
+	    χ²_vec=χ²_vec[idx]
 
 
 		# 现在进行曲线拟合
@@ -80,7 +85,6 @@ function chi2kink_v1(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 		# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
 		α_opt = 10.0^(c - adjust / d)
 		u_opt = Optim.minimizer(optimize(u -> -Q(u, α_opt), zeros(n), BFGS()))
-		@show χ²(u_opt)
 
 		#复原返回要求的A
 		return A(u_opt)
@@ -138,9 +142,11 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	# real paraliaze Gvalue and kernel
 	G = vcat(real(Gvalue), imag(Gvalue))
 	K = [real(kernel); imag(kernel)]
-	_, S, V = svd(K)
+	U, S, V = svd(K)
 	n = count(x -> (x >= 1e-10), S)
 	V = V[:, 1:n]
+	U = U[:, 1:n]
+	S = S[1:n]
 
 	# defualt model
 	model = exp.(-output_range .^ 2 / 2)
@@ -151,7 +157,7 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	σ = 1e-4
 
 	# 设定一列 α, 以及对应的χ², 长度默认
-	L = 18
+	L = 16
 	α_vec = Vector{Float64}(undef, L)
 	α_vec[1] = 1e12
 	for i ∈ 2:L
@@ -165,45 +171,45 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	end
 
 	# 拟合曲线时候为了防止过拟合设置的参数
-	adjust = 2.5
+	#adjust = 2.5
+
 
 	# function Q
-	A(u::Vector{Float64}) = model .* exp.(V * u)
-	χ²(u::Vector{Float64}) = (G - d * K * A(u))' * (G - d * K * A(u)) / (σ^2)
-	Q(u::Vector{Float64}, α::Float64) = α * (A(u) - model - A(u) .* log.(A(u) ./ model))' * output_weight - 0.5 * χ²(u)
+	A_vec(u::Vector{Float64}) = model .* exp.(V * u)
+	χ²(u::Vector{Float64}) = (G - d * K * A_vec(u))' * (G - d * K * A_vec(u)) / (σ^2)
+	Q(u::Vector{Float64}, α::Float64) = α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight - 0.5 * χ²(u)
 
-	# 𝞉Q/∂u
-	function ∂Qdiv∂u(u::Vector{Float64}, α::Float64)
-		∂Sdiv∂A = -d * (V * u)'    #行向量	
-		∂χ²div∂A = 2 / (σ^2) * (-d * G' * K + d^2 * A(u)' * K' * K)    #行向量
-		∂Adiv∂u = diagm(A(u)) * V
-		∂Sdiv∂u = ∂Sdiv∂A * ∂Adiv∂u
-		∂χ²div∂u = ∂χ²div∂A * ∂Adiv∂u
+	# -𝞉Q/∂A
+	J(u::Vector{Float64}, α::Float64) = α * u + 1 / (σ^2) * (-diagm(S) * U' * G + d * diagm(S)^2 * V' * A_vec(u))
 
-		return (α * ∂Sdiv∂u - ∂χ²div∂u / 2)'
-	end
+	# -∂²Q/∂A∂u
+	H(u::Vector{Float64}, α::Float64) = α * Matrix(I(n)) + d / (σ^2) * diagm(S)^2 * V' * diagm(A_vec(u)) * V
 
 
-	# 接下来用BFGS求最值点
+
+	# 接下来用Newton method求最值点
 	for i in 1:L
 		@show i
-		α = α_vec
-		u_opt = my_BFGS(u -> -Q(u, α_vec[i]), u -> -∂Qdiv∂u(u, α_vec[i]), zeros(n))
+		α = α_vec[i]
+		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), zeros(n))
 		χ²_vec[i] = χ²(u_opt)
+		@show log(α),log(χ²_vec[i])
 	end
+	idx = findall(isfinite,χ²_vec)
+	α_vec=α_vec[idx]
+	χ²_vec=χ²_vec[idx]
 
 	# 现在进行曲线拟合
-	guess_fit = ones(4)
-	_, _, c, d = curve_fit(fitfun, log10.(α_vec), log10.(χ²_vec), guess_fit).param
+	guess_fit = [0.0, 5.0, 2.0, 0.0]
+	_, _, c, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)
 
 
 	# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
-	α_opt = 10.0^(c - adjust / d)
-	u_opt = my_BFGS(u -> -Q(u, α_opt), u -> -∂Qdiv∂u(u, α_opt), model)
-	@show χ²(u_opt)
+	α_opt = 10.0^c
+	u_opt,_ = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), zeros(n))
 
 	#复原返回要求的A
-	return A(u_opt)
+	return A_vec(u_opt)
 end
 
 

@@ -5,9 +5,9 @@ using Plots
 A=continous_spectral_density(μ,σ,peak);
 β=10.0;
 N=20;
-output_bound=5.0;
-output_number=401;
-noise=1e-3;
+output_bound=8.0;
+output_number=801;
+noise=0.0;
 Gvalue=generate_G_values_cont(β,N,A;noise=noise);
 output_range=range(-output_bound,output_bound,output_number);
 output_range=collect(output_range);

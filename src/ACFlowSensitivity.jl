@@ -6,7 +6,7 @@ using Zygote:@adjoint
 
 
 # export interfaces
-export my_BFGS, my_GD
+export newton,my_GD_v1,my_GD_v2
 export continous_spectral_density, kernel,aaa_check,kernel
 export discrete_GF,benchmark_GF
 export generate_G_values_cont,AD_aaa
