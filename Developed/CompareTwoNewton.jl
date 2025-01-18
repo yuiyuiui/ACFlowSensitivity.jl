@@ -41,5 +41,7 @@ S = Dict{String, Any}(
 setup_param(B, S);
 
 mesh, reA, reG = solve(wn, Gvalue);
-plot(mesh,A.(mesh))
-plot!(mesh,reA)
+plot(mesh,A.(mesh),label = "origin Spectral ", title = "noise=$noise")
+plot!(mesh,reA, label = "reconstruct Spectral by ACFlow")
+plot!(output_range, Aout,label = "reconstruct Spectral by myself")
+

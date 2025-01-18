@@ -188,16 +188,14 @@ function chi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 
 
 	# 接下来用Newton method求最值点
+	u_guess=zeros(n)
 	for i in 1:L
 		@show i
 		α = α_vec[i]
-		print_out=false
-		if abs(α-1.0)<1e-1
-			print_out = true
-		end
-		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), zeros(n);print_out = print_out)
+		u_opt, call = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
+		u_guess = copy(u_opt)
 		χ²_vec[i] = χ²(u_opt)
-		@show log10(α),log10(χ²_vec[i])
+		@show log10(α),log10(χ²_vec[i]),norm(J(u_opt,α)),call
 	end
 	idx = findall(isfinite,χ²_vec)
 	α_vec=α_vec[idx]

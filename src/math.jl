@@ -128,7 +128,6 @@ function my_newton(
 	fun::Function,
 	grad::Function,
 	guess;
-    print_out = false,
 	maxiter::Int64 = 20000,
 	mixing::Float64 = 0.5,
  )
@@ -167,9 +166,6 @@ function my_newton(
 		feed = feeds[end] + mixing * (backs[end] - feeds[end])
 
 		f = fun(feed)
-        if print_out && counter<=100
-            @show norm(feed)
-        end
 		J = grad(feed)
 		back = _apply(feed, f, J)
 		push!(feeds, feed)
