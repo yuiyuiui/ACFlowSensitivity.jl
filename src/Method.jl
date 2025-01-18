@@ -39,7 +39,6 @@ include("math.jl")
 include("aaa.jl")
 include("ADaaa.jl")
 include("maxent.jl")
-include("ADmaxent.jl")
 include("sac.jl")
 include("ADsac.jl")
 

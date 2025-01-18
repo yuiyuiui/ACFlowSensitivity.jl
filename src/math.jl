@@ -151,29 +151,21 @@ function my_newton(
 	end
 
 	counter = 0
-	feeds = []
-	backs = []
-
-	f = fun(guess)
-	J = grad(guess)
-	back = _apply(guess, f, J)
-	push!(feeds, guess)
-	push!(backs, back)
-	res_feed = nothing
+    feed = copy(guess)
+	f = fun(feed)
+	J = grad(feed)
+	back = _apply(feed, f, J)
 
 	while true
 		counter = counter + 1
-		feed = feeds[end] + mixing * (backs[end] - feeds[end])
+		feed +=  mixing * (back - feed)
 
 		f = fun(feed)
 		J = grad(feed)
 		back = _apply(feed, f, J)
-		push!(feeds, feed)
-		push!(backs, back)
 
 		any(isnan.(back)) && error("Got NaN!")
 		if counter > maxiter || maximum(abs.(back - feed)) < 1.e-4
-			res_feed = feed
 			break
 		end
 	end

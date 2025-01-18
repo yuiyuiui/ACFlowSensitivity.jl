@@ -13,7 +13,7 @@ export generate_G_values_cont,AD_aaa
 export DireInverse_check,generate_G_values_delta,DireInverse
 export ADaaa,Solver,get_loss,aaa_cont_FiniDIff_Chain
 export ADaaaBase,GiwnToL0,GiwnL0ToLoss,Loss
-export chi2kink_v1, chi2kink_v2, my_likehood
+export my_chi2kink, AD_chi2kink
 
 
 
