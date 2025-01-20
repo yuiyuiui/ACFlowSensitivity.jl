@@ -89,13 +89,19 @@ end
 function my_GD_v2(f, grad, x0; tol = 1e-3, max_iter = 2000)
 	res = copy(x0)
 	ite = 0
+	reach_tol = false
 	while true
 		ratio = norm(grad(res))
 		# 归一化方向
 		direct = -grad(res) / ratio
 		if ratio < tol || ite >= max_iter
-			println("Iterations is $ite, ratio is $ratio")
-			return res
+			if ratio < tol
+				reach_tol = true
+			end
+			if ite >= max_iter
+				println("Tolerance is reached in GD()!")
+			end
+			return res, reach_tol
 		end
 
 		f_now = f(res)

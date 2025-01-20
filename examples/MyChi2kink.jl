@@ -1,5 +1,5 @@
 using ACFlowSensitivity
-using Plots,Zygote
+using Plots,Zygote,LinearAlgebra
 
 μ=[0.5,-2.5];σ=[0.2,0.8];peak=[1.0,0.3];
 A=continous_spectral_density(μ,σ,peak);
@@ -14,12 +14,11 @@ output_range=collect(output_range);
 iwn=(collect(0:N-1).+0.5)*2π/β * im;
 
 Aout=my_chi2kink(iwn,Gvalue,output_range)
-plot!(output_range,A.(output_range),label="origin Spectral ",title="noise=$noise")
-plot(output_range,Aout,label="reconstruct Spectral")
+plot(output_range,A.(output_range),label="origin Spectral ",title="noise=$noise")
+plot!(output_range,Aout,label="reconstruct Spectral")
 
-realG = vcat(real(Gvalue),imag(Gvalue))
-ADAout = AD_chi2kink(iwn,realG,output_range)
-size(ADAout[1])
+ADAout = ADchi2kink(iwn,Gvalue,output_range)
+@show norm(ADAout)
 
 
 
