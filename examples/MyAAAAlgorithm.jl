@@ -9,7 +9,7 @@ A=continous_spectral_density(μ,σ,peak);
 N=20;
 output_bound=5.0;
 output_number=801;
-noise=1e-4;
+noise=1e-2;
 Amesh,reconstruct_A,_=aaa_check(A;β,N,output_bound,output_number,noise);
 
 # draw the pictures

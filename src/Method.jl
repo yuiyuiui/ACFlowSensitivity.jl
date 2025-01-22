@@ -32,6 +32,18 @@ function generate_G_values_cont(β::Float64,N::Int64, A;int_low::Float64=-20.0,i
     return res
 end
 
+function generate_G_values_disc(β::Float64, N::Int64, γ_vec::Vector{Float64};noise::Float64=0.0)
+    wn=(collect(0:N-1).+0.5)*2π/β  
+    res = zeros(ComplexF64, N)
+    for i=1:N
+        for j=1:N
+            res[i] += γ_vec[j] / (im*wn[i]-wn[j])
+        end
+    end
+
+    res += noise * rand(N) .* exp.(2π * im * rand(N))
+    return res
+end
 
 # ------------------------------------------------------------------------------------
 

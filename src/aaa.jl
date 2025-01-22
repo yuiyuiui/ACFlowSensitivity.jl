@@ -150,19 +150,6 @@ function DireInverse_check(β::Float64,N::Int64,γ::Vector{Float64})
     return DireInverse(poles,grid,G_values)
 end
 
-
-function generate_G_values_delta(poles::Vector{Float64},γ::Vector{Float64},grid::Vector{ComplexF64})
-    @assert length(poles)==length(γ)==length(grid)
-    n=length(poles)
-    G_values=zeros(ComplexF64,n)
-    for i=1:n
-        for j=1:n
-            G_values[i]+=γ[j]/(grid[i]-poles[j])
-        end
-    end
-    return G_values
-end
-
 function DireInverse(poles::Vector{Float64},grid::Vector{ComplexF64},values::Vector{ComplexF64})
     @assert length(poles)==length(values)==length(grid)
     n=length(grid)

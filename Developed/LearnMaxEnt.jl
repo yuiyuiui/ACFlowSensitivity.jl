@@ -17,7 +17,7 @@ A = continous_spectral_density(μ, σ, peak);
 
 β = 10.0;
 N = 20;
-output_bound = 5.0;
+output_bound = 8.0;
 output_number = 801;
 noise = 1e-2;
 wn = collect((0:N-1) .+ 0.5) * 2π / β;
@@ -27,11 +27,11 @@ B = Dict{String,Any}(
     "solver" => "MaxEnt",  # Choose MaxEnt solver
     "mtype"  => "gauss",   # Default model function
     "mesh"   => "tangent", # Mesh for spectral function
-    "ngrid"  => 20,        # Number of grid points for input data
-    "nmesh"  => 801,       # Number of mesh points for output data
-    "wmax"   => 8.0,       # Right boundary of mesh
-    "wmin"   => -8.0,      # Left boundary of mesh
-    "beta"   => 10.0,      # Inverse temperature
+    "ngrid"  => N,        # Number of grid points for input data
+    "nmesh"  => output_number,       # Number of mesh points for output data
+    "wmax"   => output_bound,       # Right boundary of mesh
+    "wmin"   => -output_bound,      # Left boundary of mesh
+    "beta"   => β,      # Inverse temperature
 );
 
 
