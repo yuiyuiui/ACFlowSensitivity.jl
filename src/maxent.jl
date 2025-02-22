@@ -68,27 +68,31 @@ function my_chi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 
 
 	# 接下来用Newton method求最值点
-	u_guess=zeros(n)
+	u_guess = zeros(n)
+	u_opt_vec = Vector{Vector{Float64}}(undef, L)
 	for i in 1:L
 		@show i
 		α = α_vec[i]
-		u_opt, call = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
+		u_opt, call, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
 		u_guess = copy(u_opt)
+		u_opt_vec[i] = copy(u_opt)
 		χ²_vec[i] = χ²(u_opt)
-		@show log10(α),log10(χ²_vec[i]),norm(J(u_opt,α)),call
+		@show log10(α), log10(χ²_vec[i]), norm(J(u_opt, α)), call
 	end
-	idx = findall(isfinite,χ²_vec)
-	α_vec=α_vec[idx]
-	χ²_vec=χ²_vec[idx]
+	idx = findall(isfinite, χ²_vec)
+	α_vec = α_vec[idx]
+	χ²_vec = χ²_vec[idx]
+	u_opt_vec = u_opt_vec[idx]
 
 	# 现在进行曲线拟合
 	guess_fit = [0.0, 5.0, 2.0, 0.0]
-	_, _, c, dd = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)[1]
+	_, _, c, dd = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit,Newton())[1]
 
 
 	# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
-	α_opt = 10.0^(c-2.5/dd)
-	u_opt,_ = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), zeros(n))
+	α_opt = 10.0^(c )
+	u_guess =copy(u_opt_vec[ findmin( abs.( α_vec .- α_opt ) )[2] ])
+	u_opt, = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
 
 	#复原返回要求的A
 	return A_vec(u_opt)
@@ -98,15 +102,16 @@ end
 
 function ADchi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output_range::Vector{Float64})
 	N = length(Gvalue)
-	Try_num = 3
-	noise =1e-4
+	Try_num = 10
+	noise = 1e-6
 	c_grad_opt = zeros(ComplexF64, N)
 	min_grad = Inf
 	fit_res = false
-	for i = 1:Try_num
-		Gvalue += Gvalue .* rand(N) * noise .* exp.(2π * im*rand(N))
-		c_grad, reach_tol = _ADchi2kink(iwn,Gvalue,output_range)
-		if reach_tol && norm(c_grad) < min_grad
+	for i ∈ 1:Try_num
+		Gvalue += Gvalue .* rand(N) * noise .* exp.(2π * im * rand(N))
+		c_grad, reach_tol = _ADchi2kink(iwn, Gvalue, output_range)
+		@show norm(c_grad)
+		if !reach_tol && norm(c_grad) < min_grad
 			fit_res = true
 			c_grad_opt = copy(c_grad)
 			min_grad = norm(c_grad)
@@ -180,60 +185,67 @@ function _ADchi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	# -∂²Q/∂A∂u, -∂f/∂u
 	H(u::Vector{Float64}, α::Float64) = α * Matrix(I(n)) + d / (σ^2) * diagm(S)^2 * V' * diagm(A_vec(u)) * V
 
-    # ∂χ²/∂A, get a row vector
-    ∂χ²div∂A(u::Vector{Float64}) = Matrix( 2/(σ^2)*(-d*G'*K+d^2*A_vec(u)'*V*diagm(S.^2)*V') )
+	# ∂χ²/∂A, get a row vector
+	∂χ²div∂A(u::Vector{Float64}) = Matrix(2 / (σ^2) * (-d * G' * K + d^2 * A_vec(u)' * V * diagm(S .^ 2) * V'))
 
-    # ∂A/∂u 
-    ∂Adiv∂u(u::Vector{Float64}) = diagm(A_vec(u))*V
+	# ∂A/∂u 
+	∂Adiv∂u(u::Vector{Float64}) = diagm(A_vec(u)) * V
 
-    # ∂f/∂G 
-    ∂fdiv∂G = -1/(σ^2) * diagm(S) * U'
+	# ∂f/∂G 
+	∂fdiv∂G = -1 / (σ^2) * diagm(S) * U'
 
-    # ∂χ²/∂G, get a row vector
-    ∂χ²div∂G(u::Vector{Float64}) = Matrix( 2/(σ^2)*(G'-d*A_vec(u)'*K') )
+	# ∂χ²/∂G, get a row vector
+	∂χ²div∂G(u::Vector{Float64}) = Matrix(2 / (σ^2) * (G' - d * A_vec(u)' * K'))
 
-    # dχ²/dG 
-    dχ²divdG(u::Vector{Float64},α::Float64) = - ∂χ²div∂A(u) * ∂Adiv∂u(u) * pinv(H(u,α)) * ∂fdiv∂G  + ∂χ²div∂G(u)
+	# dχ²/dG 
+	dχ²divdG(u::Vector{Float64}, α::Float64) = -∂χ²div∂A(u) * ∂Adiv∂u(u) * pinv(H(u, α)) * ∂fdiv∂G + ∂χ²div∂G(u)
 
-    ∂χ²OPTdiv∂G = Matrix{Float64}(undef, L , 2*N)
+	∂χ²OPTdiv∂G = Matrix{Float64}(undef, L, 2 * N)
 
 	# 接下来用Newton method求最值点
-	u_guess=zeros(n)
+	u_guess = zeros(n)
+	u_opt_vec = Vector{Vector{Float64}}(undef, L)
 	for i in 1:L
 		α = α_vec[i]
-		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
+		u_opt, = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
 		u_guess = copy(u_opt)
+		u_opt_vec[i] = copy(u_opt)
 		χ²_vec[i] = χ²(u_opt)
-        ∂χ²OPTdiv∂G[i,:] = dχ²divdG(u_opt,α)
+		∂χ²OPTdiv∂G[i, :] = dχ²divdG(u_opt, α)
 	end
-	idx = findall(isfinite,χ²_vec)
-	α_vec=α_vec[idx]
-	χ²_vec=χ²_vec[idx]
+	idx = findall(isfinite, χ²_vec)
+	α_vec = α_vec[idx]
+	χ²_vec = χ²_vec[idx]
+	u_opt_vec = u_opt_vec[idx]
 
 
 	# 现在进行曲线拟合
 	guess_fit = [0.0, 5.0, 2.0, 0.0]
-	param, reach_tol = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)
-    _, _, c, dd = param
+	param, _,reach_tol = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit,Newton())
+	_, _, c, _ = param
 
 
 	# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
-	α_opt = 10.0^(c-2.5/dd)
-	u_opt,_ = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), zeros(n))
+	α_opt = 10.0^(c )
+	u_guess = copy(u_opt_vec[ findmin( abs.( α_vec .- α_opt ) )[2] ])
+	u_opt, = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
 
 	#复原返回要求的A
 	A_opt = A_vec(u_opt)
 
-    function _loss(χ²_vec1::Vector{Float64})
-        _, _, c1, dd1 = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit)[1]
-        α_opt1 = 10.0^(c1-2.5/dd1)
-	    u_opt1,_ = my_newton(u -> J(u, α_opt1), u -> H(u, α_opt1), u_opt)
-	    A_opt1 = A_vec(u_opt1)
-        idx = findall(x -> x>1e-1, A_opt)
-        return sqrt(sum((A_opt1[idx] - A_opt[idx]).^2 * d))
-    end
+	function _loss(χ²_vec1::Vector{Float64})
+		_, _, c1, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit,Newton())[1]
+		α_opt1 = 10.0^(c1 )
+		u_opt1, = my_newton(u -> J(u, α_opt1), u -> H(u, α_opt1), u_opt)
+		A_opt1 = A_vec(u_opt1)
+		idx = findall(x -> x > 1e-1, A_opt)
+		return sqrt(sum((A_opt1[idx] - A_opt[idx]) .^ 2 * d))
+	end
 
-    dlossdivdχ² = Zygote.gradient(_loss,χ²_vec)[1]
-	res = (∂χ²OPTdiv∂G)'*dlossdivdχ²
-    return res[1 : N] + im*res[N+1 : 2*N], reach_tol
+	dlossdivdχ² = Zygote.gradient(_loss, χ²_vec)[1]
+	res = (∂χ²OPTdiv∂G)' * dlossdivdχ²
+	return res[1:N] + im * res[N+1:2*N], reach_tol
 end
+
+
+

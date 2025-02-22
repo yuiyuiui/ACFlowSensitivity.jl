@@ -1,3 +1,15 @@
+abstract type Method end
+
+# 定义具体的方法类型
+struct Newton <: Method end
+struct GD <: Method end
+
+
+
+
+
+#-----------------------------------------
+
 # for poles in discrete situation
 function kernel(ε::Float64)
 	return continous_spectral_density([0.0], [ε], [1 / (sqrt(2π) * ε)])
@@ -95,13 +107,11 @@ function my_GD_v2(f, grad, x0; tol = 1e-3, max_iter = 2000)
 		# 归一化方向
 		direct = -grad(res) / ratio
 		if ratio < tol || ite >= max_iter
-			if ratio < tol
-				reach_tol = true
-			end
 			if ite >= max_iter
+				reach_tol = true
 				println("Tolerance is reached in GD()!")
 			end
-			return res, reach_tol
+			return res, ite, reach_tol
 		end
 
 		f_now = f(res)
@@ -161,6 +171,7 @@ function my_newton(
 	f = fun(feed)
 	J = grad(feed)
 	back = _apply(feed, f, J)
+	reach_tol = false
 
 	while true
 		counter = counter + 1
@@ -179,16 +190,17 @@ function my_newton(
     if counter > maxiter
         println("Tolerance is reached in newton()!")
         @show norm(grad(back))
+		reach_tol = true
     end
 
-	return back, counter
+	return back, counter , reach_tol
 end
 
 
 
 
 # ϕ(x;a,b,c,d)=a+b/(1+exp(-d(x-c))) 的曲线拟合
-function my_curve_fit(xx::Vector{Float64}, yy::Vector{Float64}, guess::Vector{Float64})
+function my_curve_fit(xx::Vector{Float64}, yy::Vector{Float64}, guess::Vector{Float64},method::GD)
     @assert length(xx)==length(yy)
 	loss(p) = sum((p[1] .+ p[2] ./ (1 .+ exp.(-p[4] * (xx .- p[3]))) - yy) .^ 2)
     L=length(xx)
@@ -208,4 +220,51 @@ function my_curve_fit(xx::Vector{Float64}, yy::Vector{Float64}, guess::Vector{Fl
 	end
 
 	return my_GD_v2(loss, J, guess)
+end
+
+
+function my_curve_fit(x::Vector{Float64}, y::Vector{Float64}, guess::Vector{Float64},method::Newton)
+    @assert length(x)==length(y)
+    L=length(x)
+
+	function _∂loss_curveDiv∂p(p)
+		a,b,c,d=p
+		s=1 ./ ( 1 .+ exp.(-d*(x.-c))  )
+		r=a .+ b*s - y
+
+		Ja=2*sum(r)
+		Jb=2*sum(s.*r)
+		Jc=-2*b*d*sum(s.*(1 .- s).*r)
+		Jd=2*b*sum(s.*(1 .-s).*(x.-c).*r)
+		return [Ja,Jb,Jc,Jd]
+	end
+	
+	function _∂²loss_curveDiv∂p²(p)
+		a, b, c, d = p
+		L = length(x)
+		
+		# 计算 sigmoid 函数及其相关项
+		s = 1 ./ (1 .+ exp.(-d * (x .- c)))
+		s1 = s .* (1 .- s)  # s1 = s * (1 - s)
+		r = a .+ b * s .- y  # 残差项
+		
+		# 填充对角元素
+		Jaa = 2 * L
+		Jbb = 2 * sum(s.^2)
+		Jcc = 2 * b^2 * d^2 * sum(s.^2 .* (1 .- s).^2) + 2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
+		Jdd = 2 * sum(b^2 * s.^2 .* (1 .- s).^2 .* (x .- c).^2 + b * (x .- c).^2 .* s1 .* (1 .- 2 * s) .* r)
+		
+		# 填充非对角元素
+		Jab  = 2 * sum(s)
+		Jac = -2 * b * d * sum(s1)
+		Jad = 2 * b * sum(s1 .* (x .- c))
+		Jbc = -2 * d * sum(s1 .* (b * s .+ r))
+		Jbd = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
+		Jcd = -2 * b * sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
+		
+		return [Jaa Jab Jac Jad;Jab Jbb Jbc Jbd;Jac Jbc Jcc Jcd;Jad Jbd Jcd Jdd]
+	end
+
+	return my_newton(_∂loss_curveDiv∂p,_∂²loss_curveDiv∂p²,guess)
+
 end
