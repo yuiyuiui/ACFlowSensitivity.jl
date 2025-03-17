@@ -71,7 +71,7 @@ function linesearch(f, grad, x, p; c1 = 1e-4, c2 = 0.9, max_iter = 20)
 end
 
 # 自己写的梯度下降法
-function my_GD_v1(f, grad, x0; tol = 1e-6, max_iter = 2000)
+function my_GD_v1(f, grad, x0; tol = 1e-6, max_iter = 20000)
 	res = copy(x0)
 	ite = 0
 	while true
@@ -98,7 +98,7 @@ end
 
 
 # 自己写的梯度下降法，斜率的角平分线版本，v2效果一般会比v1好一些
-function my_GD_v2(f, grad, x0; tol = 1e-3, max_iter = 2000)
+function my_GD_v2(f, grad, x0; tol = 1e-4, max_iter = 20000)
 	res = copy(x0)
 	ite = 0
 	reach_tol = false
@@ -182,7 +182,7 @@ function my_newton(
 		back = _apply(feed, f, J)
 
 		any(isnan.(back)) && error("Got NaN!")
-		if counter > maxiter || maximum(abs.(back - feed)) < 1.e-4
+		if counter > maxiter || maximum(abs.(back - feed)) < 1e-5
 			break
 		end
 	end
@@ -200,6 +200,14 @@ end
 
 
 # ϕ(x;a,b,c,d)=a+b/(1+exp(-d(x-c))) 的曲线拟合
+#=
+function loss(p,x,y)
+    a,b,c,d=p
+    s=1 ./ ( 1 .+ exp.(-d*(x.-c))  )
+    r=a .+ b*s - y
+    return sum(r.^2)
+end
+=#
 function my_curve_fit(xx::Vector{Float64}, yy::Vector{Float64}, guess::Vector{Float64},method::GD)
     @assert length(xx)==length(yy)
 	loss(p) = sum((p[1] .+ p[2] ./ (1 .+ exp.(-p[4] * (xx .- p[3]))) - yy) .^ 2)

@@ -1,13 +1,14 @@
 using ACFlowSensitivity
-using Plots,LinearAlgebra
+using Plots,LinearAlgebra,Random
 
-μ=[0.5,-2.5];σ=[0.2,0.8];peak=[1.0,0.3];
+Random.seed!(6)
+μ=[0.5,-2.5];σ=[0.2,1.0];peak=[1.0,0.3];
 A=continous_spectral_density(μ,σ,peak);
 β=10.0;
-N=200;
+N=20;
 output_bound=5.0;
-output_number=401;
-noise=1e-2;
+output_number=801;
+noise=1e-4;
 Gvalue=generate_G_values_cont(β,N,A;noise=noise);
 output_range=range(-output_bound,output_bound,output_number);
 output_range=collect(output_range);
@@ -17,60 +18,32 @@ Aout=my_chi2kink(iwn,Gvalue,output_range)
 plot(output_range,A.(output_range),label="origin Spectral ",title="noise=$noise")
 plot!(output_range,Aout,label="reconstruct Spectral")
 
+d = output_range[2]-output_range[1]
 ADAout = ADchi2kink(iwn,Gvalue,output_range)
 @show norm(ADAout)
+η = 0.3*1e-4
+δ = sum(abs2.(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout))*d
+# δ = sum(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout)*d
+δ1= η *norm(ADAout)^2
 
+norm(δ- δ1)/max(δ,δ1)
+
+ADAout_v2 = ACFlowSensitivity.ADchi2kink_v2(iwn,Gvalue,output_range)
+δ2 = sum(abs2.(my_chi2kink(iwn,Gvalue + η * ADAout_v2, output_range) - Aout))*d
+#δ2 = sum(my_chi2kink(iwn,Gvalue + η * ADAout_v2, output_range) - Aout)*d
+δ3 = η *norm(ADAout_v2)^2
+norm(δ2- δ3)/max(δ2,δ3)
 # -----
 plot(output_range,A.(output_range),title = "compare diff fit constant,noise = $noise",label="origin spectral")
 plot!(output_range,Aout,label="fit_const=2.5")
 plot!(output_range,Aout,label="fit_const=2b")
 
 
-function loss(p,x,y)
-    a,b,c,d=p
-    s=1 ./ ( 1 .+ exp.(-d*(x.-c))  )
-    r=a .+ b*s - y
-    return sum(r.^2)
-end
+######################### Compare with v2
 
+model_ite = 20
+Aout_v2 = ACFlowSensitivity.my_chi2kink_v2(iwn,Gvalue,output_range;model_ite=model_ite)
 
-function ∂loss_curveDiv∂p(p,x,y)
-    a,b,c,d=p
-    s=1 ./ ( 1 .+ exp.(-d*(x.-c))  )
-    r=a .+ b*s - y
-    res = zeros(4)
-    res[1]=2*sum(r)
-    res[2]=2*sum(s.*r)
-    res[3]=-2*b*d*sum(s.*(1 .- s).*r)
-    res[4]=2*b*sum(s.*(1 .-s).*(x.-c).*r)
-    return res
-end
+plot!(output_range,Aout_v2,label="v2 with ite=$model_ite")
 
-
-function ∂²loss_curveDiv∂p²(p,x,y)
-    res = zeros(4, 4)
-    a, b, c, d = p
-    L = length(x)
-    
-    # 计算 sigmoid 函数及其相关项
-    s = 1 ./ (1 .+ exp.(-d * (x .- c)))
-    s1 = s .* (1 .- s)  # s1 = s * (1 - s)
-    r = a .+ b * s .- y  # 残差项
-    
-    # 填充对角元素
-    res[1, 1] = 2 * L
-    res[2, 2] = 2 * sum(s.^2)
-    res[3, 3] = 2 * b^2 * d^2 * sum(s.^2 .* (1 .- s).^2) + 2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
-    res[4, 4] = 2 * sum(b^2 * s.^2 .* (1 .- s).^2 .* (x .- c).^2 + b * (x .- c).^2 .* s1 .* (1 .- 2 * s) .* r)
-    
-    # 填充非对角元素
-    res[1, 2] = res[2, 1] = 2 * sum(s)
-    res[1, 3] = res[3, 1] = -2 * b * d * sum(s1)
-    res[1, 4] = res[4, 1] = 2 * b * sum(s1 .* (x .- c))
-    res[2, 3] = res[3, 2] = -2 * d * sum(s1 .* (b * s .+ r))
-    res[2, 4] = res[4, 2] = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
-    res[3, 4] = res[4, 3] = -2 * b * sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
-    
-    return res
-end
-
+output_range[2]-output_range[1]
