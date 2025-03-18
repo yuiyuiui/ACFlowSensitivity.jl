@@ -1,5 +1,6 @@
-using LinearAlgebra
+using LinearAlgebra,Random,Test
 
+Random.seed!(3)
 
 function ∂²loss_∂p∂y(p, x, y)
     a, b, c, d = p
@@ -46,12 +47,14 @@ function ∂loss_∂y(p, x, y)
     return -2 * (a .+ b * s .- y)
 end
 
+@testset "test ∂²loss_∂p∂y" begin
 # 测试
 p = [1.0, 2.0, 0.5, 0.1]
 x = rand(100)
 y = rand(100)
 
-analytic_grad = ∂²loss_∂p∂y(p, x, y)
-finite_diff_grad = finite_difference_∂²loss_∂p∂y(p, x, y)
+    analytic_grad = ∂²loss_∂p∂y(p, x, y)
+    finite_diff_grad = finite_difference_∂²loss_∂p∂y(p, x, y)
 
-norm(analytic_grad - finite_diff_grad)
+    @test norm(analytic_grad - finite_diff_grad) < 1e-6
+end

@@ -22,14 +22,14 @@ d = output_range[2]-output_range[1]
 ADAout = ADchi2kink(iwn,Gvalue,output_range)
 @show norm(ADAout)
 η = 0.3*1e-4
-δ = sum(abs2.(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout))*d
-# δ = sum(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout)*d
+# δ = sum(abs2.(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout))*d
+ δ = sum(abs.(my_chi2kink(iwn,Gvalue + η * ADAout, output_range) - Aout))*d
 δ1= η *norm(ADAout)^2
 
 norm(δ- δ1)/max(δ,δ1)
 
 ADAout_v2 = ACFlowSensitivity.ADchi2kink_v2(iwn,Gvalue,output_range)
-δ2 = sum(abs2.(my_chi2kink(iwn,Gvalue + η * ADAout_v2, output_range) - Aout))*d
+δ2 = sum(abs.(my_chi2kink(iwn,Gvalue + η * ADAout_v2, output_range) - Aout))*d
 #δ2 = sum(my_chi2kink(iwn,Gvalue + η * ADAout_v2, output_range) - Aout)*d
 δ3 = η *norm(ADAout_v2)^2
 norm(δ2- δ3)/max(δ2,δ3)
