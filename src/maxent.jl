@@ -71,13 +71,13 @@ function my_chi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	u_guess = zeros(n)
 	u_opt_vec = Vector{Vector{Float64}}(undef, L)
 	for i in 1:L
-		@show i
+		# @show i
 		α = α_vec[i]
 		u_opt, call, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
 		u_guess = copy(u_opt)
 		u_opt_vec[i] = copy(u_opt)
 		χ²_vec[i] = χ²(u_opt)
-		@show log10(α), log10(χ²_vec[i]), norm(J(u_opt, α)), call
+		# @show log10(α), log10(χ²_vec[i]), norm(J(u_opt, α)), call
 	end
 	idx = findall(isfinite, χ²_vec)
 	α_vec = α_vec[idx]
@@ -334,18 +334,41 @@ function _ADchi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 
 	#复原返回要求的A
 	A_opt = A_vec(u_opt)
-
-	function _loss(χ²_vec1::Vector{Float64})
+	
+	
+	function _loss(χ²_vec1::Vector{Float64},G::Vector{Float64})
 		_, _, c1, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit, Newton())[1]
 		α_opt1 = 10.0^(c1)
-		u_opt1, = my_newton(u -> J(u, α_opt1), u -> H(u, α_opt1), u_opt)
+		J1(u::Vector{Float64}, α::Float64) = α * u + 1 / (σ^2) * (-diagm(S) * U' * G + d * diagm(S)^2 * V' * A_vec(u))
+		u_opt1, = my_newton(u -> J1(u, α_opt1), u -> H(u, α_opt1), u_opt)
 		A_opt1 = A_vec(u_opt1)
-		idx = findall(x -> x > 1e-3, A_opt)
-		return sum(abs.(A_opt1[idx] - A_opt[idx]))*d
+		idx = findall(x -> x > 1e-6, A_opt)
+		return sum(exp.(A_opt1[idx] - A_opt[idx]))*d
 	end
 
-	dlossdivdχ² = Zygote.gradient(_loss, χ²_vec)[1]
-	res = (∂χ²OPTdiv∂G)' * dlossdivdχ²
+	#=
+	function _A_opt(χ²_vec1::Vector{Float64},G::Vector{Float64})
+		_, _, c, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit, Newton())[1]
+		α_opt = 10.0^(c)
+		J1(u::Vector{Float64}, α::Float64) = α * u + 1 / (σ^2) * (-diagm(S) * U' * G + d * diagm(S)^2 * V' * A_vec(u))
+		u_opt1, = my_newton(u -> J1(u, α_opt), u -> H(u, α_opt), u_opt)
+		A_opt1 = A_vec(u_opt1)
+		return A_opt1
+	end
+	dA_optdivdχ²_vec, ∂A_optdiv∂G = Zygote.jacobian(_A_opt, χ²_vec, G)
+	dA_optdivdG = dA_optdivdχ²_vec*∂χ²OPTdiv∂G + ∂A_optdiv∂G
+	@show dA_optdivdG[3,:]
+
+	
+	η = 1e-5
+	χ²_vec1 = χ²_vec + η * dα_optdivdχ²_vec
+	param1 = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit, Newton())[1]
+	c1 = param1[3]
+	@show c1-c, η*sum(abs2.(dcdivdχ²_vec))
+	=#
+
+	dlossdivdχ² , ∂lossdiv∂G = Zygote.gradient(_loss, χ²_vec, G)
+	res = (∂χ²OPTdiv∂G)' * dlossdivdχ² + ∂lossdiv∂G
 	return res[1:N] + im * res[N+1:2*N], reach_tol
 end
 
@@ -481,82 +504,26 @@ function _ADchi2kink_v2(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, out
 	#复原返回要求的A
 	A_opt = A_vec(u_opt)
 
-	function _∂²loss_curveDiv∂p²(p,x,y)
-		a, b, c, d = p
-		L = length(x)
-		
-		# 计算 sigmoid 函数及其相关项
-		s = 1 ./ (1 .+ exp.(-d * (x .- c)))
-		s1 = s .* (1 .- s)  # s1 = s * (1 - s)
-		r = a .+ b * s .- y  # 残差项
-		
-		# 填充对角元素
-		Jaa = 2 * L
-		Jbb = 2 * sum(s.^2)
-		Jcc = 2 * b^2 * d^2 * sum(s.^2 .* (1 .- s).^2) + 2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
-		Jdd = 2 * sum(b^2 * s.^2 .* (1 .- s).^2 .* (x .- c).^2 + b * (x .- c).^2 .* s1 .* (1 .- 2 * s) .* r)
-		
-		# 填充非对角元素
-		Jab  = 2 * sum(s)
-		Jac = -2 * b * d * sum(s1)
-		Jad = 2 * b * sum(s1 .* (x .- c))
-		Jbc = -2 * d * sum(s1 .* (b * s .+ r))
-		Jbd = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
-		Jcd = -2 * b * sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
-		
-		return [Jaa Jab Jac Jad;Jab Jbb Jbc Jbd;Jac Jbc Jcc Jcd;Jad Jbd Jcd Jdd]
+
+	function _α_opt(χ²_vec1::Vector{Float64})
+		_, _, c, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec1), guess_fit, Newton())[1]
+		α_opt = 10.0^(c)
+		return α_opt
 	end
-
-	function _∂²loss_curveDiv∂p∂y(p, x, y)
-		a, b, c, d = p
-		L = length(x)
-		
-		# 计算 sigmoid 函数及其相关项
-		s = 1 ./ (1 .+ exp.(-d * (x .- c)))
-		s1 = s .* (1 .- s)  # s1 = s * (1 - s)
-		
-		# 初始化混合偏导数矩阵
-		∂²loss_∂p∂y_matrix = zeros(4, L)
-		
-		# 填充矩阵
-		∂²loss_∂p∂y_matrix[1, :] .= -2  # ∂²loss/∂a∂y_i
-		∂²loss_∂p∂y_matrix[2, :] = -2 * s  # ∂²loss/∂b∂y_i
-		∂²loss_∂p∂y_matrix[3, :] = 2 * b * d * s1  # ∂²loss/∂c∂y_i
-		∂²loss_∂p∂y_matrix[4, :] = -2 * b * s1 .* (x .- c)  # ∂²loss/∂d∂y_i
-		
-		return ∂²loss_∂p∂y_matrix
-	end
-
-	p1 = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit, Newton())[1]
-	c1 = p1[3]
-	α_opt1 = 10.0^(c1)
-	u_opt1, = my_newton(u -> J(u, α_opt1), u -> H(u, α_opt1), u_opt)
-	A_opt1 = A_vec(u_opt1)
-
-	arg = (p1,log10.(α_vec),log10.(χ²_vec))
-
-	dpdivdχ²_vec = - _∂²loss_curveDiv∂p²(arg...) \ _∂²loss_curveDiv∂p∂y(arg...)*diagm(1 ./ (χ²_vec * log(10)))
-	dα_opt1divdχ²_vec = log(10) * dpdivdχ²_vec[3,:]
-	dα_opt1divdG = dα_opt1divdχ²_vec' * ∂χ²OPTdiv∂G
-	du_opt1divdG = -pinv(H(u_opt1, α_opt1)) * (∂fdiv∂G + u_opt1 * dα_opt1divdG)
-	dA_opt1divdG = ∂Adiv∂u(u_opt1) * du_opt1divdG
+	dα_optdivdχ²_vec = Zygote.gradient(_α_opt, χ²_vec)[1]
+	dα_optdivdG = dα_optdivdχ²_vec' * ∂χ²OPTdiv∂G
+	du_optdivdG = -pinv(H(u_opt, α_opt)) * (∂fdiv∂G + u_opt * dα_optdivdG)
+	dA_optdivdG = ∂Adiv∂u(u_opt) * du_optdivdG
 
 	
 	function _loss(A_opt1::Vector)
-		idx = findall(x -> x > 1e-6, A_opt)
-		return sum(abs.(A_opt1[idx] - A_opt[idx]))*d
+		idx = findall(x -> x >1e-6, A_opt)
+		return sum(exp.(A_opt1[idx] - A_opt[idx]))*d
 	end
-	
-	#=
-	function _loss(A_opt1::Vector)
-		idx = findall(x -> x > 1e-6, A_opt)
-		return sum(A_opt1[idx])*d
-	end
-	=#
 
 	# output as a vector
-	dlossdivdA_opt1 = Zygote.gradient(_loss, A_opt1)[1]
-	res = (dA_opt1divdG)' * dlossdivdA_opt1
+	dlossdivdA_opt = Zygote.gradient(_loss, A_opt)[1]
+	res = (dA_optdivdG)' * dlossdivdA_opt
 	return res[1:N] + im * res[N+1:2*N], reach_tol
 end
 

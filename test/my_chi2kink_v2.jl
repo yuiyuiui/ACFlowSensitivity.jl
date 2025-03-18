@@ -7,7 +7,7 @@ Random.seed!(3)
 β=10.0;
 output_bound=5.0;
 output_number=801;
-noise = 1e-2;
+noise = 1e-4;
 output_range=range(-output_bound,output_bound,output_number);
 output_range=collect(output_range);
 

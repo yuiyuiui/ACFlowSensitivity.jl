@@ -20,6 +20,3 @@ plot(noise_scales, error_means, yerr=error_stds,
      label="Error between grad_f and grad_f_fd",
      title="Error Bar Plot for Gradient Comparison",
      marker=:circle, lw=2, legend=:topleft)
-
-# 保存图像
-savefig("error_bar_plot.png")
