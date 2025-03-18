@@ -54,7 +54,7 @@ function loss(p,x,y)
     return sum(r.^2)
 end
 
-function _∂²loss_curveDiv∂p²(p,x,y)
+function ∂²loss_curveDiv∂p²(p,x,y)
     a, b, c, d = p
     L = length(x)
     
@@ -80,7 +80,7 @@ function _∂²loss_curveDiv∂p²(p,x,y)
     return [Jaa Jab Jac Jad;Jab Jbb Jbc Jbd;Jac Jbc Jcc Jcd;Jad Jbd Jcd Jdd]
 end
 
-function _∂loss_curveDiv∂p(p,x,y)
+function ∂loss_curveDiv∂p(p,x,y)
     a,b,c,d=p
     s=1 ./ ( 1 .+ exp.(-d*(x.-c))  )
     r=a .+ b*s - y
@@ -138,7 +138,7 @@ x = rand(100)             # 输入数据
 y = rand(100)             # 目标值
 
 # 解析解
-analytic_H = _∂²loss_curveDiv∂p²(p, x, y)
+analytic_H = ∂²loss_curveDiv∂p²(p, x, y)
 
 # 有限差分近似
 finite_diff_H = finite_difference_∂²loss_∂p²(p, x, y)
@@ -147,3 +147,12 @@ finite_diff_H = finite_difference_∂²loss_∂p²(p, x, y)
 # 计算相对误差
 relative_error = norm(analytic_H - finite_diff_H) / norm(analytic_H)
 println("Relative Error: ", relative_error)
+
+a = 12:-1:-3
+a = collect(a).+0.0
+
+b = rand(16)
+
+p = [1.0,2.0,0.5,0.1]
+
+∂²loss_curveDiv∂p²(p,a,b)
