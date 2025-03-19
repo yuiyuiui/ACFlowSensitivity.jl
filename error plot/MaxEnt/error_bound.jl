@@ -19,13 +19,23 @@ Aout = my_chi2kink(iwn,Gvalue,output_range);
 dAdivdG, _ = ADchi2kink(iwn,Gvalue,output_range);
 norm(dAdivdG)
 η = 1e-4
-direc = η * exp.(im * 2π * rand(N))
-dAdivdG
+
 dAout =  η * sum(abs2.(dAdivdG),dims=2) .^ 0.5
 
-plot(output_range,Aout,title = "noise = $noise and pert = $η",label="origin", xlabel="ω", ylabel="A(ω)")
-plot!(output_range,Aout + 2 * dAout, label="perturbed upper bound")
-plot!(output_range,max.(Aout-2 * dAout,0.0), label="perturbed lower bound")
+Aupper = Aout + 2 * dAout
+Alower = max.(Aout-2 * dAout,0.0)
 
+
+plot(output_range,Aout,title = "noise = $noise and pert = $η",label="origin", xlabel="ω", ylabel="A(ω)")
+plot!(output_range, Aupper, fillrange=Alower, fillalpha=0.3, label="Confidence region", linewidth=0)
+
+i = 1
+
+direc = η * rand() * exp.(im * 2π * rand(N))
 Aout1 = my_chi2kink(iwn,Gvalue + direc,output_range)
-plot!(output_range, Aout1, label="A random pert")
+plot!(output_range, Aout1, label="random pert $i", linewidth=0.3)
+i+=1
+
+savefig("random_pert.png")
+
+
