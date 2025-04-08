@@ -63,6 +63,3 @@ plot(ε,Grad_noise,label="size of grad changes as ε changes with noise:$noise")
 
 
 
-
-
-
