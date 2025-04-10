@@ -8,7 +8,7 @@ A=continous_spectral_density(μ,σ,peak);
 N=20;
 output_bound=5.0;
 output_number=801;
-noise=1e-2;
+noise=0.005;
 Gvalue=generate_G_values_cont(β,N,A;noise=noise);
 output_range=range(-output_bound,output_bound,output_number);
 output_range=collect(output_range);

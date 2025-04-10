@@ -9,11 +9,15 @@ A=continous_spectral_density(μ,σ,peak);
 N=20;
 output_bound=5.0;
 output_number=801;
-noise=1e-2;
-Amesh,reconstruct_A,_=aaa_check(A;β,N,output_bound,output_number,noise);
+noise0=0.0;
+noise1=1e-3;
+
+Amesh,reconstruct_A0,_=aaa_check(A;β,N,output_bound,output_number,noise=noise0);
+Amesh,reconstruct_A1,_=aaa_check(A;β,N,output_bound,output_number,noise=noise1);
 
 # draw the pictures
-plot(Amesh,reconstruct_A.(Amesh),label="reconstruct SD, noise: $noise")
+plot(Amesh,reconstruct_A0.(Amesh),label="reconstruct SD, noise: 0.0",title = "AAA", xlabel = "w", ylabel = "A(w)")
+plot!(Amesh,reconstruct_A1.(Amesh),label="reconstruct SD, noise: 1e-3")
 plot!(Amesh,A.(Amesh),label="origin SD")
 
 
