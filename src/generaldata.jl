@@ -29,7 +29,7 @@ function generate_G_values_cont(
     n = length(grid)
     res = zeros(Complex{T}, n)
     for i = 1:n
-        res[i] = quadgk(x -> A(x) / (im * grid[i] - x), int_low, int_up)[1]
+        res[i] = integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
     end
     NL = Normal(T(0), T(1))   # Normal list
     for i = 1:n

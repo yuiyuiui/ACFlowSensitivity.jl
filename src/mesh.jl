@@ -9,7 +9,7 @@ struct TangentMesh{T<:Real} <: Mesh{T}
     end
 end
 
-function make_mesh(opb::T<:Real, opn::Int64, mesh_type::UniformMesh{T}) where {T<:Real}
+function make_mesh(opb::T, opn::Int64, mesh_type::UniformMesh{T}) where {T<:Real}
     mesh=collect(range(-opb, opb, opn))
     mesh_weights = (mesh[2:end] + mesh[1:(end-1)]) * 1//2
     pushfirst!(mesh_weights, mesh[1])
@@ -18,9 +18,9 @@ function make_mesh(opb::T<:Real, opn::Int64, mesh_type::UniformMesh{T}) where {T
     return mesh, mesh_weights
 end
 
-function make_mesh(opb::T<:Real, opn::Int64, mesh_type::TangentMesh{T}) where {T<:Real}
+function make_mesh(opb::T, opn::Int64, mesh_type::TangentMesh{T}) where {T<:Real}
     p=mesh_type.p
-    mesh=tan.(collect(range(-π/p, π/p, opn)))
+    mesh=tan.(collect(range(-T(π)/p, T(π)/p, opn)))
     mesh = mesh/mesh[end]*opb
     mesh_weights = (mesh[2:end] + mesh[1:(end-1)]) * 1//2
     pushfirst!(mesh_weights, mesh[1])

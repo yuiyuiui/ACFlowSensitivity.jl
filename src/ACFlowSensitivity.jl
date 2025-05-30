@@ -1,6 +1,6 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra, Zygote, QuadGK, Optim, LsqFit, Distributions
+using LinearAlgebra, Distributions #, Zygote, Optim, LsqFit
 using Zygote: @adjoint
 
 
@@ -21,14 +21,17 @@ export my_chi2kink, ADchi2kink
 
 
 # `include` other source files into this module
+include("math.jl")
 include("generaldata.jl")
 include("mesh.jl")
+#=
 include("math.jl")
 include("aaa.jl")
 include("ADaaa.jl")
 include("maxent.jl")
 include("sac.jl")
 include("ADsac.jl")
+=#
 
 
 end

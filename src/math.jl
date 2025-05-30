@@ -1,3 +1,34 @@
+function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
+    n_raw = floor((b - a) / h)
+    n = Int(n_raw)
+    if isodd(n)
+        n -= 1
+    end
+    if n < 2
+        error("step is too large")
+    end
+
+    fa = f(a)
+    !(typeof(fa) <: Union{T,Complex{T}}) && error("Type of the output of f should be consistent with its input")
+    fb = f(a + h * T(n))  
+    acc = fa + fb
+
+    @inbounds for i in 1:(n-1)
+        x = a + h * T(i)
+        coeff = isodd(i) ? T(4) : T(2)
+        acc += coeff * f(x)
+    end
+
+    return acc * (h / T(3))
+end
+
+function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
+    Tp = T(p)
+    return integral(x->abs(f(x))^Tp,a,b;h=h)^(1/Tp)
+end
+
+
+#=
 abstract type Method end
 
 # 定义具体的方法类型
@@ -15,23 +46,6 @@ function kernel(ε::Float64)
     return continous_spectral_density([0.0], [ε], [1 / (sqrt(2π) * ε)])
 end
 
-# Why we don't use quadgk, but accomplish it by ourselves ?
-# Because it takes too much time to calculate the first gradient( parameter->quadgk( func_type(parameter),int_low,int_up )[1], parameter )
-# after "using QuadGK"
-function Lp_norm(
-    f,
-    p::Real;
-    int_low::Float64 = -8.0,
-    int_up::Float64 = 8.0,
-    step::Float64 = 1e-4,
-)
-    int_field = collect(int_low:step:int_up)
-    n = length(int_field)
-    values = abs.(f.(int_field)) .^ p
-    values1 = view(values, 1:(n-1))
-    values2 = view(values, 2:n)
-    return sum((values1 + values2) * step / 2)^(1 / p)
-end
 
 
 function my_BFGS(f, grad, x0; tol = 1e-6, max_iter = 2000)
@@ -301,3 +315,4 @@ function my_curve_fit(
     return my_newton(_∂loss_curveDiv∂p, _∂²loss_curveDiv∂p², guess)
 
 end
+=#
