@@ -15,15 +15,17 @@ For input $\mathcal{G}=\{G(iw_n)\}_{n=1}^N$ and analytic continuation algorithm
 
 And use $L_2$ norm as a loss function to measure its sensitivity:
 
-$$\text{Loss}(\mathcal{G,G_0}) = \|\text{reA}-\text{reA}_0\|_2=\sqrt{\sum_{j=1}^M|\widetilde{A}_j-\widetilde{A_{0}}_{j}^2|w_j}$$
+![Loss formula](https://latex.codecogs.com/svg.image?\text{Loss}(\mathcal{G},\mathcal{G}_0)=|\text{reA}-\text{reA}_0|^2=\sqrt{\sum_{j=1}^M|\widetilde{A}_j-\widetilde{A_{0}}_j^2|w_j})
+
 
 Here $\text{reA}$ means the reconstructed spenctral density function and $w_j$ is the integral weight of the output mesh.
 
 As a result we calculate:
 
-$$\nabla f(\mathcal{G})=\left(\frac{\partial \widetilde{A}_j}{\partial \mathcal{G}_k}\right)_{M\times N}$$
+![Gradient formula](https://latex.codecogs.com/svg.image?\nabla%20f(\mathcal{G})=\left(\frac{\partial\widetilde{A}_j}{\partial\mathcal{G}_k}\right)_{M\times%20N})
 
-$$\frac{\partial \text{Loss}(\mathcal{G,G_0})}{\partial \mathcal{G}}|_{\mathcal{G=G_0}}$$
+![Loss derivative](https://latex.codecogs.com/svg.image?\frac{\partial\text{Loss}(\mathcal{G},\mathcal{G}_0)}{\partial\mathcal{G}}|_{\mathcal{G}=\mathcal{G}_0})
+
 
 Our purpose is to implement following methods (not all) and their sensitivity analysis:
 
