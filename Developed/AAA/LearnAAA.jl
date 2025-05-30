@@ -35,9 +35,9 @@ function last(brc::BarRatContext)
         end
     end
 
-    
 
-    
+
+
     # Calculate full response function on real axis and write them
     _G = brc.ℬ.(brc.mesh.mesh)
     get_r("atype") == "delta" && pole_green!(_G)
@@ -181,15 +181,15 @@ function bc_poles(r::BarycentricFunction)
     z, w = z[nonzero], w[nonzero]
     #
     m = length(w)
-    B = diagm( [zero(F64); ones(F64, m)] )
-    E = [zero(F64) transpose(w); ones(F64, m) diagm(z) ];
+    B = diagm([zero(F64); ones(F64, m)])
+    E = [zero(F64) transpose(w); ones(F64, m) diagm(z)];
     #
     pole = [] # Put it into scope
     try
-        pole = filter( isfinite, eigvals(E, B) )
+        pole = filter(isfinite, eigvals(E, B))
     catch
         # Generalized eigen not available in extended precision, so:
-        λ = filter( z->abs(z)>1e-13, eigvals(E\B) )
+        λ = filter(z->abs(z)>1e-13, eigvals(E\B))
         pole = 1 ./ λ
     end
 
@@ -224,17 +224,11 @@ Mutable struct. It is used within the BarRat solver only.
 * ℬA   -> It means the weights / amplitudes of the poles.
 """
 mutable struct BarRatContext
-    Gᵥ   :: Vector{C64}
-    grid :: AbstractGrid
-    mesh :: AbstractMesh
-    𝒫    :: Union{Missing,PronyApproximation}
-    ℬ    :: Union{Missing,BarycentricFunction}
-    ℬP   :: Vector{C64}
-    ℬA   :: Vector{C64}
+    Gᵥ::Vector{C64}
+    grid::AbstractGrid
+    mesh::AbstractMesh
+    𝒫::Union{Missing,PronyApproximation}
+    ℬ::Union{Missing,BarycentricFunction}
+    ℬP::Vector{C64}
+    ℬA::Vector{C64}
 end
-
-
-
-
-
-

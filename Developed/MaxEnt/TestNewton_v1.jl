@@ -14,7 +14,7 @@ noise = 0.0;
 Gvalue = generate_G_values_cont(β, N, A; noise = noise);
 output_range = range(-output_bound, output_bound, output_number);
 output_range = collect(output_range);
-iwn = (collect(0:N-1) .+ 0.5) * 2π / β * im;
+iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im;
 
 
 
@@ -28,9 +28,9 @@ output_weight = fill(d, output_number);
 # set the kernel matrix
 kernel = Matrix{ComplexF64}(undef, N, output_number);
 for i ∈ 1:N
-	for j ∈ 1:output_number
-		kernel[i, j] = 1 / (iwn[i] - output_range[j])
-	end
+    for j ∈ 1:output_number
+        kernel[i, j] = 1 / (iwn[i] - output_range[j])
+    end
 end;
 
 # real paraliaze Gvalue and kernel
@@ -55,7 +55,9 @@ model = model / (model' * output_weight);
 # function Q
 A_vec(u::Vector{Float64}) = model .* exp.(V * u)
 χ²(u::Vector{Float64}) = (G - d * K * A_vec(u))' * (G - d * K * A_vec(u)) / (σ^2)
-Q(u::Vector{Float64}, α::Float64) = α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight - 0.5 * χ²(u)
+Q(u::Vector{Float64}, α::Float64) =
+    α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight -
+    0.5 * χ²(u)
 
 # 𝞉Q/∂u
 function ∂Qdiv∂u(u::Vector{Float64}, α::Float64)
@@ -69,11 +71,11 @@ function ∂Qdiv∂u(u::Vector{Float64}, α::Float64)
 end
 
 # Hessel Matrix
-function hessel(u::Vector{Float64},α::Float64)
+function hessel(u::Vector{Float64}, α::Float64)
     Av=A_vec(u)
     Am=diagm(Av)
-    ∂²S=-d*V'*diagm(Av.*log.(Av./model)+Av)*V
-    ∂²χ²=2*d/(σ^2)*V'*( diagm( (-G'*K+d*Av'*K'*K)' ) + d*Am*K'*K )*Am*V
+    ∂²S=-d*V'*diagm(Av .* log.(Av ./ model)+Av)*V
+    ∂²χ²=2*d/(σ^2)*V'*(diagm((-G'*K+d*Av'*K'*K)') + d*Am*K'*K)*Am*V
     return α*∂²S-∂²χ²/2
 end
 
@@ -99,8 +101,8 @@ function newton(
     grad::Function,
     guess;
     maxiter::Int64 = 20000,
-    mixing::Float64 = 0.5
-    )
+    mixing::Float64 = 0.5,
+)
     function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
         resid = nothing
         step = 1.0
@@ -112,7 +114,7 @@ function newton(
         end
         if any(x -> x > limit, abs.(feed))
             ratio = abs.(resid ./ feed)
-            max_ratio = maximum( ratio[ abs.(feed) .> limit ] )
+            max_ratio = maximum(ratio[abs.(feed) .> limit])
             if max_ratio > 1.0
                 step = 1.0 / max_ratio
             end
@@ -142,23 +144,23 @@ function newton(
         push!(backs, back)
 
         any(isnan.(back)) && error("Got NaN!")
-        if counter > maxiter || maximum( abs.(back - feed) ) < 1.e-4
+        if counter > maxiter || maximum(abs.(back - feed)) < 1.e-4
             res_feed=feed
             break
         end
     end
 
-    @show norm(back),norm(res_feed),maximum( abs.(back - res_feed) ) < 1.e-4
+    @show norm(back), norm(res_feed), maximum(abs.(back - res_feed)) < 1.e-4
 
     counter > maxiter && error("Tolerance is reached in newton()!")
 
     return back, counter
 end
 
-u_opt,iter_num=newton(u->-∂Qdiv∂u(u,α),u->-hessel(u,α),zeros(n))
-norm(∂Qdiv∂u(u_opt,α))
+u_opt, iter_num=newton(u->-∂Qdiv∂u(u, α), u->-hessel(u, α), zeros(n))
+norm(∂Qdiv∂u(u_opt, α))
 
-norm(∂Qdiv∂u(u_opt,α))
+norm(∂Qdiv∂u(u_opt, α))
 
 
 
@@ -170,13 +172,13 @@ norm(∂Qdiv∂u(u_opt,α))
 u=rand(n)
 e=1e-6
 fidi=zeros(n)
-for i=1:n
+for i = 1:n
     u1=copy(u)
     u1[i]+=e
-    fidi[i]=(Q(u1,α)-Q(u,α))/e
+    fidi[i]=(Q(u1, α)-Q(u, α))/e
 end
 
-form=∂Qdiv∂u(u,α)
+form=∂Qdiv∂u(u, α)
 norm(form-fidi)/norm(fidi)
 
 
@@ -184,8 +186,8 @@ u=rand(n)
 e=1e-4
 u1=copy(u)
 u1[3]+=e
-v1=(∂Qdiv∂u(u1,α)-∂Qdiv∂u(u,α))/e
-v2=hessel(u,α)[:,3]
+v1=(∂Qdiv∂u(u1, α)-∂Qdiv∂u(u, α))/e
+v2=hessel(u, α)[:, 3]
 norm(v1)
 norm(v1-v2)/norm(v1)
 
@@ -194,14 +196,8 @@ norm(v1-v2)/norm(v1)
 # 检查牛顿法本身的正确性
 using LinearAlgebra
 u=rand(40)
-my(x) = sum((x .- 1.1).^4)
-grad(x) = 4*(x.-1.1).^3
-hessel(x) = diagm(12*(x .- 1.1).^2)
-sol=newton(grad,hessel,zeros(40))
+my(x) = sum((x .- 1.1) .^ 4)
+grad(x) = 4*(x .- 1.1) .^ 3
+hessel(x) = diagm(12*(x .- 1.1) .^ 2)
+sol=newton(grad, hessel, zeros(40))
 norm(grad(sol))
-
-
-
-
-
-

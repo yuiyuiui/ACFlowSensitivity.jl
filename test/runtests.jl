@@ -1,6 +1,6 @@
 using Test
 using ACFlowSensitivity
 
-@testset "AAATest" begin
-    include("AAATest.jl")
+@testset "generatedata" begin
+    include("generatedata.jl")
 end

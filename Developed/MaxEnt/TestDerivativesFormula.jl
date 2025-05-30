@@ -11,7 +11,7 @@ noise = 0.0;
 Gvalue = generate_G_values_cont(β, N, A; noise = noise);
 output_range = range(-output_bound, output_bound, output_number);
 output_range = collect(output_range);
-iwn = (collect(0:N-1) .+ 0.5) * 2π / β * im;
+iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im;
 
 
 
@@ -25,9 +25,9 @@ output_weight = fill(d, output_number);
 # set the kernel matrix
 kernel = Matrix{ComplexF64}(undef, N, output_number);
 for i ∈ 1:N
-	for j ∈ 1:output_number
-		kernel[i, j] = 1 / (iwn[i] - output_range[j])
-	end
+    for j ∈ 1:output_number
+        kernel[i, j] = 1 / (iwn[i] - output_range[j])
+    end
 end;
 
 # real paraliaze Gvalue and kernel
@@ -52,7 +52,9 @@ model = model / (model' * output_weight);
 # function Q
 A_vec(u::Vector{Float64}) = model .* exp.(V * u)
 χ²(u::Vector{Float64}) = (G - d * K * A_vec(u))' * (G - d * K * A_vec(u)) / (σ^2)
-Q(u::Vector{Float64}, α::Float64) = α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight - 0.5 * χ²(u)
+Q(u::Vector{Float64}, α::Float64) =
+    α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight -
+    0.5 * χ²(u)
 
 # 𝞉Q/∂u
 function ∂Qdiv∂u(u::Vector{Float64}, α::Float64)
@@ -70,10 +72,10 @@ end
 u=rand(n)
 e=1e-6
 fidi=zeros(n)
-for i=1:n
+for i = 1:n
     u1=copy(u)
     u1[i]+=e
-    fidi[i]=(Q(u1,α)-Q(u,α))/e
+    fidi[i]=(Q(u1, α)-Q(u, α))/e
 end
 
-norm(fidi-∂Qdiv∂u(u,α))/norm(fidi)
+norm(fidi-∂Qdiv∂u(u, α))/norm(fidi)

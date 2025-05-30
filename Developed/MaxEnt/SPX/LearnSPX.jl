@@ -1,26 +1,26 @@
 using ACFlow, DelimitedFiles, Plots
-import ACFlowSensitivity:  generate_G_values_delta
+import ACFlowSensitivity: generate_G_values_delta
 
 
-poles = [-0.5,1.2]
+poles = [-0.5, 1.2]
 γ = [0.7, 0.3]
 β = 10.0;
 N = 20;
 output_bound = 8.0;
 output_number = 801;
 noise = 0.0;
-wn = collect((0:N-1) .+ 0.5) * 2π / β;
+wn = collect((0:(N-1)) .+ 0.5) * 2π / β;
 GFV = generate_G_values_delta(β, N, poles, γ; noise = noise);
 
 B = Dict{String,Any}(
     "solver" => "StochPX",  # Choose MaxEnt solver
-    "mtype"  => "gauss",   # Default model function
-    "mesh"   => "tangent", # Mesh for spectral function
-    "ngrid"  => N,        # Number of grid points for input data
-    "nmesh"  => output_number,       # Number of mesh points for output data
-    "wmax"   => output_bound,       # Right boundary of mesh
-    "wmin"   => -output_bound,      # Left boundary of mesh
-    "beta"   => β,      # Inverse temperature
+    "mtype" => "gauss",   # Default model function
+    "mesh" => "tangent", # Mesh for spectral function
+    "ngrid" => N,        # Number of grid points for input data
+    "nmesh" => output_number,       # Number of mesh points for output data
+    "wmax" => output_bound,       # Right boundary of mesh
+    "wmin" => -output_bound,      # Left boundary of mesh
+    "beta" => β,      # Inverse temperature
 );
 
 
@@ -40,7 +40,7 @@ setup_param(B, S);
 
 mesh, reA, reG = solve(wn, GFV);
 
-plot(mesh,reA)
+plot(mesh, reA)
 reG
 
 # ---------
@@ -49,11 +49,11 @@ using Optim
 Np=length(poles)
 function loss(x)
     poles = x[1:Np]
-    γ = x[Np+1:2*Np]
+    γ = x[(Np+1):(2*Np)]
     res = 0.0
-    for j=1:N
+    for j = 1:N
         res1=GFV[j]
-        for k=1:Np
+        for k = 1:Np
             res1 -= γ[k]/(im*wn[j]-poles[k])
         end
         res+=abs(res1)^2
@@ -65,8 +65,6 @@ end
 
 
 
-result = optimize(loss, [1.0,-1.0,0.5,0.5], SimulatedAnnealing())
+result = optimize(loss, [1.0, -1.0, 0.5, 0.5], SimulatedAnnealing())
 
 Optim.minimizer(result)
-
-

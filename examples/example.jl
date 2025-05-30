@@ -14,7 +14,7 @@ noise = 1e-4;
 Gvalue = generate_G_values_cont(β, N, A; noise = noise);
 output_range = range(-output_bound, output_bound, output_number);
 output_range = collect(output_range);
-iwn = (collect(0:N-1) .+ 0.5) * 2π / β * im;
+iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im;
 
 
 
@@ -24,9 +24,9 @@ output_weight = fill(d, output_number)
 # set the kernel matrix
 kernel = Matrix{ComplexF64}(undef, N, output_number)
 for i ∈ 1:N
-	for j ∈ 1:output_number
-		kernel[i, j] = 1 / (iwn[i] - output_range[j])
-	end
+    for j ∈ 1:output_number
+        kernel[i, j] = 1 / (iwn[i] - output_range[j])
+    end
 end
 
 # real paraliaze Gvalue and kernel
@@ -40,9 +40,9 @@ S = S[1:n]
 
 u=diagm(1 ./ S) * U' * G/d
 
-A =  V * u
+A = V * u
 
 norm(G-K*A*d)
 
 
-plot(output_range,A)
+plot(output_range, A)

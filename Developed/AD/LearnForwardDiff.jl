@@ -1,9 +1,9 @@
 using ForwardDiff
 using Zygote
 
-Zygote.gradient(x->x^2,1.0)
+Zygote.gradient(x->x^2, 1.0)
 
-ForwardDiff.gradient(x->x[1]^2,[1.0])
+ForwardDiff.gradient(x->x[1]^2, [1.0])
 
 using ForwardDiff
 

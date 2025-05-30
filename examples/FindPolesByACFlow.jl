@@ -6,53 +6,53 @@ using ACFlowSensitivity
 
 
 
-function iter_solve(β,poles,input_G)
-    
+function iter_solve(β, poles, input_G)
+
     B = Dict{String,Any}(
         "solver" => "BarRat",  # Choose MaxEnt solver
-        "mtype"  => "gauss",   # Default model function
-        "mesh"   => "tangent", # Mesh for spectral function
-        "ngrid"  => length(poles),        # Number of grid points for input data
-        "nmesh"  => 801,       # Number of mesh points for output data
-        "wmax"   => 8.0,       # Right boundary of mesh
-        "wmin"   => -8.0,      # Left boundary of mesh
-        "beta"   => β,      # Inverse temperature
+        "mtype" => "gauss",   # Default model function
+        "mesh" => "tangent", # Mesh for spectral function
+        "ngrid" => length(poles),        # Number of grid points for input data
+        "nmesh" => 801,       # Number of mesh points for output data
+        "wmax" => 8.0,       # Right boundary of mesh
+        "wmin" => -8.0,      # Left boundary of mesh
+        "beta" => β,      # Inverse temperature
     );
 
     S = Dict{String,Any}(
-        "atype"=>"delta",        
+        "atype"=>"delta",
         "denoise"=>"none",
         "epsilon"=>1e-10,
         "pcut"=>0.99,
         "eta"=>1e-2,
     );
     setup_param(B, S);
-    solve(poles,input_G)
+    solve(poles, input_G)
 end
 
 
 #descrete situation
 β=10.0;
 N=20;
-poles=(collect(0:N-1).+0.5)*2π/β;
+poles=(collect(0:(N-1)) .+ 0.5)*2π/β;
 grid=im*poles;
 
 
 
-input_G=Vector{ComplexF64}(undef,N);
-for i=1:N
-    for j=1:N
+input_G=Vector{ComplexF64}(undef, N);
+for i = 1:N
+    for j = 1:N
         input_G[i]+=1/(grid[i]-poles[j])
     end
 end
 
-reA=Vector{Float64}(undef,N);
+reA=Vector{Float64}(undef, N);
 
-for k=1:N
+for k = 1:N
     poles1=poles[k:N]
     input_G1=input_G[k:N]
     iter_solve(β, poles1, input_G1);
-    input_G=input_G-1 ./(im*poles.-poles[k])
+    input_G=input_G-1 ./ (im*poles .- poles[k])
 end
 
 0.31326707887540683 - 0.00197679837205032im
