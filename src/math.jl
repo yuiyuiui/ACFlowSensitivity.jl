@@ -27,6 +27,26 @@ function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     return integral(x->abs(f(x))^Tp,a,b;h=h)^(1/Tp)
 end
 
+# Normal distribution
+struct Normal{T<:Real}
+    μ::T
+    σ::T
+end
+
+function Base.rand(d::Normal{T}) where {T<:Real}
+    u1 = rand()
+    u2 = rand()
+    r = sqrt(-2 * log(u1))
+    θ = 2 * π * u2
+    z = r * cos(θ)
+    return d.μ + d.σ * T(z)
+end
+
+function Base.rand(d::Normal{T},n::Int) where {T<:Real}
+    return [rand(d) for _ in 1:n]
+end
+
+
 
 #=
 abstract type Method end
