@@ -6,7 +6,7 @@
 [![Coverage](https://codecov.io/gh/yuiyuiui/ACFlowSensitivity.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/yuiyuiui/ACFlowSensitivity.jl)
 -->
 
-`ACFlowSensitivity` is a package to reimplement analytic continuation methods in [`ACFlow`](https://github.com/huangli712/ACFlow) and use Automatic Differentiation and other methods to analyse these algorithms' sensitivity.
+`ACFlowSensitivity` is a Julia package that reimplements and enhances analytic continuation methods from [`ACFlow`](https://github.com/huangli712/ACFlow). It provides tools for analyzing the sensitivity of these algorithms using automatic differentiation and other advanced techniques.
 
 For input $\mathcal{G}=\{G(iw_n)\}_{n=1}^N$ and analytic continuation algorithm
 
@@ -27,12 +27,12 @@ As a result we calculate:
 ![Loss derivative](https://latex.codecogs.com/svg.image?\frac{\partial\text{Loss}(\mathcal{G},\mathcal{G}_0)}{\partial\mathcal{G}}|_{\mathcal{G}=\mathcal{G}_0})
 
 
-Our purpose is to implement following methods (not all) and their sensitivity analysis:
+Our purpose is to implement following methods (not all) and their sensitivity analysis (`RI` means reimplement. `SA` means Sensitivity Analysis. `cont,delta,mixed` are spectrum types):
 
-|Method|reimplement|Sensitivity Analysis|
-|:---|:---|:---|
-|BarRat(no prony)|✅||
-|MaxEnt Chi2kink|✅|✅|
+|Method|RI cont|RI delta|RI mixed|SA cont|SA delta|SA mixed|
+|:---|:---|:---|:---|:---|:---|:---|
+|BarRat(no prony)|✅|
+|MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
 |SSK||
 |SAC||
 |SPX||

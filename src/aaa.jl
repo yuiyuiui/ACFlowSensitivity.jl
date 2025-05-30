@@ -1,66 +1,35 @@
 # Aaa algorithm for continuous spectral density
 
-solve(GFV::Vector{T}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
-
-# function for examine effect of methods
-function aaa_check(
-    A;
-    β::Float64 = 10.0,
-    N::Int64 = 20,
-    output_bound::Float64 = 5.0,
-    output_number::Int64 = 801,
-    noise = 0.0::Float64,
-)
-
-    #generate green function values on image axis
-    G_values_image=generate_G_values_cont(β, N, A)
-    for i in eachindex(G_values_image)
-        G_values_image[i]+=G_values_image[i]*noise*rand()*exp(2π*im*rand())
+function solve(GFV::Vector{T}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
+    w, g, v, _ = aaa(ctx.iwn, GFV; alg = alg)
+    reA = zeros(T, length(ctx.mesh))
+    for i in eachindex(ctx.mesh)
+        reA[i] = sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g))
     end
-    input_grid=im*(collect(0:(N-1)) .+ 0.5)*2π/β;
-
-    # calculate reconstruct output mesh and spectral density and green function
-    mesh=make_mesh(output_bound, output_number)
-    (w, g, v), reA=reconstruct_spectral_density(input_grid, G_values_image)
-    return mesh, reA, construct_bary_func(w, g, v)
+    return ctx.mesh, reA
 end
-
-# reconstruct spectral density
-function reconstruct_spectral_density(
-    input_grid::Vector{ComplexF64},
-    input_values::Vector{ComplexF64},
-)
-    # construct output mesh
-    w, g, v=my_aaa(input_grid, input_values)
-    return (w, g, v), construct_bf_sd(w, g, v)
-end
-
 
 # aaa algorithm writen by myself
-function my_aaa(
-    grid::Vector{ComplexF64},
-    values::Vector{ComplexF64};
-    max_degree = 150,
-    tol = 1000*eps(Float64),
-    lookaheaad = 10,
-    isAD::Bool = false,
-)
+function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T<:Number}
     @assert length(grid)>0
-
-    #preparation
     @assert length(grid)==length(values)
+
+    # preparation
+    tol = alg.aaa_tol
+    max_degree = alg.max_degree
+    lookaheaad = alg.lookaheaad
     m=length(grid)
     best_error=Inf
     best_n=0
-    best_weight=0.0+im*0.0
+    best_weight=T(0)
     best_index=Int[]
 
     max_values=maximum(abs.(values))
     wait_index=Set(1:m)
     chosen_index=Int64[]
 
-    C=Matrix{ComplexF64}(undef, m, m)
-    L=Matrix{ComplexF64}(undef, m, m)
+    C=Matrix{T}(undef, m, m)
+    L=Matrix{T}(undef, m, m)
     R=zeros(m)
 
     #get the first node
@@ -78,7 +47,7 @@ function my_aaa(
         active_values=values[chosen_index]
         @inbounds @fastmath for i in wait_index
             δ = grid[i] - active_grid[n]
-            C[i, n] = iszero(δ) ? 1 / eps() : 1 / δ
+            C[i, n] = iszero(δ) ? 1 / eps(real(T)) : 1 / δ
             L[i, n] = (values[i] - active_values[n]) * C[i, n]
         end
 
@@ -114,156 +83,5 @@ function my_aaa(
         delete!(wait_index, next_index)
         R[next_index]=0
     end
-
-    if isAD
-
-        return best_weight, grid[best_index], values[best_index], best_index
-    end
-
-    return best_weight, grid[best_index], values[best_index]
-
-end
-
-
-#---------------
-
-# reconstructed green function on the complex palne
-function construct_bary_func(
-    w::Vector{ComplexF64},
-    g::Vector{ComplexF64},
-    v::Vector{ComplexF64},
-)
-    function y(x)
-        return sum((w .* v) ./ (x .- g))/sum(w ./ (x .- g))
-    end
-    return y
-end
-
-# re construct spectral density function on the whole complex palne
-function construct_bf_sd(
-    w::Vector{ComplexF64},
-    g::Vector{ComplexF64},
-    v::Vector{ComplexF64},
-)
-    f0=construct_bary_func(w, g, v)
-    function f1(x::Float64)
-        return -imag(f0(x))/π
-    end
-    return f1
-end
-
-
-
-
-
-
-#--------------------------------------
-# Aaa algorithm for delta spectral density
-
-function DireInverse_check(β::Float64, N::Int64, γ::Vector{Float64})
-    poles=(collect(0:(N-1)) .+ 0.5)*2π/β
-    grid=im*poles
-    G_values=generate_G_values_delta(poles, γ, grid)
-    return DireInverse(poles, grid, G_values)
-end
-
-function DireInverse(
-    poles::Vector{Float64},
-    grid::Vector{ComplexF64},
-    values::Vector{ComplexF64},
-)
-    @assert length(poles)==length(values)==length(grid)
-    n=length(grid)
-    A=Matrix{ComplexF64}(undef, n, n)
-    #=
-    γ=zeros(ComplexF64,n)
-    poles1=copy(poles)
-    values1=copy(values)
-    grid1=copy(grid)
-    for k=1:n
-
-        for i=1:n
-            for j=1:n
-                A[i,j]=1/(grid1[i]-poles1[j])
-            end
-        end
-        γ[k]=(A\values1)[1]
-        poles1=permu(poles1)
-        grid1=permu(grid1)
-        values1=permu(values1)
-    end
-
-    return real.(γ)
-    =#
-
-
-    #=
-    for i=1:n
-        for j=1:n
-            A[i,j]=1/(grid[i]-poles[j])
-        end
-    end
-
-    F=qr(A)
-    return real.(F\values)
-    =#
-
-
-
-    γ=zeros(ComplexF64, n)
-    for k = 1:n
-        poles1=permu_closest(poles, k)
-        values1=permu_closest(values, k)
-        grid1=permu_closest(grid, k)
-        for i = 1:n
-            for j = 1:n
-                A[i, j]=1/(grid1[i]-poles1[j])
-            end
-        end
-        γ[k]=(A\values1)[1]
-    end
-
-    return real.(γ)
-
-
-
-end
-
-function permu(v::Vector; direction = :left::Symbol)
-    n=length(v)
-    res=similar(v, n)
-    if direction==:left
-        for i = 1:(n-1)
-            res[i]=v[i+1]
-        end
-        res[n]=v[1]
-    else
-        for i = 1:(n-1)
-            res[i+1]=v[i]
-        end
-        res[i]=v[n]
-    end
-    return res
-end
-
-function permu_closest(v::Vector, target::Int64)
-    N=length(v)
-    res=similar(v, N)
-    @assert target>=1&&target<=N
-    idx=1
-    res[1]=v[target]
-    for k = 1:N
-        if target-k<=0||target+k>N
-            break
-        end
-        res[idx+1]=v[target-k]
-        res[idx+2]=v[target+k]
-        idx+=2
-    end
-    if target<=(1+N)/2
-        res[(idx+1):N]=v[(2*target):N]
-    else
-        res[(idx+1):N]=v[(2*target-N-1):-1:1]
-    end
-    return res
+    return best_weight, grid[best_index], values[best_index], best_index
 end

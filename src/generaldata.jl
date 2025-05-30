@@ -19,7 +19,7 @@ end
 # generate values of G(iw_n)
 function generate_G_values_cont(
     β::T,
-    N::Int64,
+    N::Int,
     A;
     int_low::T = -T(20),
     int_up::T = T(20),
@@ -40,7 +40,7 @@ end
 
 function generate_G_values_delta(
     β::T,
-    N::Int64,
+    N::Int,
     poles::Vector{T},
     γ_vec::Vector{T};
     noise::T = T(0),

@@ -1,4 +1,4 @@
-# AD for aaa algorithm on continuous spectral density
+#= AD for aaa algorithm on continuous spectral density
 
 function ADaaa(
     solver::Solver,
@@ -474,3 +474,4 @@ function aaa_cont_FiniDIff_Chain(
     ∇Loss_2G = (JwDivJG)' * ∇Loss_w + transpose(∇w_G) * ∂LossDiv∂w
     return ∇Loss_2G + ∇Loss_1G
 end
+=#

@@ -1,4 +1,4 @@
-function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
+function integral(f::Function, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
     n_raw = floor((b - a) / h)
     n = Int(n_raw)
     if isodd(n)
@@ -9,11 +9,12 @@ function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     end
 
     fa = f(a)
-    !(typeof(fa) <: Union{T,Complex{T}}) && error("Type of the output of f should be consistent with its input")
-    fb = f(a + h * T(n))  
+    !(typeof(fa) <: Union{T,Complex{T}}) &&
+        error("Type of the output of f should be consistent with its input")
+    fb = f(a + h * T(n))
     acc = fa + fb
 
-    @inbounds for i in 1:(n-1)
+    @inbounds for i = 1:(n-1)
         x = a + h * T(i)
         coeff = isodd(i) ? T(4) : T(2)
         acc += coeff * f(x)
@@ -22,9 +23,9 @@ function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     return acc * (h / T(3))
 end
 
-function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
+function Lp(f::Function, p::Real, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
     Tp = T(p)
-    return integral(x->abs(f(x))^Tp,a,b;h=h)^(1/Tp)
+    return integral(x->abs(f(x))^Tp, a, b; h = h)^(1/Tp)
 end
 
 # Normal distribution
@@ -42,8 +43,8 @@ function Base.rand(d::Normal{T}) where {T<:Real}
     return d.μ + d.σ * T(z)
 end
 
-function Base.rand(d::Normal{T},n::Int) where {T<:Real}
-    return [rand(d) for _ in 1:n]
+function Base.rand(d::Normal{T}, n::Int) where {T<:Real}
+    return [rand(d) for _ = 1:n]
 end
 
 
@@ -184,7 +185,7 @@ function my_newton(
     fun::Function,
     grad::Function,
     guess;
-    maxiter::Int64 = 20000,
+    maxiter::Int = 20000,
     mixing::Float64 = 0.5,
 )
     function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}

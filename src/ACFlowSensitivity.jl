@@ -24,9 +24,9 @@ export my_chi2kink, ADchi2kink
 include("math.jl")
 include("generaldata.jl")
 include("mesh.jl")
-#=
-include("math.jl")
+include("solve.jl")
 include("aaa.jl")
+#=
 include("ADaaa.jl")
 include("maxent.jl")
 include("sac.jl")
