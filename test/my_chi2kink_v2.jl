@@ -19,7 +19,7 @@ A=continous_spectral_density(μ, σ, peak);
 N=20;
 iwn=(collect(0:(N-1)) .+ 0.5)*2π/β * im;
 wn = collect((0:(N-1)) .+ 0.5) * 2π / β;
-Gvalue=generate_G_values_cont(β, N, A; noise = noise);
+Gvalue=generate_GFV_cont(β, N, A; noise = noise);
 Aout=my_chi2kink(iwn, Gvalue, output_range)
 plot(output_range, A.(output_range), label = "origin Spectral ", title = "noise=$noise")
 plot!(output_range, Aout, label = "reconstruct Spectral")
@@ -57,7 +57,7 @@ poles = - collect(1:M) * output_bound/(M+1)
 iwn=(collect(0:(M-1)) .+ 0.5)*2π/β * im;
 wn = collect((0:(M-1)) .+ 0.5) * 2π / β;
 
-Gvalue = generate_G_values_delta(β, M, poles, γ_vec; noise = noise);
+Gvalue = generate_GFV_delta(β, M, poles, γ_vec; noise = noise);
 Aout=my_chi2kink(iwn, Gvalue, output_range)
 scatter(
     poles,

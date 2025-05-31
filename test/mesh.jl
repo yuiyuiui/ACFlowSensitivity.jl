@@ -2,7 +2,7 @@
     ml = 100
     for T in [Float32, Float64]
         mb = T(5)
-        mesh, mesh_weights = make_mesh(mb, ml, UniformMesh{T}())
+        mesh, mesh_weights = make_mesh(mb, ml, UniformMesh())
         @test typeof(mesh) === Vector{T}
         @test typeof(mesh_weights) === Vector{T}
         @test length(mesh) == ml
@@ -16,7 +16,7 @@ end
     ml = 100
     for T in [Float32, Float64]
         mb = T(5)
-        mesh, mesh_weights = make_mesh(mb, ml, TangentMesh(T(2.1)))
+        mesh, mesh_weights = make_mesh(mb, ml, TangentMesh())
         @test typeof(mesh) === Vector{T}
         @test typeof(mesh_weights) === Vector{T}
         @test length(mesh) == ml

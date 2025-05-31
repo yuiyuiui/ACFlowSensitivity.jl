@@ -20,10 +20,10 @@ noise0 = 0.0
 noise1 = 1e-5
 noise2 = 1e-4
 noise3 = 1e-3
-Gvalue0=generate_G_values_cont(β, N, A; noise = noise0);
-Gvalue1=generate_G_values_cont(β, N, A; noise = noise1);
-Gvalue2=generate_G_values_cont(β, N, A; noise = noise2);
-Gvalue3=generate_G_values_cont(β, N, A; noise = noise3);
+Gvalue0=generate_GFV_cont(β, N, A; noise = noise0);
+Gvalue1=generate_GFV_cont(β, N, A; noise = noise1);
+Gvalue2=generate_GFV_cont(β, N, A; noise = noise2);
+Gvalue3=generate_GFV_cont(β, N, A; noise = noise3);
 
 
 B = Dict{String,Any}(
@@ -81,7 +81,7 @@ plot!(mesh, reA0_cont, label = "reconstruct A0(w), noise: 0.0")
 
 using DelimitedFiles, Printf, ACFlow
 using Plots, Random
-import ACFlowSensitivity.generate_G_values_delta
+import ACFlowSensitivity.generate_GFV_delta
 
 β = 10.0;
 N = 20;
@@ -98,10 +98,10 @@ noise3 = 1e-3
 poles = [-2.0, -1.0, 1.0, 2.0]
 γ_vec = 0.25 * ones(length(poles))
 
-Gval0 = generate_G_values_delta(β, N, poles, γ_vec; noise = noise0)
-Gval1 = generate_G_values_delta(β, N, poles, γ_vec; noise = noise1)
-Gval2 = generate_G_values_delta(β, N, poles, γ_vec; noise = noise2)
-Gval3 = generate_G_values_delta(β, N, poles, γ_vec; noise = noise3)
+Gval0 = generate_GFV_delta(β, N, poles, γ_vec; noise = noise0)
+Gval1 = generate_GFV_delta(β, N, poles, γ_vec; noise = noise1)
+Gval2 = generate_GFV_delta(β, N, poles, γ_vec; noise = noise2)
+Gval3 = generate_GFV_delta(β, N, poles, γ_vec; noise = noise3)
 
 
 B = Dict{String,Any}(

@@ -11,7 +11,7 @@ peak=[1.0, 0.3];
 A=continous_spectral_density(μ, σ, peak);
 noise=0.0
 
-Giwn=generate_G_values_cont(β, N, A);
+Giwn=generate_GFV_cont(β, N, A);
 for i in eachindex(Giwn)
     Giwn[i]+=Giwn[i]*noise*rand()*exp(2π*im*rand())
 end;

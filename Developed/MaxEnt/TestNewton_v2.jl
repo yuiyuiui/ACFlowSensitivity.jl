@@ -9,7 +9,7 @@ N = 20;
 output_bound = 8.0;
 output_number = 801;
 noise = 1e-2;
-Gvalue = generate_G_values_cont(β, N, A; noise = noise);
+Gvalue = generate_GFV_cont(β, N, A; noise = noise);
 output_range = range(-output_bound, output_bound, output_number);
 output_range = collect(output_range);
 iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im;

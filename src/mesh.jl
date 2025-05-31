@@ -1,15 +1,15 @@
-abstract type Mesh{T<:Real} end
+abstract type Mesh end
 
-struct UniformMesh{T<:Real} <: Mesh{T} end
+struct UniformMesh <: Mesh end
 
-struct TangentMesh{T<:Real} <: Mesh{T}
+struct TangentMesh{T<:Real} <: Mesh
     p::T
-    function TangentMesh(p::T) where {T<:Real}
+    function TangentMesh(; p::T = 2.1) where {T<:Real}
         return new{T}(p)
     end
 end
 
-function make_mesh(mb::T, ml::Int, mesh_type::UniformMesh{T}) where {T<:Real}
+function make_mesh(mb::T, ml::Int, mesh_type::UniformMesh) where {T<:Real}
     mesh=collect(range(-mb, mb, ml))
     mesh_weights = (mesh[2:end] + mesh[1:(end-1)]) * 1//2
     pushfirst!(mesh_weights, mesh[1])
@@ -18,8 +18,8 @@ function make_mesh(mb::T, ml::Int, mesh_type::UniformMesh{T}) where {T<:Real}
     return mesh, mesh_weights
 end
 
-function make_mesh(mb::T, ml::Int, mesh_type::TangentMesh{T}) where {T<:Real}
-    p=mesh_type.p
+function make_mesh(mb::T, ml::Int, mesh_type::TangentMesh) where {T<:Real}
+    p=T(mesh_type.p)
     mesh=tan.(collect(range(-T(π)/p, T(π)/p, ml)))
     mesh = mesh/mesh[end]*mb
     mesh_weights = (mesh[2:end] + mesh[1:(end-1)]) * 1//2

@@ -15,10 +15,10 @@ noise1 = 1e-5;
 noise2 = 1e-4;
 noise3 = 1e-3;
 
-Gvalue0=generate_G_values_cont(β, N, A; noise = noise0);
-Gvalue1=generate_G_values_cont(β, N, A; noise = noise1);
-Gvalue2=generate_G_values_cont(β, N, A; noise = noise2);
-Gvalue3=generate_G_values_cont(β, N, A; noise = noise3);
+Gvalue0=generate_GFV_cont(β, N, A; noise = noise0);
+Gvalue1=generate_GFV_cont(β, N, A; noise = noise1);
+Gvalue2=generate_GFV_cont(β, N, A; noise = noise2);
+Gvalue3=generate_GFV_cont(β, N, A; noise = noise3);
 output_range=range(-output_bound, output_bound, output_number);
 output_range=collect(output_range);
 iwn=(collect(0:(N-1)) .+ 0.5)*2π/β * im;
@@ -61,10 +61,10 @@ noise0 = 0.0;
 noise1 = 1e-5;
 noise2 = 1e-4;
 noise3 = 1e-3;
-Gval0=generate_G_values_delta(β, N, poles, γ_vec; noise = noise0);
-Gval1=generate_G_values_delta(β, N, poles, γ_vec; noise = noise1);
-Gval2=generate_G_values_delta(β, N, poles, γ_vec; noise = noise2);
-Gval3=generate_G_values_delta(β, N, poles, γ_vec; noise = noise3);
+Gval0=generate_GFV_delta(β, N, poles, γ_vec; noise = noise0);
+Gval1=generate_GFV_delta(β, N, poles, γ_vec; noise = noise1);
+Gval2=generate_GFV_delta(β, N, poles, γ_vec; noise = noise2);
+Gval3=generate_GFV_delta(β, N, poles, γ_vec; noise = noise3);
 
 Aout0_delta=my_chi2kink(iwn, Gval0, output_range)
 Aout1_delta=my_chi2kink(iwn, Gval1, output_range)

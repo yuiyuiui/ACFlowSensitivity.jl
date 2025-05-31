@@ -27,7 +27,7 @@ error = zeros(T)
 
 for t = 1:T
     @show t
-    Gvalue = generate_G_values_cont(β, N, A; noise = noise)
+    Gvalue = generate_GFV_cont(β, N, A; noise = noise)
     Aout = my_chi2kink(iwn, Gvalue, output_range)
     _, dlossdivdG = ADchi2kink(iwn, Gvalue, output_range)
     δ = norm(my_chi2kink(iwn, Gvalue + η * dlossdivdG, output_range) - Aout) * sqrt(d)

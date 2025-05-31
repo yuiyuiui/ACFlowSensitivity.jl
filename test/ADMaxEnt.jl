@@ -19,7 +19,7 @@ using Plots, LinearAlgebra, Random, Test
     iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im
 
     noise = 1e-2
-    Gvalue = generate_G_values_cont(β, N, A; noise = noise)
+    Gvalue = generate_GFV_cont(β, N, A; noise = noise)
     Aout = my_chi2kink(iwn, Gvalue, output_range)
 
     η = 1e-8

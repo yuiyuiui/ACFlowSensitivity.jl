@@ -1,5 +1,5 @@
 using ACFlow, DelimitedFiles, Plots
-import ACFlowSensitivity: continous_spectral_density, generate_G_values_cont
+import ACFlowSensitivity: continous_spectral_density, generate_GFV_cont
 
 
 μ = [0.5, -2.5];
@@ -21,7 +21,7 @@ output_bound = 8.0;
 output_number = 801;
 noise = 1e-2;
 wn = collect((0:(N-1)) .+ 0.5) * 2π / β;
-GFV = generate_G_values_cont(β, N, A; noise = noise);
+GFV = generate_GFV_cont(β, N, A; noise = noise);
 
 B = Dict{String,Any}(
     "solver" => "MaxEnt",  # Choose MaxEnt solver

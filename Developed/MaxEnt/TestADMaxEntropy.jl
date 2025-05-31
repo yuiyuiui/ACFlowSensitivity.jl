@@ -143,7 +143,7 @@ N=20;
 output_bound=5.0;
 output_number=401;
 noise=1e-4;
-Gvalue=generate_G_values_cont(β, N, A; noise = noise);
+Gvalue=generate_GFV_cont(β, N, A; noise = noise);
 G=vcat(real(Gvalue), imag(Gvalue))
 output_range=range(-output_bound, output_bound, output_number);
 output_range=collect(output_range);

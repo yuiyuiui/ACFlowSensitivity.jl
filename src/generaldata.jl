@@ -17,10 +17,10 @@ function continous_spectral_density(
 end
 
 # generate values of G(iw_n)
-function generate_G_values_cont(
+function generate_GFV_cont(
     β::T,
     N::Int,
-    A;
+    A::Function;
     int_low::T = -T(20),
     int_up::T = T(20),
     noise::T = T(0),
@@ -38,7 +38,7 @@ function generate_G_values_cont(
     return res
 end
 
-function generate_G_values_delta(
+function generate_GFV_delta(
     β::T,
     N::Int,
     poles::Vector{T},

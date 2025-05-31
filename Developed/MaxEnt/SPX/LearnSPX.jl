@@ -1,5 +1,5 @@
 using ACFlow, DelimitedFiles, Plots
-import ACFlowSensitivity: generate_G_values_delta
+import ACFlowSensitivity: generate_GFV_delta
 
 
 poles = [-0.5, 1.2]
@@ -10,7 +10,7 @@ output_bound = 8.0;
 output_number = 801;
 noise = 0.0;
 wn = collect((0:(N-1)) .+ 0.5) * 2π / β;
-GFV = generate_G_values_delta(β, N, poles, γ; noise = noise);
+GFV = generate_GFV_delta(β, N, poles, γ; noise = noise);
 
 B = Dict{String,Any}(
     "solver" => "StochPX",  # Choose MaxEnt solver

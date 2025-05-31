@@ -17,7 +17,7 @@ iwn=(collect(0:(N-1)) .+ 0.5)*2π/β * im;
 d = output_range[2]-output_range[1]
 
 noise=1e-3;
-Gvalue=generate_G_values_cont(β, N, A; noise = noise);
+Gvalue=generate_GFV_cont(β, N, A; noise = noise);
 Aout = my_chi2kink(iwn, Gvalue, output_range);
 dAdivdG, _ = ADchi2kink(iwn, Gvalue, output_range);
 η = 1e-3
@@ -74,7 +74,7 @@ iwn=(collect(0:(N-1)) .+ 0.5)*2π/β * im;
 d = output_range[2]-output_range[1]
 
 noise=1e-3;
-Gvalue=generate_G_values_cont(β, N, A; noise = noise);
+Gvalue=generate_GFV_cont(β, N, A; noise = noise);
 
 T = 10
 pert = 10.0 .^ collect(-5.0:0.5:0.0)
