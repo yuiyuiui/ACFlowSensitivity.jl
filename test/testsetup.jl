@@ -1,6 +1,6 @@
 tolerance(T) = eps(real(T))^(1 // 2)
 strict_tol(T) = eps(real(T))^(2 // 3)
-relax_tol(T) = eps(real(T))^(1 // 3)
+relax_tol(T) = eps(real(T))^(1 // 4)
 
 # loss function
 function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{T}) where {T<:Real}

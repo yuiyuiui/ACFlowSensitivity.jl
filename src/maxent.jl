@@ -3,8 +3,33 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::MaxEntChi2kink) wh
     α₁ = T(alg.α₁)
     σ = T(alg.σ)
     maxiter = alg.maxent_iter
-    G,K,n,U,S,V = singular_space(GFV, ctx.iwn, ctx.mesh)
-    model
+
+    # singular space method
+    kernel = Matrix{Complex{T}}(undef, length(GFV), length(ctx.mesh))
+    for i ∈ 1:length(GFV)
+        for j ∈ 1:length(ctx.mesh)
+            kernel[i, j] = 1 / (ctx.iwn[i] - ctx.mesh[j])
+        end
+    end
+    G = vcat(real(GFV), imag(GFV))
+    K = [real(kernel); imag(kernel)]
+    U, S, V = svd(K)
+    n = count(x -> (x >= strict_tol(T)), S)
+    V = V[:, 1:n]
+    U = U[:, 1:n]
+    S = S[1:n]
+    
+    model = make_model(alg.model_type, ctx)
+    reA = copy(model)
+    for i ∈ 1:maxiter
+        model = reA
+        reA = chi2kink(G,K,n,U,S,V,model,L,α₁,σ)
+    end
+end
+
+
+
+function chi2kink(G::Vector{T},K::Matrix{T},n::Int,U::Matrix{T},S::Vector{T},V::Matrix{T},model::Vector{T},L::Int,α₁::T,σ::T) where {T<:Real}
 end
 
 function my_chi2kink(
@@ -19,22 +44,7 @@ function my_chi2kink(
     d = output_range[2] - output_range[1]
     output_weight = fill(d, output_number)
 
-    # set the kernel matrix
-    kernel = Matrix{ComplexF64}(undef, N, output_number)
-    for i ∈ 1:N
-        for j ∈ 1:output_number
-            kernel[i, j] = 1 / (iwn[i] - output_range[j])
-        end
-    end
-
-    # real paraliaze Gvalue and kernel
-    G = vcat(real(Gvalue), imag(Gvalue))
-    K = [real(kernel); imag(kernel)]
-    U, S, V = svd(K)
-    n = count(x -> (x >= 1e-10), S)
-    V = V[:, 1:n]
-    U = U[:, 1:n]
-    S = S[1:n]
+    
 
     # defualt model
     model = exp.(-output_range .^ 2 / 4)

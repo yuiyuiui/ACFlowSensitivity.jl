@@ -1,3 +1,7 @@
+tolerance(T) = eps(real(T))^(1 // 2)
+strict_tol(T) = eps(real(T))^(2 // 3)
+relax_tol(T) = eps(real(T))^(1 // 4)
+
 function integral(f::Function, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
     n_raw = floor((b - a) / h)
     n = Int(n_raw)
