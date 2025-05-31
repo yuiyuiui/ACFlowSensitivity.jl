@@ -31,9 +31,8 @@ function generate_GFV_cont(
     for i = 1:n
         res[i] = integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
     end
-    NL = Normal(T(0), T(1))   # Normal list
     for i = 1:n
-        res[i]+=noise*rand(NL)*res[i]*exp(T(2π)*im*rand(T))
+        res[i]+=noise*randn(T)*res[i]*exp(T(2π)*im*rand(T))
     end
     return res
 end
@@ -53,9 +52,8 @@ function generate_GFV_delta(
             res[i] += γ_vec[j] / (im*wn[i]-poles[j])
         end
     end
-    NL = Normal(T(0), T(1))
     for i = 1:N
-        res[i]+=noise*rand(NL)*res[i]*exp(T(2π)*im*rand(T))
+        res[i]+=noise*randn(T)*res[i]*exp(T(2π)*im*rand(T))
     end
     return res
 end

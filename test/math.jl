@@ -35,17 +35,3 @@ end
             @test_throws ErrorException ACFlowSensitivity.Lp(x->f(x)+0.0, 2.0, a, b)
     end
 end
-
-@testset "Normal" begin
-    for T in [Float32, Float64]
-        d = ACFlowSensitivity.Normal(T(0), T(1))
-        @test typeof(rand(d)) == T
-        @test typeof(rand(d, 10)) == Vector{T}
-        n = 10000
-        samples = rand(d, n)
-        μ = sum(samples)/n
-        σ = sqrt(sum((samples .- μ) .^ 2)/n)
-        @test isapprox(μ, d.μ, atol = 2e-2)
-        @test isapprox(σ, d.σ, atol = 2e-2)
-    end
-end

@@ -26,9 +26,9 @@ struct BarRat
     max_degree::Int
     lookaheaad::Int
     function BarRat(;
-        aaa_tol = ACFSDefults.tol[],
-        max_degree = ACFSDefults.max_degree[],
-        lookaheaad = ACFSDefults.lookaheaad[],
+        aaa_tol = ACFSDefults.tol[]::Real,
+        max_degree = ACFSDefults.max_degree[]::Int,
+        lookaheaad = ACFSDefults.lookaheaad[]::Int,
     )
         return new(aaa_tol, max_degree, lookaheaad)
     end
