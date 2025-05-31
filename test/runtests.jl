@@ -16,3 +16,6 @@ end
 @testset "barrat" begin
     include("barrat.jl")
 end
+@testset "model" begin
+    include("model.jl")
+end

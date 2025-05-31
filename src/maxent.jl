@@ -1,8 +1,12 @@
-# 一些说明：
-# 1. 为了方便计算，我们统一使用均匀的输出网格点，并记个点间距为d
-Zygote.@nograd range
+function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::MaxEntChi2kink) where {T<:Real}
+    L = alg.L
+    α₁ = T(alg.α₁)
+    σ = T(alg.σ)
+    maxiter = alg.maxent_iter
+    G,K,n,U,S,V = singular_space(GFV, ctx.iwn, ctx.mesh)
+    model
+end
 
-# wirte optimize max Q by hand for AD
 function my_chi2kink(
     iwn::Vector{ComplexF64},
     Gvalue::Vector{ComplexF64},

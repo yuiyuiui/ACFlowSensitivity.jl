@@ -26,17 +26,31 @@ struct BarRat
     max_degree::Int
     lookaheaad::Int
     function BarRat(;
-        aaa_tol = ACFSDefults.tol[]::Real,
-        max_degree = ACFSDefults.max_degree[]::Int,
-        lookaheaad = ACFSDefults.lookaheaad[]::Int,
+        aaa_tol::Real = ACFSDefults.tol[],
+        max_degree::Int = 150,
+        lookaheaad::Int = 10,
     )
         return new(aaa_tol, max_degree, lookaheaad)
     end
 end
 
-struct maxent
-    ite::Int
-    method::String
+abstract type MaxEnt end
+
+struct MaxEntChi2kink <: MaxEnt
+    maxiter::Int
+    L::Int
+    α₁::Real
+    σ::Real
+    model_type::String
+    function MaxEntChi2kink(;
+        maxiter::Int = 1,
+        L::Int = 16,
+        α₁::Real = 1e12,
+        σ::Real = 1e-4,
+        model_type::String = "Gaussian",
+    )
+        return new(maxiter, L, α₁, σ, model_type)
+    end
 end
 
 module ACFSDefults
