@@ -7,7 +7,6 @@ noise = 0.2
 xx = collect(range(-5, 5, L))
 yy = ϕ.(xx) + (2 * rand(L) .- 1) * noise * b
 
-
 fitfun(x::Float64, p::Vector{Float64}) = p[1] + p[2] / (1 + exp(-p[4] * (x - p[3])))
 
 function JfdivJp(x::Float64, p::Vector{Float64})
@@ -18,13 +17,11 @@ function JfdivJp(x::Float64, p::Vector{Float64})
     return [1.0, J2, J3, J4]
 end
 
-function my_curve_fit(
-    fun::Function,
-    JfdivJp::Function,
-    xx::Vector{Float64},
-    yy::Vector{Float64},
-    guess::Vector{Float64},
-)
+function my_curve_fit(fun::Function,
+                      JfdivJp::Function,
+                      xx::Vector{Float64},
+                      yy::Vector{Float64},
+                      guess::Vector{Float64})
     loss(p) = sum(((x -> fun(x, p)).(xx) - yy) .^ 2)
     J(p) = 2*sum((x -> JfdivJp(x, p)).(xx) .* ((x -> fun(x, p)).(xx) - yy))
     return my_GD_v2(loss, J, guess)
@@ -32,22 +29,9 @@ end
 
 p_opt = my_curve_fit(fitfun, JfdivJp, xx, yy, ones(4))
 
-
 reϕ(x)=p_opt[1]+p_opt[2]/(1+exp(-p_opt[4]*(x-p_opt[3])))
 
-
-
-
-
-
-
-
-
-
-
-
 # ------------------------------------------------------------------
-
 
 loss(p) = sum((p[1] .+ p[2] ./ (1 .+ exp.(-p[4] * (xx .- p[3]))) - yy) .^ 2)
 

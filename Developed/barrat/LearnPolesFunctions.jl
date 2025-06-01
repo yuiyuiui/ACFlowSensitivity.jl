@@ -23,7 +23,6 @@ mutable struct BarRatContext
     ℬA::Vector{C64}
 end
 
-
 """
     BFGSOptimizationResults
 
@@ -52,7 +51,6 @@ mutable struct BFGSOptimizationResults{Tx,Tc,Tf}
     resid::Tc
     gconv::Bool
 end
-
 
 function solve(S::BarRatSolver, rd::RawData)
     println("[ BarRat ]")
@@ -90,7 +88,7 @@ function poles!(brc)
 
     # 计算ff在权重w处的导数值
     function JJ!(J::Vector{ComplexF64}, x::Vector{ComplexF64})
-        J.=gradient_via_fd(ff, x)
+        return J.=gradient_via_fd(ff, x)
     end
 
     calP=bc_poles(brc.calB)
@@ -99,10 +97,9 @@ function poles!(brc)
     brc.calBP=calP
 
     AA=zeros(ComplexF64, length(calP))
-    res=optimize(ff, JJ!, AA, max_iter = 500)
-    brc.calBA=res.minimizer
+    res=optimize(ff, JJ!, AA; max_iter=500)
+    return brc.calBA=res.minimizer
 end
-
 
 #find places of poles
 function bc_poles(r::BarycentricFunction)
@@ -125,7 +122,6 @@ function bc_poles(r::BarycentricFunction)
     end
     return pole
 end
-
 
 # a genaral primiry method to get derivatives of a complex function
 function gradient_via_fd(f, x)
@@ -156,11 +152,10 @@ function gradient_via_fd(f, x)
     end
 
     return ∇f
-
 end
 
 # calculate amplitude of poles
-function optimize(f, g, x0, max_iter = 1000)
+function optimize(f, g, x0, max_iter=1000)
 
     #这个函数里x0只是为了提供类型，实际提供数值在下面的init()函数
     d=BFGSDifferentiable(f, g, x0)
@@ -193,21 +188,17 @@ function optimize(f, g, x0, max_iter = 1000)
         gconv(eval_resid(d)<=1e-8)
     end
 
-    return BFGSOptimizationResults(
-        x0,
-        s.x,
-        value(d),
-        iteration,
-        eval_δx(s),
-        eval_Δx(s),
-        eval_δf(d, s),
-        eval_Δf(d, s),
-        eval-resid(d),
-        gconv,
-    )
-
+    return BFGSOptimizationResults(x0,
+                                   s.x,
+                                   value(d),
+                                   iteration,
+                                   eval_δx(s),
+                                   eval_Δx(s),
+                                   eval_δf(d, s),
+                                   eval_Δf(d, s),
+                                   eval-resid(d),
+                                   gconv)
 end
-
 
 function last(brc)
     function pole_green!(_G::Vector{ComplexF64})
@@ -221,7 +212,6 @@ function last(brc)
         for i in eachindex(_G)
             _G[i]=sum(rA ./ (brc.mesh.mesh[i] .- rP+η*im))
         end
-
     end
 
     # Reconstruct green function

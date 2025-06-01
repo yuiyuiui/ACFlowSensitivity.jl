@@ -11,7 +11,7 @@ peak=[1.0, 0.3];
 A=continous_spectral_density(μ, σ, peak);
 
 Giwn=generate_GFV_cont(β, N, A);
-wn=(collect(0:(N-1)) .+ 0.5)*2π/β;
+wn=(collect(0:(N - 1)) .+ 0.5)*2π/β;
 # 记得看一下svd的实现方式，并且设计出符合自己需求的svd 
 
 #------------------------------------------------------------------------
@@ -28,13 +28,13 @@ up_bound=1e-2
 ε=exp.(collect(range(log(low_bound), log(up_bound), M)));
 Grad=zeros(M);
 
-for i = 1:M
+for i in 1:M
     println(i)
-    bbb=aaa_cont_FiniDIff_Chain(wn, Giwn; ε = ε[i])
+    bbb=aaa_cont_FiniDIff_Chain(wn, Giwn; ε=ε[i])
     Grad[i]=sum(abs.(bbb) .^ 2)^(0.5)
 end;
 
-plot(ε, Grad, label = "size of grad changes as ε changes")
+plot(ε, Grad; label="size of grad changes as ε changes")
 
 #--------------------------------------------------------------
 # Add noise 
@@ -50,14 +50,13 @@ end;
 
 Grad_noise=zeros(M);
 
-
-for i = 1:M
+for i in 1:M
     println(i)
-    bbb=aaa_cont_FiniDIff_Chain(wn, G_noise; ε = ε[i])
+    bbb=aaa_cont_FiniDIff_Chain(wn, G_noise; ε=ε[i])
     Grad_noise[i]=sum(abs.(bbb) .^ 2)^(0.5)
     # Grad_noise[i]=sum(abs.(bbb))
 end;
 
-plot(ε, Grad_noise, label = "size of grad changes as ε changes with noise:$noise")
+plot(ε, Grad_noise; label="size of grad changes as ε changes with noise:$noise")
 
 # 试试换回L2？

@@ -16,10 +16,10 @@ using Plots, LinearAlgebra, Random, Test
     output_range = range(-output_bound, output_bound, output_number)
     output_range = collect(output_range)
     d = output_range[2] - output_range[1]
-    iwn = (collect(0:(N-1)) .+ 0.5) * 2π / β * im
+    iwn = (collect(0:(N - 1)) .+ 0.5) * 2π / β * im
 
     noise = 1e-2
-    Gvalue = generate_GFV_cont(β, N, A; noise = noise)
+    Gvalue = generate_GFV_cont(β, N, A; noise=noise)
     Aout = my_chi2kink(iwn, Gvalue, output_range)
 
     η = 1e-8
@@ -28,5 +28,5 @@ using Plots, LinearAlgebra, Random, Test
     δ1 = η * norm(dlossdivdG)^2
     norm(δ-δ1)/max(norm(δ), norm(δ1))
 
-    isapprox(δ, δ1, rtol = 0.01)
+    isapprox(δ, δ1, rtol=0.01)
 end

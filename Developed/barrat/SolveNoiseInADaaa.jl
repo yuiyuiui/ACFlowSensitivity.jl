@@ -15,7 +15,7 @@ Giwn=generate_GFV_cont(β, N, A);
 for i in eachindex(Giwn)
     Giwn[i]+=Giwn[i]*noise*rand()*exp(2π*im*rand())
 end;
-wn=(collect(0:(N-1)) .+ 0.5)*2π/β;
+wn=(collect(0:(N - 1)) .+ 0.5)*2π/β;
 ε=exp.(collect(range(log(1e-4), log(1e-2), 20)));
 abs_grad=zeros(20);
 
@@ -33,7 +33,7 @@ function get_abs_grad(wn, Giwn, ε)
         e[i][i] = 1.0 + 0.0im
     end
 
-    for j ∈ 1:length(Giwn)
+    for j in 1:length(Giwn)
         w2 = svd(f1(Giwn + ε * im * e[j])).V[:, end]
         w22 = svd(f1(Giwn - ε * im * e[j])).V[:, end]
         w1 = svd(f1(Giwn + ε * e[j])).V[:, end]
@@ -56,22 +56,16 @@ function get_abs_grad(wn, Giwn, ε)
     end
 
     return sum(abs.(∇w_G) .^ 2) .^ (0.5), f1(Giwn)
-
 end;
-
-
-
 
 #------------------------------------------------------------------------------------------------------------------------
 
 _, L0=get_abs_grad(wn, Giwn, 1e-6);
 
-
 loss_L0(L)=sum(abs.(svd(L).V[:, end]));
 loss_L0(L0)
 
-
-for i = 1:20
+for i in 1:20
     L01=L0+ε[i]*(zero(L0) .+ 1.0im)
 
     abs_grad[i]=abs((loss_L0(L01-L0))/1e-4)
@@ -79,13 +73,10 @@ end;
 
 plot(ε, abs_grad)
 
-
-
-
 # ------------------------------------------------------------------------------------------------------------------------
 
-for i = 1:20
+for i in 1:20
     abs_grad[i], _=get_abs_grad(wn, Giwn, ε[i])
 end
 
-plot(ε, abs_grad, label = "size of grad changes as ε changes with noise:$noise")
+plot(ε, abs_grad; label="size of grad changes as ε changes with noise:$noise")

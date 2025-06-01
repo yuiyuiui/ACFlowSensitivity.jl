@@ -12,7 +12,6 @@ mutable struct MaxEntContext
     Bₘ::Vector{F64}
 end
 
-
 """
 	TangentMesh
 
@@ -36,9 +35,6 @@ mutable struct TangentMesh{T} <: AbstractMesh
     weight::Vector{T}
 end
 
-
-
-
 """
     RawData
 
@@ -57,11 +53,6 @@ mutable struct RawData{T} <: AbstractData
     value::Vector{T}
     error::Vector{T}
 end
-
-
-
-
-
 
 # ————————————————————————————————————————————————————————————————————————
 # 一层函数
@@ -102,7 +93,6 @@ function init(S::MaxEntSolver, rd::RawData)
     return MaxEntContext(Gᵥ, σ², grid, mesh, model, kernel, hess, Vₛ, W₂, W₃, Bₘ)
 end
 
-
 function run(mec::MaxEntContext)
     method = get_m("method")
     @cswitch method begin
@@ -129,13 +119,11 @@ function last() end
 # ————————————————————————————————————————————————————————————————————————
 # 二层函数
 
-function precompute(
-    Gᵥ::Vector{F64},
-    σ²::Vector{F64},
-    am::AbstractMesh,
-    model::Vector{F64},
-    kernel::Matrix{F64},
-)
+function precompute(Gᵥ::Vector{F64},
+                    σ²::Vector{F64},
+                    am::AbstractMesh,
+                    model::Vector{F64},
+                    kernel::Matrix{F64})
 
     # Create singular value space
     U, V, S = make_singular_space(kernel)
@@ -154,8 +142,8 @@ function precompute(
     mesh_weight = am.weight
 
     # Compute Wₘₗ
-    @einsum W₂[m, l] =
-        σ²[k] * (U[k, n] * U[k, m]) * (S[m] * S[n] * V[l, n]) * (mesh_weight[l] * model[l])
+    @einsum W₂[m, l] = σ²[k] * (U[k, n] * U[k, m]) * (S[m] * S[n] * V[l, n]) *
+                       (mesh_weight[l] * model[l])
 
     # Compute Wₘₗᵢ
     @einsum W₃[m, k, l] = W₂[m, l] * V[l, k]
@@ -164,8 +152,8 @@ function precompute(
     @einsum Bₘ[m] = S[m] * U[k, m] * σ²[k] * Gᵥ[k]
 
     # Compute the Hessian matrix
-    @einsum hess[i, j] =
-        mesh_weight[i] * mesh_weight[j] * (kernel[k, i] * kernel[k, j] * σ²[k])
+    @einsum hess[i, j] = mesh_weight[i] * mesh_weight[j] *
+                         (kernel[k, i] * kernel[k, j] * σ²[k])
 
     return V, W₂, W₃, Bₘ, hess
 end
@@ -244,20 +232,15 @@ function chi2kink(mec::MaxEntComtext)
     return slo_vec, sol
 end
 
-
 # ————————————————————————————————————————————————————————————————————————
 # 三层函数
 
-
 # For given α, calculate corresponding
 # 
-function optimizer(
-    mec::MaxEntContext,
-    α::Float64,
-    sol_now::Vector{Float64},
-    use_bayes::Bool,
-)
-
+function optimizer(mec::MaxEntContext,
+                   α::Float64,
+                   sol_now::Vector{Float64},
+                   use_bayes::Bool)
     blur = get_("blur")
     offdiag = get_b("offdiag")
 
@@ -277,15 +260,13 @@ function optimizer(
     # 计算数值积分
     norm = trapz(mec, mesh, A)
 
-    dict = Dict{Symbol,Any}(
-        :sol => sol,
-        :α => α,
-        :S => S,
-        :χ² => χ²,
-        :norm => norm,
-        :Q => α * S - 0.5 * χ²,
-        :Araw => deepcopy(A),
-    )
+    dict = Dict{Symbol,Any}(:sol => sol,
+                            :α => α,
+                            :S => S,
+                            :χ² => χ²,
+                            :norm => norm,
+                            :Q => α * S - 0.5 * χ²,
+                            :Araw => deepcopy(A))
 
     if use_bayes
         if offdiag
@@ -329,19 +310,15 @@ function curve_fit(model, x::AbstractArray, y::AbstractArray, p0::AbstractArray)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), conv)
 end
 
-
 # ————————————————————————————————————————————————————————————————————————
 # 四层函数
 
-
 # 根据当前解（feed）、目标函数值（f）和雅可比矩阵（J）
-function newton(
-    fun::Function,
-    guess,
-    kwargs...;
-    maxiter::Int64 = 20000,
-    mixing::Float64 = 0.5,
-)
+function newton(fun::Function,
+                guess,
+                kwargs...;
+                maxiter::Int64=20000,
+                mixing::Float64=0.5,)
 
     # 前面加下划线表明这是不希望被外部调用的内部函数
     # feed s是当前猜测值
@@ -419,12 +396,9 @@ function calc_entropy() end
 
 function calc_chi2() end
 
-
-
 function calc_bayes_od() end
 
 function calc_bayes() end
-
 
 function OnceDifferentiable() end
 
@@ -435,30 +409,12 @@ function f_and_J_od() end
 
 function f_and_J() end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 using Einsum
 
 A = [1 0; 0 2] .+ 0.0
 B = [1 2; 3 4] .+ 0.0
 C = zeros(2, 2)
 @einsum C[i, j] = A[i, k] * B[k, j]
-
 
 #-------------------------\
 # check functions
@@ -536,13 +492,11 @@ function newton(fun::Function,
 end
 =#
 
-function newton(
-    fun::Function,
-    guess,
-    kwargs...;
-    maxiter::Int64 = 2000,
-    mixing::Float64 = 0.5,
-)
+function newton(fun::Function,
+                guess,
+                kwargs...;
+                maxiter::Int64=2000,
+                mixing::Float64=0.5,)
 
     # 前面加下划线表明这是不希望被外部调用的内部函数
     # feed s是当前猜测值
@@ -602,7 +556,6 @@ function newton(
         end
     end
 
-
     return backs[counter+1]
 end
 
@@ -612,7 +565,6 @@ guess=[0.0, 0.0]
 newton(my_fun, guess)
 
 jacobian(x->newton(my_fun, x), [0.0, 0.0])[1]
-
 
 function my_func1(A::Matrix{Float64})
     A=A .+ 1.0

@@ -2,7 +2,7 @@ tolerance(T) = eps(real(T))^(1 // 2)
 strict_tol(T) = eps(real(T))^(2 // 3)
 relax_tol(T) = eps(real(T))^(1 // 4)
 
-function integral(f::Function, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
+function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     n_raw = floor((b - a) / h)
     n = Int(n_raw)
     if isodd(n)
@@ -18,7 +18,7 @@ function integral(f::Function, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
     fb = f(a + h * T(n))
     acc = fa + fb
 
-    @inbounds for i = 1:(n-1)
+    @inbounds for i in 1:(n - 1)
         x = a + h * T(i)
         coeff = isodd(i) ? T(4) : T(2)
         acc += coeff * f(x)
@@ -27,9 +27,9 @@ function integral(f::Function, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
     return acc * (h / T(3))
 end
 
-function Lp(f::Function, p::Real, a::T, b::T; h::T = T(1e-4)) where {T<:Real}
+function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     Tp = T(p)
-    return integral(x->abs(f(x))^Tp, a, b; h = h)^(1/Tp)
+    return integral(x->abs(f(x))^Tp, a, b; h=h)^(1/Tp)
 end
 
 #=
@@ -39,18 +39,12 @@ abstract type Method end
 struct Newton <: Method end
 struct GD <: Method end
 
-
-
-
-
 #-----------------------------------------
 
 # for poles in discrete situation
 function kernel(ε::Float64)
     return continous_spectral_density([0.0], [ε], [1 / (sqrt(2π) * ε)])
 end
-
-
 
 function my_BFGS(f, grad, x0; tol = 1e-6, max_iter = 2000)
     x = x0
@@ -120,7 +114,6 @@ function my_GD_v1(f, grad, x0; tol = 1e-6, max_iter = 20000)
     end
 end
 
-
 # 自己写的梯度下降法，斜率的角平分线版本，v2效果一般会比v1好一些
 function my_GD_v2(f, grad, x0; tol = 1e-4, max_iter = 20000)
     res = copy(x0)
@@ -156,12 +149,10 @@ function my_GD_v2(f, grad, x0; tol = 1e-4, max_iter = 20000)
             end
         end
 
-
         res = res + direct * step
         ite += 1
     end
 end
-
 
 # 牛顿法，ACFlow 的步长处理
 function my_newton(
@@ -220,9 +211,6 @@ function my_newton(
     return back, counter, reach_tol
 end
 
-
-
-
 # ϕ(x;a,b,c,d)=a+b/(1+exp(-d(x-c))) 的曲线拟合
 #=
 function loss(p,x,y)
@@ -258,7 +246,6 @@ function my_curve_fit(
 
     return my_GD_v2(loss, J, guess)
 end
-
 
 function my_curve_fit(
     x::Vector{Float64},

@@ -7,21 +7,18 @@
 
 # But don't use eigen(A'A) or svd(A'A) to get the last column of V, because it is numerically inaccurate.
 
-
 using ACFlow, Plots, DelimitedFiles, Test
 
 @testset "correct aaa" begin
     # continous spectral density
-    function continous_spectral_density(
-        μ::Vector{Float64},
-        σ::Vector{Float64},
-        peak::Vector{Float64},
-    )
+    function continous_spectral_density(μ::Vector{Float64},
+                                        σ::Vector{Float64},
+                                        peak::Vector{Float64})
         @assert length(μ) == length(σ) == length(peak)
         n = length(μ)
         function y(x::Float64)
             res = 0
-            for i ∈ 1:n
+            for i in 1:n
                 res += peak[i] * exp(-(x - μ[i])^2 / (2 * σ[i]^2))
             end
             return res
@@ -30,18 +27,18 @@ using ACFlow, Plots, DelimitedFiles, Test
     end
 
     # Generate observed green function values with noise and continuous spectral density
-    function generate_observed_GFV_cont(A, β, N; noise = 1e-3, step = 1e-3, boundary = 20)
-        grid = (collect(0:(N-1)) .+ 0.5) * 2π / β
+    function generate_observed_GFV_cont(A, β, N; noise=1e-3, step=1e-3, boundary=20)
+        grid = (collect(0:(N - 1)) .+ 0.5) * 2π / β
         Int_stp_num = trunc(Int64, boundary / step)
         n = length(grid)
         res = zeros(ComplexF64, n)
 
-        for i ∈ 1:n
+        for i in 1:n
             # 计算每个 \hat{G}(w_n)=\int_R A(x)/(iw_n-x)dx
 
             # 辛普森法的积分
             integral = 0.0
-            for j ∈ (-Int_stp_num):Int_stp_num
+            for j in (-Int_stp_num):Int_stp_num
                 x = j * step
                 coeff = 1.0
 
@@ -61,42 +58,36 @@ using ACFlow, Plots, DelimitedFiles, Test
             res[i] = integral
         end
 
-        for i = 1:length(res)
+        for i in 1:length(res)
             res[i] += res[i] * noise * rand() * exp(2π * rand() * im)
         end
         return res
     end
 
     function reconstruct_spectral_density(A, β, N, output_bound, output_number, noise)
+        iwn = collect((0:(N - 1)) .+ 0.5) * 2π / β
+        GFV = generate_observed_GFV_cont(A, β, N; noise=noise)
 
-        iwn = collect((0:(N-1)) .+ 0.5) * 2π / β
-        GFV = generate_observed_GFV_cont(A, β, N; noise = noise)
+        B = Dict{String,Any}("solver" => "BarRat",  # Choose MaxEnt solver
+                             "mtype" => "gauss",   # Default model function
+                             "mesh" => "tangent", # Mesh for spectral function
+                             "ngrid" => N,        # Number of grid points for input data
+                             "nmesh" => output_number,       # Number of mesh points for output data
+                             "wmax" => output_bound,       # Right boundary of mesh
+                             "wmin" => -output_bound,      # Left boundary of mesh
+                             "beta" => β)
 
-        B = Dict{String,Any}(
-            "solver" => "BarRat",  # Choose MaxEnt solver
-            "mtype" => "gauss",   # Default model function
-            "mesh" => "tangent", # Mesh for spectral function
-            "ngrid" => N,        # Number of grid points for input data
-            "nmesh" => output_number,       # Number of mesh points for output data
-            "wmax" => output_bound,       # Right boundary of mesh
-            "wmin" => -output_bound,      # Left boundary of mesh
-            "beta" => β,      # Inverse temperature
-        )
-
-        S = Dict{String,Any}(
-            "atype" => "cont",
-            #"denoise"=>"prony_o",
-            "denoise" => "none",
-            #"denoise"=>"prony_s",
-            "epsilon" => 1e-10,
-            "pcut" => 1e-3,
-            "eta" => 1e-2,
-        )
+        S = Dict{String,Any}("atype" => "cont",
+                             #"denoise"=>"prony_o",
+                             "denoise" => "none",
+                             #"denoise"=>"prony_s",
+                             "epsilon" => 1e-10,
+                             "pcut" => 1e-3,
+                             "eta" => 1e-2)
         setup_param(B, S)
 
         mesh, reA, _ = solve(iwn, GFV)
         return mesh, reA
-
     end
 
     μ = [0.5, -2.5]
@@ -111,15 +102,16 @@ using ACFlow, Plots, DelimitedFiles, Test
     avrage_diff = 0.0
     times = 10
     Amesh=Float64[]
-    for i = 1:times
+    for i in 1:times
         noise = 1e-6
-        Amesh, reA =
-            reconstruct_spectral_density(A, β, N, output_bound, output_number, noise)
-        avrage_diff += abs.((reA-A.(Amesh))[1:(end-1)])' * (Amesh[2:end] - Amesh[1:(end-1)])
+        Amesh, reA = reconstruct_spectral_density(A, β, N, output_bound, output_number,
+                                                  noise)
+        avrage_diff += abs.((reA-A.(Amesh))[1:(end - 1)])' *
+                       (Amesh[2:end] - Amesh[1:(end - 1)])
     end
     avrage_diff /= times
-    av_diff_ratio =
-        avrage_diff / ((A.(Amesh)[1:(end-1)])' * (Amesh[2:end] - Amesh[1:(end-1)]))
+    av_diff_ratio = avrage_diff /
+                    ((A.(Amesh)[1:(end - 1)])' * (Amesh[2:end] - Amesh[1:(end - 1)]))
 
     @test av_diff_ratio < 0.1
 end

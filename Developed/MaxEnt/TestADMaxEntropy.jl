@@ -1,13 +1,9 @@
 using ACFlowSensitivity
 using Plots, Zygote, LinearAlgebra
 
-
-
-function _ADchi2kink(
-    iwn::Vector{ComplexF64},
-    Gvalue::Vector{ComplexF64},
-    output_range::Vector{Float64},
-)
+function _ADchi2kink(iwn::Vector{ComplexF64},
+                     Gvalue::Vector{ComplexF64},
+                     output_range::Vector{Float64})
     output_number = length(output_range)
     N = length(Gvalue)
 
@@ -17,8 +13,8 @@ function _ADchi2kink(
 
     # set the kernel matrix
     kernel = Matrix{ComplexF64}(undef, N, output_number)
-    for i ∈ 1:N
-        for j ∈ 1:output_number
+    for i in 1:N
+        for j in 1:output_number
             kernel[i, j] = 1 / (iwn[i] - output_range[j])
         end
     end
@@ -44,7 +40,7 @@ function _ADchi2kink(
     L = 16
     α_vec = Vector{Float64}(undef, L)
     α_vec[1] = 1e12
-    for i ∈ 2:L
+    for i in 2:L
         α_vec[i] = α_vec[i-1] / 10.0
     end
     χ²_vec = Vector{Float64}(undef, L)
@@ -57,25 +53,26 @@ function _ADchi2kink(
     # 拟合曲线时候为了防止过拟合设置的参数
     #adjust = 2.5
 
-
     # function Q
     A_vec(u::Vector{Float64}) = model .* exp.(V * u)
     χ²(u::Vector{Float64}) = (G - d * K * A_vec(u))' * (G - d * K * A_vec(u)) / (σ^2)
-    Q(u::Vector{Float64}, α::Float64) =
-        α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * output_weight -
-        0.5 * χ²(u)
+    Q(u::Vector{Float64}, α::Float64) = α *
+                                        (A_vec(u) - model -
+                                         A_vec(u) .* log.(A_vec(u) ./ model))' *
+                                        output_weight -
+                                        0.5 * χ²(u)
 
     # -𝞉Q/∂A, what we get is a vector, that is to say, column vector
-    J(u::Vector{Float64}, α::Float64) =
-        α * u + 1 / (σ^2) * (-diagm(S) * U' * G + d * diagm(S)^2 * V' * A_vec(u))
+    J(u::Vector{Float64}, α::Float64) = α * u +
+                                        1 / (σ^2) * (-diagm(S) * U' * G +
+                                                     d * diagm(S)^2 * V' * A_vec(u))
 
     # -∂²Q/∂A∂u, -∂f/∂u
-    H(u::Vector{Float64}, α::Float64) =
-        α * Matrix(I(n)) + d / (σ^2) * diagm(S)^2 * V' * diagm(A_vec(u)) * V
+    H(u::Vector{Float64}, α::Float64) = α * Matrix(I(n)) +
+                                        d / (σ^2) * diagm(S)^2 * V' * diagm(A_vec(u)) * V
 
     # ∂χ²/∂A, get a row vector
-    ∂χ²div∂A(u::Vector{Float64}) =
-        Matrix(2/(σ^2)*(-d*G'*K+d^2*A_vec(u)'*V*diagm(S .^ 2)*V'))
+    ∂χ²div∂A(u::Vector{Float64}) = Matrix(2/(σ^2)*(-d*G'*K+d^2*A_vec(u)'*V*diagm(S .^ 2)*V'))
 
     # ∂A/∂u 
     ∂Adiv∂u(u::Vector{Float64}) = diagm(A_vec(u))*V
@@ -87,14 +84,14 @@ function _ADchi2kink(
     ∂χ²div∂G(u::Vector{Float64}) = Matrix(2/(σ^2)*(G'-d*A_vec(u)'*K'))
 
     # dχ²/dG 
-    dχ²divdG(u::Vector{Float64}, α::Float64) =
-        - ∂χ²div∂A(u) * ∂Adiv∂u(u) * pinv(H(u, α)) * ∂fdiv∂G + ∂χ²div∂G(u)
+    dχ²divdG(u::Vector{Float64}, α::Float64) = - ∂χ²div∂A(u) * ∂Adiv∂u(u) * pinv(H(u, α)) *
+                                               ∂fdiv∂G + ∂χ²div∂G(u)
 
     ∂χ²OPTdiv∂G = Matrix{Float64}(undef, L, 2*N)
 
     # 接下来用Newton method求最值点
     u_guess=zeros(n)
-    for i = 1:L
+    for i in 1:L
         α = α_vec[i]
         u_opt, call = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
         u_guess = copy(u_opt)
@@ -111,7 +108,6 @@ function _ADchi2kink(
     guess_fit = [0.0, 5.0, 2.0, 0.0]
     param, reach_tol = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)
     _, _, c, dd = param
-
 
     # 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
     α_opt = 10.0^(c-2.5/dd)
@@ -131,7 +127,6 @@ function _ADchi2kink(
 
     dlossdivdχ² = Zygote.gradient(_loss, χ²_vec)[1]
     return (∂χ²OPTdiv∂G)'*dlossdivdχ², reach_tol
-
 end
 
 μ=[0.5, -2.5];
@@ -143,14 +138,12 @@ N=20;
 output_bound=5.0;
 output_number=401;
 noise=1e-4;
-Gvalue=generate_GFV_cont(β, N, A; noise = noise);
+Gvalue=generate_GFV_cont(β, N, A; noise=noise);
 G=vcat(real(Gvalue), imag(Gvalue))
 output_range=range(-output_bound, output_bound, output_number);
 output_range=collect(output_range);
-iwn=(collect(0:(N-1)) .+ 0.5)*2π/β * im;
+iwn=(collect(0:(N - 1)) .+ 0.5)*2π/β * im;
 _ADchi2kink(iwn, Gvalue, output_range)
-
-
 
 plot(output_range, A.(output_range))
 plot!()
@@ -162,9 +155,6 @@ end
 
 a=[1, 1]
 my(a)
-
-
-
 
 #=
 # maximum entropy context
@@ -234,7 +224,6 @@ function CP1(G::Vector{Float64}, mec::MEContext)
     return log10.(χ²_vec0)
 end
 
-
 function chi2kinkForAD(G::Vector{Float64}, mec::MEContext)
 	d = mec.d
     output_weight = mec.output_weight
@@ -287,7 +276,6 @@ function chi2kinkForAD(G::Vector{Float64}, mec::MEContext)
 	# 现在进行曲线拟合
 	guess_fit = [0.0, 5.0, 2.0, 0.0]
 	_, _, c, dd = my_curve_fit(log10.(α_vec0), log10.(χ²_vec0), guess_fit)
-
 
 	# 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
 	α_opt = 10.0^(c-2.5/dd)
@@ -358,7 +346,6 @@ function MEContext_compute(iwn::Vector{ComplexF64},  output_range::Vector{Float6
 		u_opt, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
 		u_guess_vec[i+1] = copy(u_opt)
 	end
-
 
 	return MEContext(d,output_weight,K,U,V,S,n,model,α_vec,E,u_guess_vec)
 end

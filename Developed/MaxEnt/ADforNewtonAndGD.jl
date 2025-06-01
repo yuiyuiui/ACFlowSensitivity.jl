@@ -1,12 +1,10 @@
 using Zygote, LinearAlgebra
 
-function my_newton(
-    fun::Function,
-    grad::Function,
-    guess;
-    maxiter::Int64 = 20000,
-    mixing::Float64 = 0.5,
-)
+function my_newton(fun::Function,
+                   grad::Function,
+                   guess;
+                   maxiter::Int64=20000,
+                   mixing::Float64=0.5,)
     function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
         resid = nothing
         step = 1.0
@@ -63,13 +61,11 @@ function my_newton(
 end
 
 # 牛顿法，ACFlow 的步长处理
-function ad_newton(
-    fun::Function,
-    grad::Function,
-    guess;
-    maxiter::Int64 = 20000,
-    mixing::Float64 = 0.5,
-)
+function ad_newton(fun::Function,
+                   grad::Function,
+                   guess;
+                   maxiter::Int64=20000,
+                   mixing::Float64=0.5,)
     function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
         resid = nothing
         step = 1.0
@@ -117,7 +113,6 @@ function ad_newton(
     return back, counter
 end
 
-
 my(x)=[2*x[1]+4*x[2], 2*x[2]+4*x[1]]
 grad_my(x)=[2.0 4.0; 4.0 2.0]
 my(zeros(2))
@@ -126,15 +121,12 @@ ad_newton(my, grad_my, 10*rand(2))
 
 Zygote.jacobian(u->ad_newton(my, grad_my, u)[1], ones(2))
 
-
-
 function my1(x)
     y=copy(x)
     y=ones(2)
     return y
 end
 Zygote.jacobian(my1, rand(2))
-
 
 function my2(x)
     my3(y)=x*y
@@ -144,7 +136,7 @@ my2(2.0)
 Zygote.gradient(my2, 2.0)
 
 using Zygote, LinearAlgebra
-function my_GD_v2(f, grad, x0; tol = 1e-3, max_iter = 2000)
+function my_GD_v2(f, grad, x0; tol=1e-3, max_iter=2000)
     res = copy(x0)
     ite = 0
     while true
@@ -167,13 +159,12 @@ function my_GD_v2(f, grad, x0; tol = 1e-3, max_iter = 2000)
         end
         list = collect(range(0, 2 * step, 20)[2:end])
         min_value = f_now
-        for i ∈ 1:19
+        for i in 1:19
             if f(res + direct * list[i]) < min_value
                 step = list[i]
                 min_value = f(res + direct * list[i])
             end
         end
-
 
         res = res + direct * step
         ite += 1

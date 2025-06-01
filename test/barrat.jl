@@ -2,9 +2,9 @@
     for T in [Float32, Float64, ComplexF32, ComplexF64]
         f(z) = (1) / (2 * z^2 + z + 1)
         N = 10
-        train_z = [randn(T) for _ = 1:N]
+        train_z = [randn(T) for _ in 1:N]
         train_data = [f(z) for z in train_z]
-        test_z = [randn(T) for _ = 1:N]
+        test_z = [randn(T) for _ in 1:N]
         test_data = [f(z) for z in test_z]
         w, g, v = ACFlowSensitivity.aaa(train_z, train_data; alg=BarRat())
         @test w isa Vector{T}

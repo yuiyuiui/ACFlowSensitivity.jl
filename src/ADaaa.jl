@@ -114,7 +114,6 @@ end
     return value, pullback
 end
 
-
 # Compute Loss function 
 struct Loss <: Function
     iwn::Vector{ComplexF64}
@@ -139,7 +138,6 @@ function Loss(
     return Loss(iwn, Index0, f0, int_low, int_up, step, int_field)
 end
 
-
 # L1 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
     iwn0 = f.iwn[f.Index0[2]]
@@ -159,8 +157,6 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
     return sum((values1 + values2) * f.step / 2)
 end
 #
-
-
 
 #= L2 norm version loss function
 function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
@@ -187,7 +183,6 @@ function (f::Loss)(Giwn::Vector{ComplexF64}, weights::Vector{ComplexF64})
 end
 =#
 
-
 # Compute Loss function from Giwn and L0
 struct GiwnL0ToLoss <: Function
     iwn::Vector{ComplexF64}
@@ -203,7 +198,6 @@ function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
     loss = Loss(f.iwn, f.Index0, f.f0, f.int_low, f.int_up, f.step)
     return loss(Giwn, weights)
 end
-
 
 @adjoint function (f::GiwnL0ToLoss)(Giwn::Vector{ComplexF64}, L0::Matrix{ComplexF64})
     function vague_reci(a::Number)
@@ -245,7 +239,6 @@ function (f::GiwnToLoss)(Giwn::Vector{ComplexF64})
     return f.f2(Giwn, f.f1(Giwn))
 end
 
-
 # Perform once aaa algorithm and get constants needed for ADaaa
 struct ADaaaBase
     wn::Vector{Float64}
@@ -279,8 +272,6 @@ function ADaaa_cont_backward(
     return (Zygote.gradient(f, ada.Giwn)[1], f(ada.Giwn))
 end
 
-
-
 function get_loss(
     wn::Vector{Float64},
     Giwn::Vector{ComplexF64};
@@ -298,12 +289,9 @@ function get_loss(
     return f(Giwn)
 end
 
-
 # ----------------------------------------------------------------
 # Foeward mode
 # To be updated
-
-
 
 function ADaaa_cont_forward(
     wn::Vector{Float64},
@@ -379,16 +367,6 @@ function ForwardAD(f::GiwnL0ToLoss, Giwn::Vector{ComplexF64}, L0::Matrix{Complex
     return (∂Giwn, 2 * (conj_AO + conj_AK)), loss_value
 end
 
-
-
-
-
-
-
-
-
-
-
 # ----------------------------------------------------------------
 # Check the correctness of  backward ADaaa by Finite Difference
 # We give up finite difference method because of it's poor numerical stability
@@ -412,8 +390,6 @@ function aaa_cont_FiniteDifference_Direct(
     loss_value = quadgk(x -> abs(A0(x) - A1(x)) / ε, int_low, int_up)
     return loss_value
 end
-
-
 
 # ∂L/∂G =  (∂L/∂w)^T * Jw/JG + (∂L/∂w^*)^T * Jw^*/JG 
 function aaa_cont_FiniDIff_Chain(

@@ -22,11 +22,11 @@ function ∂²loss_∂p∂y(p, x, y)
     return ∂²loss_∂p∂y_matrix
 end
 
-function finite_difference_∂²loss_∂p∂y(p, x, y, ϵ = 1e-6)
+function finite_difference_∂²loss_∂p∂y(p, x, y, ϵ=1e-6)
     L = length(x)
     ∂²loss_∂p∂y_matrix = zeros(4, L)
 
-    for i = 1:4
+    for i in 1:4
         p_plus = copy(p)
         p_minus = copy(p)
         p_plus[i] += ϵ
@@ -66,14 +66,10 @@ function ∂²loss_curveDiv∂p²(p, x, y)
     # 填充对角元素
     Jaa = 2 * L
     Jbb = 2 * sum(s .^ 2)
-    Jcc =
-        2 * b^2 * d^2 * sum(s .^ 2 .* (1 .- s) .^ 2) +
-        2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
-    Jdd =
-        2 * sum(
-            b^2 * s .^ 2 .* (1 .- s) .^ 2 .* (x .- c) .^ 2 +
-            b * (x .- c) .^ 2 .* s1 .* (1 .- 2 * s) .* r,
-        )
+    Jcc = 2 * b^2 * d^2 * sum(s .^ 2 .* (1 .- s) .^ 2) +
+          2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
+    Jdd = 2 * sum(b^2 * s .^ 2 .* (1 .- s) .^ 2 .* (x .- c) .^ 2 +
+                  b * (x .- c) .^ 2 .* s1 .* (1 .- 2 * s) .* r)
 
     # 填充非对角元素
     Jab = 2 * sum(s)
@@ -81,10 +77,9 @@ function ∂²loss_curveDiv∂p²(p, x, y)
     Jad = 2 * b * sum(s1 .* (x .- c))
     Jbc = -2 * d * sum(s1 .* (b * s .+ r))
     Jbd = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
-    Jcd =
-        -2 *
-        b *
-        sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
+    Jcd = -2 *
+          b *
+          sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
 
     return [Jaa Jab Jac Jad; Jab Jbb Jbc Jbd; Jac Jbc Jcc Jcd; Jad Jbd Jcd Jdd]
 end
@@ -113,17 +108,13 @@ end
     @test norm(analytic_grad - finite_diff_grad) < 1e-6
 end
 
-
-
-
-
 # 有限差分法验证二阶导数
-function finite_difference_∂²loss_∂p²(p, x, y, ϵ = 1e-6)
+function finite_difference_∂²loss_∂p²(p, x, y, ϵ=1e-6)
     n = length(p)
     H = zeros(n, n)  # 初始化 Hessian 矩阵
 
-    for i = 1:n
-        for j = 1:n
+    for i in 1:n
+        for j in 1:n
             # 单位向量
             ei = zeros(n)
             ej = zeros(n)
@@ -131,11 +122,8 @@ function finite_difference_∂²loss_∂p²(p, x, y, ϵ = 1e-6)
             ej[j] = 1
 
             # 有限差分公式
-            H[i, j] =
-                (
-                    loss(p + ϵ * ei + ϵ * ej, x, y) - loss(p + ϵ * ei, x, y) -
-                    loss(p + ϵ * ej, x, y) + loss(p, x, y)
-                ) / ϵ^2
+            H[i, j] = (loss(p + ϵ * ei + ϵ * ej, x, y) - loss(p + ϵ * ei, x, y) -
+                       loss(p + ϵ * ej, x, y) + loss(p, x, y)) / ϵ^2
         end
     end
 
@@ -152,7 +140,6 @@ analytic_H = ∂²loss_curveDiv∂p²(p, x, y)
 
 # 有限差分近似
 finite_diff_H = finite_difference_∂²loss_∂p²(p, x, y)
-
 
 # 计算相对误差
 relative_error = norm(analytic_H - finite_diff_H) / norm(analytic_H)

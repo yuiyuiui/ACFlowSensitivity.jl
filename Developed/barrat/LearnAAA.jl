@@ -35,9 +35,6 @@ function last(brc::BarRatContext)
         end
     end
 
-
-
-
     # Calculate full response function on real axis and write them
     _G = brc.ℬ.(brc.mesh.mesh)
     get_r("atype") == "delta" && pole_green!(_G)
@@ -71,7 +68,6 @@ function last(brc::BarRatContext)
         #
         G = reprod(brc.mesh, kernel, Aeff)
     end
-
 
     return Aout, _G
 end
@@ -108,7 +104,7 @@ function poles!(brc::BarRatContext)
 
     function 𝐽!(J::Vector{C64}, x::Vector{C64})
         # The Zygote.gradient() fails here.
-        J .= gradient_via_fd(𝑓, x)
+        return J .= gradient_via_fd(𝑓, x)
     end
 
     # Get positions of the poles
@@ -141,7 +137,7 @@ function poles!(brc::BarRatContext)
     # their amplitudes. This is a typical optimization problem. We just
     # employ the BFGS algorithm to do this job.
     𝐴 = zeros(C64, length(𝑃))
-    res = optimize(𝑓, 𝐽!, 𝐴, max_iter = 500)
+    res = optimize(𝑓, 𝐽!, 𝐴; max_iter=500)
     brc.ℬA = res.minimizer
     #
     # Print their weights / amplitudes.
@@ -154,14 +150,6 @@ function poles!(brc::BarRatContext)
     # Well, we should check whether these amplitudes are reasonable.
     #@assert all(z -> abs(imag(z)) < get_r("pcut"), brc.ℬA)
 end
-
-
-
-
-
-
-
-
 
 """
     bc_poles(r::BarycentricFunction)
@@ -195,19 +183,6 @@ function bc_poles(r::BarycentricFunction)
 
     return pole
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 """
     BarRatContext

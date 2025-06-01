@@ -1,11 +1,10 @@
 # Aaa algorithm for continuous spectral density
 
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
-    w, g, v, _ = aaa(ctx.iwn, GFV; alg = alg)
+    w, g, v, _ = aaa(ctx.iwn, GFV; alg=alg)
     reA = zeros(T, length(ctx.mesh))
     for i in eachindex(ctx.mesh)
-        reA[i] =
-            -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
+        reA[i] = -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
     end
     return ctx.mesh, reA
 end
@@ -68,7 +67,6 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T<:Number}
             best_weight=w
             best_index=copy(chosen_index)
         end
-
 
         # Do we end the iteration?
         if (best_error<tol*max_values) ||

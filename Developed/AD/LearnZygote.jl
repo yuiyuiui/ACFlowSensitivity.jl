@@ -1,7 +1,6 @@
 using Zygote
 using Zygote: @adjoint
 
-
 gradient(x->3x^2+2x+1, 5)
 
 W=rand(2, 3);
@@ -18,12 +17,11 @@ gradient(Z->my_func1(Z), my_matrix)
 c=[1, 2]
 gradient(c->c[1]*c[2], c)
 
-
 d=Dict()
 
 gradient(5) do x
     d[:x]=x
-    d[:x]*d[:x]
+    return d[:x]*d[:x]
 end
 
 linear(θ, x)=θ[:W]*x .+ θ[:b]
@@ -52,7 +50,7 @@ y=[7, 8];
 z=[1, 10, 100]
 
 g=gradient(Params([x, y])) do
-    sum(x .* y .* z')
+    return sum(x .* y .* z')
 end
 
 x=ones(5)
@@ -76,12 +74,10 @@ end
 
 gradient(jclock, rand())
 
-
 struct my_type
     x::Float64
     y::Float64
 end
-
 
 # Zygote.pullback(f,x0) return a value f(x0) and a afunction f'
 y, back=Zygote.pullback(sin, π/3)
@@ -90,7 +86,6 @@ y
 sqrt(3)/2
 back(1.0)
 back
-
 
 #--------------------------------
 # Adjoint
@@ -160,8 +155,6 @@ grad(f, x)=gradient(f, x)[1]
 f(1)
 grad(f, 1)
 grad(x->x*grad(f, x), 1)
-
-
 
 gradient(z->abs(z[1])^2+abs(z[2]), [1+im 1-im])[1]
 

@@ -8,7 +8,7 @@
         @test length(mesh) == ml
         @test length(mesh_weights) == ml
         @test mesh == collect(range(-mb, mb, ml))
-        @test isapprox(sum(mesh_weights), mb*2, atol = tolerance(T))
+        @test isapprox(sum(mesh_weights), mb*2, atol=tolerance(T))
     end
 end
 
@@ -23,6 +23,6 @@ end
         @test length(mesh_weights) == ml
         @test mesh ==
               tan.(collect(range(-T(π)/T(2.1), T(π)/T(2.1), ml)))/tan(T(π)/T(2.1))*mb
-        @test isapprox(sum(mesh_weights), mb*2, atol = tolerance(T))
+        @test isapprox(sum(mesh_weights), mb*2, atol=tolerance(T))
     end
 end

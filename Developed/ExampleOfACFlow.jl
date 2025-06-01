@@ -5,8 +5,6 @@ using Printf
 using ACFlow
 using Plots
 
-
-
 # Deal with self-energy function
 #
 # Read self-energy function
@@ -31,24 +29,20 @@ grid = dlm[:, 1]
 #
 # For [BASE] block
 # See types.jl/_PBASE for default setup
-B = Dict{String,Any}(
-    "solver" => "MaxEnt",  # Choose MaxEnt solver
-    "mtype" => "gauss",   # Default model function
-    "mesh" => "tangent", # Mesh for spectral function
-    "ngrid" => 20,        # Number of grid points for input data
-    "nmesh" => 801,       # Number of mesh points for output data
-    "wmax" => 8.0,       # Right boundary of mesh
-    "wmin" => -8.0,      # Left boundary of mesh
-    "beta" => 10.0,      # Inverse temperature
-)
+B = Dict{String,Any}("solver" => "MaxEnt",  # Choose MaxEnt solver
+                     "mtype" => "gauss",   # Default model function
+                     "mesh" => "tangent", # Mesh for spectral function
+                     "ngrid" => 20,        # Number of grid points for input data
+                     "nmesh" => 801,       # Number of mesh points for output data
+                     "wmax" => 8.0,       # Right boundary of mesh
+                     "wmin" => -8.0,      # Left boundary of mesh
+                     "beta" => 10.0)
 #
 # For [MaxEnt] block
 # See types.jl/_PMaxEnt for default setup
-S = Dict{String,Any}(
-    "nalph" => 15,        # Number of α parameters
-    "alpha" => 1e12,      # Starting value of α parameter
-    "blur" => -1.0,      # Enable preblur or not
-)
+S = Dict{String,Any}("nalph" => 15,        # Number of α parameters
+                     "alpha" => 1e12,      # Starting value of α parameter
+                     "blur" => -1.0)
 #
 setup_param(B, S)
 

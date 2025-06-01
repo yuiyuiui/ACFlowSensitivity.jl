@@ -5,7 +5,7 @@ function make_model(model_type::String, ctx::CtxData{T}) where {T<:Real}
         c = sum(fmesh .* ctx.mesh_weights)
         return fmesh/c
     elseif model_type == "flat"
-        return ones(T,length(ctx.mesh)) ./ sum(ctx.mesh_weights)
+        return ones(T, length(ctx.mesh)) ./ sum(ctx.mesh_weights)
     else
         error("Model $model_type not supported")
     end
