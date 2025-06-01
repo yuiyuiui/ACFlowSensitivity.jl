@@ -64,7 +64,7 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     u_opt_vec = Vector{Vector{T}}(undef, L)
     for i in 1:L
         α = α_vec[i]
-        u_opt, _, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
+        u_opt, _, _ = newton(u -> J(u, α), u -> H(u, α), u_guess)
         u_guess = copy(u_opt)
         u_opt_vec[i] = copy(u_opt)
         χ²_vec[i] = χ²(u_opt)
@@ -76,98 +76,16 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
 
     # Now performe curve fit
     guess_fit = [T(0), T(5), T(2), T(0)]
-    _, _, c, _ = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit, Newton())[1]
+    _, _, c, _ = curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)[1]
     # choose the inflection point as the best α
     α_opt = 10^(c)
     u_guess = copy(u_opt_vec[findmin(abs.(α_vec .- α_opt))[2]])
-    u_opt, = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
+    u_opt, = newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
     # recover the A
     return A_vec(u_opt)
 end
 
-function my_chi2kink(iwn::Vector{ComplexF64},
-                     Gvalue::Vector{ComplexF64},
-                     output_range::Vector{Float64})
-    output_number = length(output_range)
-    N = length(Gvalue)
-
-    # 计算积分时候网格点的权重
-    d = output_range[2] - output_range[1]
-    output_weight = fill(d, output_number)
-
-    # defualt model
-    model = exp.(-output_range .^ 2 / 4)
-    # 调整参数，归一化
-    model = model / (model' * output_weight)
-
-    # 默认测量Green function values on image axis时，各个测量值的标准差是1e-4
-    σ = 1e-4
-
-    # 设定一列 α, 以及对应的χ², 长度默认
-    L = 16
-    α_vec = Vector{Float64}(undef, L)
-    α_vec[1] = 1e12
-    for i in 2:L
-        α_vec[i] = α_vec[i-1] / 10.0
-    end
-    χ²_vec = Vector{Float64}(undef, L)
-
-    # 后面log10(α)和log10(χ²)要拟合的曲线
-    function fitfun(x, p)
-        return @. p[1] + p[2] / (1.0 + exp(-p[4] * (x - p[3])))
-    end
-
-    # 拟合曲线时候为了防止过拟合设置的参数
-    #adjust = 2.5
-
-    # function Q
-    A_vec(u::Vector{Float64}) = model .* exp.(V * u)
-    χ²(u::Vector{Float64}) = (G - d * K * A_vec(u))' * (G - d * K * A_vec(u)) / (σ^2)
-    Q(u::Vector{Float64}, α::Float64) = α *
-                                        (A_vec(u) - model -
-                                         A_vec(u) .* log.(A_vec(u) ./ model))' *
-                                        output_weight -
-                                        0.5 * χ²(u)
-
-    # -𝞉Q/∂A
-    J(u::Vector{Float64}, α::Float64) = α * u +
-                                        1 / (σ^2) * (-diagm(S) * U' * G +
-                                                     d * diagm(S)^2 * V' * A_vec(u))
-
-    # -∂²Q/∂A∂u
-    H(u::Vector{Float64}, α::Float64) = α * Matrix(I(n)) +
-                                        d / (σ^2) * diagm(S)^2 * V' * diagm(A_vec(u)) * V
-
-    # 接下来用Newton method求最值点
-    u_guess = zeros(n)
-    u_opt_vec = Vector{Vector{Float64}}(undef, L)
-    for i in 1:L
-        # @show i
-        α = α_vec[i]
-        u_opt, call, _ = my_newton(u -> J(u, α), u -> H(u, α), u_guess)
-        u_guess = copy(u_opt)
-        u_opt_vec[i] = copy(u_opt)
-        χ²_vec[i] = χ²(u_opt)
-        # @show log10(α), log10(χ²_vec[i]), norm(J(u_opt, α)), call
-    end
-    idx = findall(isfinite, χ²_vec)
-    α_vec = α_vec[idx]
-    χ²_vec = χ²_vec[idx]
-    u_opt_vec = u_opt_vec[idx]
-
-    # 现在进行曲线拟合
-    guess_fit = [0.0, 5.0, 2.0, 0.0]
-    _, _, c, dd = my_curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit, Newton())[1]
-
-    # 选取拐点，并为了防止过拟合或者欠拟合做一定处理，再计算对应的u
-    α_opt = 10.0^(c)
-    u_guess = copy(u_opt_vec[findmin(abs.(α_vec .- α_opt))[2]])
-    u_opt, = my_newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
-
-    #复原返回要求的A
-    return A_vec(u_opt)
-end
-#
+#=
 
 function ADchi2kink(iwn::Vector{ComplexF64},
                     Gvalue::Vector{ComplexF64},
@@ -705,4 +623,5 @@ function _ADchi2kink(iwn::Vector{ComplexF64}, Gvalue::Vector{ComplexF64}, output
 	res = (∂χ²OPTdiv∂G)' * dlossdivdχ² + ∂lossdiv∂G
 	return res[1:N] + im * res[N+1:2*N], reach_tol
 end
+=#
 =#
