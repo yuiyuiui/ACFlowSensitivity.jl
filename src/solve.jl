@@ -52,8 +52,6 @@ end
 module ACFSDefults
 using ..ACFlowSensitivity
 const tol = Ref(1e-12)
-const max_degree = Ref(150)
-const lookaheaad = Ref(10)
 const mesh_bound = Ref(8)
 const mesh_length = Ref(801)
 const mesh_type = Ref(UniformMesh())

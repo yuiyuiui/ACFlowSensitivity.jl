@@ -16,6 +16,6 @@ end
 @testset "model" begin
     include("model.jl")
 end
-@testset "barrat" begin
+@testset "solve" begin
     include("solve.jl")
 end
