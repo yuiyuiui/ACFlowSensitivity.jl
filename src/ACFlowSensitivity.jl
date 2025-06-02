@@ -8,6 +8,7 @@ export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
 export make_mesh, UniformMesh, TangentMesh
 export solve, CtxData
 export BarRat, MaxEntChi2kink
+export curve_fit, LsqFitResult
 #=
 export my_newton,my_GD_v1,my_GD_v2, my_curve_fit
 export continous_spectral_density, kernel,aaa_check,kernel

@@ -48,24 +48,16 @@ end
         @test isapprox(back, mini_point, atol=strict_tol(T))
     end
 end
-#=
-#@testset "Curve Fitting" begin
-    #for T in [Float32, Float64]
-    T = Float64
-        p = rand(T,4)
-        ϕ(x) = p[1] + p[2]/(1+exp(-p[4]*(x-p[3])))
-        n = 20
-        x = rand(T,n)
-        y = ϕ.(x)
-        res,_,_ = @constinferred ACFlowSensitivity.curve_fit(x,y;guess=[T(0),T(5),T(2),T(0)])
+
+@testset "Curve Fitting" begin
+    for T in [Float32, Float64]
+        p = rand(T, 4)
+        ϕ(x, p) = p[1] .+ p[2] ./ (1 .+ exp.(-p[4] .* (x .- p[3])))
+        n = 10
+        x = Vector{T}((-n ÷ 2):(n ÷ 2))
+        y = ϕ(x, p)
+        res = ACFlowSensitivity.curve_fit(ϕ, x, y, ones(T, 4)).param
         @test res isa Vector{T}
-        f(x) = res[1] + res[2]/(1+exp(-res[4]*(x-res[3])))
-        norm(f.(x)-y)
-        norm(y)
-        norm(ϕ.(x)-y)
-        res
-        ACFlowSensitivity._∂loss_curveDiv∂p(res,x,y)
-        @test isapprox(res,p,atol=strict_tol(T))
-    #end
-#end
-=#
+        @test isapprox(ϕ(x, res), y, atol=strict_tol(T))
+    end
+end

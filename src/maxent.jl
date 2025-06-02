@@ -39,9 +39,6 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     end
     χ²_vec = Vector{T}(undef, L)
 
-    # Parameter to prevent overfitting when fitting the curve
-    #adjust = T(2.5)
-
     # function Q
     KDw = K * Diagonal(w)
     DS = Diagonal(S)
@@ -56,16 +53,16 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     H(u::Vector{T}, α::T) = α * I(n) + S²VadDwDivσ² * Diagonal(A_vec(u)) * V
 
     # Now solve the minimal with Newton method
-    u_guess = zeros(n)
+    u_guess = zeros(T, n)
     u_opt_vec = Vector{Vector{T}}(undef, L)
     for i in 1:L
-        @show i
+        #@show i
         α = α_vec[i]
         u_opt, call, _ = newton(u -> J(u, α), u -> H(u, α), u_guess)
         u_guess = copy(u_opt)
         u_opt_vec[i] = copy(u_opt)
         χ²_vec[i] = χ²(u_opt)
-        @show log10(α),log10(χ²_vec[i]),norm(J(u_opt,α)),call
+        #@show log10(α), log10(χ²_vec[i]), norm(J(u_opt, α)), call
     end
     idx = findall(isfinite, χ²_vec)
     α_vec = α_vec[idx]
@@ -74,11 +71,14 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
 
     # Now performe curve fit
     guess_fit = [T(0), T(5), T(2), T(0)]
-    p = curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)[1]
-    ϕ(x) = p[1] + p[2] / (1 + exp(-p[4] * (x - p[3])))
-    @show norm(ϕ.(log10.(α_vec)) - log10.(χ²_vec))
+    function fitfun(x, p)
+        return @. p[1] + p[2] / (T(1) + exp(-p[4] * (x - p[3])))
+    end
+    p = curve_fit(fitfun, log10.(α_vec), log10.(χ²_vec), guess_fit).param
     # choose the inflection point as the best α
-    α_opt = 10^(p[3])
+    # Parameter to prevent overfitting when fitting the curve
+    adjust = T(5//2)
+    α_opt = 10^(p[3]-adjust/p[4])
     u_guess = copy(u_opt_vec[findmin(abs.(α_vec .- α_opt))[2]])
     u_opt, = newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
     # recover the A

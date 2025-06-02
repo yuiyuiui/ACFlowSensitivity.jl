@@ -13,9 +13,9 @@ end
 @testset "mesh" begin
     include("mesh.jl")
 end
-@testset "barrat" begin
-    include("barrat.jl")
-end
 @testset "model" begin
     include("model.jl")
+end
+@testset "barrat" begin
+    include("solve.jl")
 end
