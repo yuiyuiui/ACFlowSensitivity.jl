@@ -29,23 +29,23 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     return ctx.mesh, reA
 end
 
-struct Chi2kink_A{T<:Real} <: Function
+struct MaxEnt_A{T<:Real} <: Function
     model::Vector{T}
     V::Matrix{T}
 end
-(f::Chi2kink_A{T})(u::Vector{T}) where {T<:Real} = f.model .* exp.(f.V * u)
-struct Chi2kink_χ²{T<:Real} <: Function
+(f::MaxEnt_A{T})(u::Vector{T}) where {T<:Real} = f.model .* exp.(f.V * u)
+struct MaxEnt_χ²{T<:Real} <: Function
     G::Vector{T}
     KDw::Matrix{T}
     model::Vector{T}
     V::Matrix{T}
     σ::T
 end
-function (f::Chi2kink_χ²{T})(u::Vector{T}) where {T<:Real}
+function (f::MaxEnt_χ²{T})(u::Vector{T}) where {T<:Real}
     res = (f.G - f.KDw * (f.model .* exp.(f.V * u))) / (f.σ)
     return res' * res
 end
-struct Chi2kink_J{T<:Real} <: Function
+struct MaxEnt_J{T<:Real} <: Function
     α::T
     DSUadDivσ²::Matrix{T}
     KDw::Matrix{T}
@@ -53,14 +53,14 @@ struct Chi2kink_J{T<:Real} <: Function
     V::Matrix{T}
     G::Vector{T}
 end
-(f::Chi2kink_J{T})(u::Vector{T}) where {T<:Real} = f.α * u + f.DSUadDivσ² * (f.KDw * (f.model .* exp.(f.V * u)) - f.G)
-struct Chi2kink_H{T<:Real} <: Function
+(f::MaxEnt_J{T})(u::Vector{T}) where {T<:Real} = f.α * u + f.DSUadDivσ² * (f.KDw * (f.model .* exp.(f.V * u)) - f.G)
+struct MaxEnt_H{T<:Real} <: Function
     α::T
     S²VadDwDivσ²::Matrix{T}
     model::Vector{T}
     V::Matrix{T}
 end
-(f::Chi2kink_H{T})(u::Vector{T}) where {T<:Real} = f.α * I(size(f.V,2)) + f.S²VadDwDivσ² * Diagonal(f.model .* exp.(f.V * u)) * f.V
+(f::MaxEnt_H{T})(u::Vector{T}) where {T<:Real} = f.α * I(size(f.V,2)) + f.S²VadDwDivσ² * Diagonal(f.model .* exp.(f.V * u)) * f.V
 
 function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T},
                   V::Matrix{T}, model::Vector{T}, w::Vector{T}, L::Int, α₁::T,
@@ -74,8 +74,8 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
 
     KDw = K * Diagonal(w)
     DS = Diagonal(S)
-    A = Chi2kink_A(model, V)
-    χ² = Chi2kink_χ²(G, KDw, model, V, σ)
+    A = MaxEnt_A(model, V)
+    χ² = MaxEnt_χ²(G, KDw, model, V, σ)
     DSUadDivσ² = DS*U'/σ^2 # to construct J = -V'∂Q/∂A
     S²VadDwDivσ² = DS^2 * V' * Diagonal(w)/σ^2 # to construct H = -V'∂²Q/∂A∂u = ∂J/∂u
 
@@ -85,7 +85,7 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     for i in 1:L
         #@show i
         α = α_vec[i]
-        u_opt, call, _ = newton(Chi2kink_J(α, DSUadDivσ², KDw, model, V, G), Chi2kink_H(α, S²VadDwDivσ², model, V), u_guess)
+        u_opt, call, _ = newton(MaxEnt_J(α, DSUadDivσ², KDw, model, V, G), MaxEnt_H(α, S²VadDwDivσ², model, V), u_guess)
         u_guess = copy(u_opt)
         u_opt_vec[i] = copy(u_opt)
         χ²_vec[i] = χ²(u_opt)
@@ -107,7 +107,7 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     adjust = T(5//2)
     α_opt = 10^(p[3]-adjust/p[4])
     u_guess = copy(u_opt_vec[findmin(abs.(α_vec .- α_opt))[2]])
-    u_opt, = newton(Chi2kink_J(α_opt, DSUadDivσ², KDw, model, V, G), Chi2kink_H(α_opt, S²VadDwDivσ², model, V), u_guess)
+    u_opt, = newton(MaxEnt_J(α_opt, DSUadDivσ², KDw, model, V, G), MaxEnt_H(α_opt, S²VadDwDivσ², model, V), u_guess)
     # recover the A
     return A(u_opt)
 end
