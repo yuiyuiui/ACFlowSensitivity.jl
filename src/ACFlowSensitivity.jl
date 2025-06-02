@@ -26,6 +26,7 @@ include("mesh.jl")
 include("solve.jl")
 include("barrat.jl")
 include("model.jl")
+include("maxent.jl")
 #=
 include("ADaaa.jl")
 include("maxent.jl")

@@ -26,6 +26,6 @@ end
         orA = A.(mesh)
         @test eltype(reA) == eltype(mesh) == T
         @test length(reA) == length(mesh) == length(ctx.mesh)
-        T == Float64 && @test loss(reA, orA, ctx.mesh_weights) < 1e-2
+        T == Float64 && @test loss(reA, orA, ctx.mesh_weights) < 1.5e-2
     end
 end

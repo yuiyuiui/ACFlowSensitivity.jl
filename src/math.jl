@@ -44,7 +44,7 @@ end
 function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
     resid = nothing
     step = T(1)
-    limit = eps(T)^(1//4)
+    limit = T(1e-4)
     try
         resid = -pinv(J) * f
     catch
@@ -59,7 +59,8 @@ function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
     end
     return feed + step .* resid
 end
-function newton(fun::Function, grad::Function, guess::Vector{T}; maxiter::Int=20000,tol::T=T(1e-5)) where T<:Real
+function newton(fun::Function, grad::Function, guess::Vector{T}; maxiter::Int=20000,
+                tol::T=T(1e-4)) where {T<:Real}
     counter = 0
     feed = copy(guess)
     f = fun(feed)
@@ -98,7 +99,7 @@ function loss(p,x,y)
     return sum(r.^2)
 end
 =#
-function _∂loss_curveDiv∂p(p::Vector{T},x::Vector{T},y::Vector{T}) where T<:Real
+function _∂loss_curveDiv∂p(p::Vector{T}, x::Vector{T}, y::Vector{T}) where {T<:Real}
     a, b, c, d=p
     s=1 ./ (1 .+ exp.(-d*(x .- c)))
     r=a .+ b*s - y
@@ -109,7 +110,7 @@ function _∂loss_curveDiv∂p(p::Vector{T},x::Vector{T},y::Vector{T}) where T<:
     Jd=2*b*sum(s .* (1 .- s) .* (x .- c) .* r)
     return [Ja, Jb, Jc, Jd]
 end
-function _∂²loss_curveDiv∂p²(p::Vector{T},x::Vector{T},y::Vector{T}) where T<:Real
+function _∂²loss_curveDiv∂p²(p::Vector{T}, x::Vector{T}, y::Vector{T}) where {T<:Real}
     a, b, c, d = p
     L = length(x)
 
@@ -132,10 +133,13 @@ function _∂²loss_curveDiv∂p²(p::Vector{T},x::Vector{T},y::Vector{T}) where
     Jad = 2 * b * sum(s1 .* (x .- c))
     Jbc = -2 * d * sum(s1 .* (b * s .+ r))
     Jbd = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
-    Jcd = -2 * b * sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
+    Jcd = -2 * b *
+          sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
     return [Jaa Jab Jac Jad; Jab Jbb Jbc Jbd; Jac Jbc Jcc Jcd; Jad Jbd Jcd Jdd]
 end
-function curve_fit(x::Vector{T}, y::Vector{T}; guess::Vector{T}=[T(0),T(5),T(2),T(0)], maxiter::Int=20000,tol::T=T(1e-5)) where T<:Real
+function curve_fit(x::Vector{T}, y::Vector{T}, guess::Vector{T}=[T(0), T(5), T(2), T(0)];
+                   maxiter::Int=20000, tol::T=T(1e-5)) where {T<:Real}
     @assert length(x)==length(y)
-    return newton(p->_∂loss_curveDiv∂p(p,x,y), p->_∂²loss_curveDiv∂p²(p,x,y), guess; maxiter=maxiter, tol=tol)
+    return newton(p->_∂loss_curveDiv∂p(p, x, y), p->_∂²loss_curveDiv∂p²(p, x, y), guess;
+                  maxiter=maxiter, tol=tol)
 end

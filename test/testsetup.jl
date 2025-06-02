@@ -11,7 +11,7 @@ end
 function dfcfg_cont(T::Type{<:Real};
                     μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
                     σ=[T(1 // 5), T(4 // 5)]::Vector{T},
-                    amplitude=[T(1), T(1 // 3)]::Vector{T},
+                    amplitude=[T(1), T(3 // 10)]::Vector{T},
                     mesh_type=UniformMesh(),
                     β=T(10)::T,
                     N=20,

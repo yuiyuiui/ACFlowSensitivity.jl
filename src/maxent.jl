@@ -4,7 +4,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     α₁ = T(alg.α₁)
     σ = T(alg.σ)
     M = length(ctx.mesh)
-    maxiter = alg.maxent_iter
+    maxiter = alg.maxiter
 
     # singular space method
     kernel = Matrix{Complex{T}}(undef, length(GFV), length(ctx.mesh))
@@ -16,17 +16,17 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     G = vcat(real(GFV), imag(GFV))
     K = [real(kernel); imag(kernel)]
     U, S, V = svd(K)
-    n = count(x -> (x >= strict_tol(T))/10, S)
+    n = count(x -> (x >= 1e-10), S)
     V = V[:, 1:n]
     U = U[:, 1:n]
     S = S[1:n]
 
-    model = make_model(alg.model_type, ctx)
-    reA = copy(model)
+    reA = make_model(alg.model_type, ctx)
     for i in 1:maxiter
         model = reA
         reA = chi2kink(G, K, n, U, S, V, model, ctx.mesh_weights, L, α₁, σ)
     end
+    return ctx.mesh, reA
 end
 
 function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T},
@@ -38,10 +38,7 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
         α_vec[i] = α_vec[i-1] / 10
     end
     χ²_vec = Vector{T}(undef, L)
-    # curve to fit log10(α) and log10(χ²) later
-    function fitfun(x, p)
-        return @. p[1] + p[2] / (1 + exp(-p[4] * (x - p[3])))
-    end
+
     # Parameter to prevent overfitting when fitting the curve
     #adjust = T(2.5)
 
@@ -50,11 +47,10 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     DS = Diagonal(S)
     A_vec(u::Vector{T}) = model .* exp.(V * u)
     χ²(u::Vector{T}) = (G - KDw * A_vec(u))' * (G - KDw * A_vec(u)) / (σ^2)
-    Q(u::Vector{T}, α::T) = α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' *
-                            w - 0.5 * χ²(u)
+    # Q(u::Vector{T}, α::T) = α * (A_vec(u) - model - A_vec(u) .* log.(A_vec(u) ./ model))' * w - 0.5 * χ²(u)
     # -𝞉Q/∂A
-    DSDivσ² = DS/σ^2
-    J(u::Vector{T}, α::T) = α * u + DSDivσ² * U' * (KDw * A_vec(u) - G)
+    DSUadDivσ² = DS*U'/σ^2
+    J(u::Vector{T}, α::T) = α * u + DSUadDivσ² * (KDw * A_vec(u) - G)
     # -∂²Q/∂A∂u
     S²VadDwDivσ² = DS^2 * V' * Diagonal(w)/σ^2
     H(u::Vector{T}, α::T) = α * I(n) + S²VadDwDivσ² * Diagonal(A_vec(u)) * V
@@ -63,11 +59,13 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
     u_guess = zeros(n)
     u_opt_vec = Vector{Vector{T}}(undef, L)
     for i in 1:L
+        @show i
         α = α_vec[i]
-        u_opt, _, _ = newton(u -> J(u, α), u -> H(u, α), u_guess)
+        u_opt, call, _ = newton(u -> J(u, α), u -> H(u, α), u_guess)
         u_guess = copy(u_opt)
         u_opt_vec[i] = copy(u_opt)
         χ²_vec[i] = χ²(u_opt)
+        @show log10(α),log10(χ²_vec[i]),norm(J(u_opt,α)),call
     end
     idx = findall(isfinite, χ²_vec)
     α_vec = α_vec[idx]
@@ -76,9 +74,11 @@ function chi2kink(G::Vector{T}, K::Matrix{T}, n::Int, U::Matrix{T}, S::Vector{T}
 
     # Now performe curve fit
     guess_fit = [T(0), T(5), T(2), T(0)]
-    _, _, c, _ = curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)[1]
+    p = curve_fit(log10.(α_vec), log10.(χ²_vec), guess_fit)[1]
+    ϕ(x) = p[1] + p[2] / (1 + exp(-p[4] * (x - p[3])))
+    @show norm(ϕ.(log10.(α_vec)) - log10.(χ²_vec))
     # choose the inflection point as the best α
-    α_opt = 10^(c)
+    α_opt = 10^(p[3])
     u_guess = copy(u_opt_vec[findmin(abs.(α_vec .- α_opt))[2]])
     u_opt, = newton(u -> J(u, α_opt), u -> H(u, α_opt), u_guess)
     # recover the A
