@@ -1,7 +1,7 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra #, Zygote
-#using Zygote: @adjoint
+using LinearAlgebra, Zygote
+using Zygote: @adjoint
 
 # export interfaces
 export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
