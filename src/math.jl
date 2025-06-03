@@ -377,3 +377,80 @@ function curve_fit(model, x::AbstractArray, y::AbstractArray, p0::AbstractArray)
     conv = OR.xconv || OR.gconv
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), conv)
 end
+
+
+# partial differentiation of sigmoid loss function
+function ∂²lossϕDiv∂p²(p, x, y)
+    a, b, c, d = p
+    L = length(x)
+    s = 1 ./ (1 .+ exp.(-d * (x .- c)))
+    s1 = s .* (1 .- s)  # s1 = s * (1 - s)
+    r = a .+ b * s .- y  # 残差项
+
+    Jaa = 2 * L
+    Jbb = 2 * sum(s .^ 2)
+    Jcc = 2 * b^2 * d^2 * sum(s .^ 2 .* (1 .- s) .^ 2) +
+          2 * b * d^2 * sum(s1 .* (1 .- 2 * s) .* r)
+    Jdd = 2 * sum(b^2 * s .^ 2 .* (1 .- s) .^ 2 .* (x .- c) .^ 2 +
+                  b * (x .- c) .^ 2 .* s1 .* (1 .- 2 * s) .* r)
+
+    Jab = 2 * sum(s)
+    Jac = -2 * b * d * sum(s1)
+    Jad = 2 * b * sum(s1 .* (x .- c))
+    Jbc = -2 * d * sum(s1 .* (b * s .+ r))
+    Jbd = 2 * sum(s1 .* (x .- c) .* (b * s .+ r))
+    Jcd = -2 *
+          b *
+          sum(s1 .* (b * d * s1 .* (x .- c) .+ (1 .+ d * (x .- c) .* (1 .- 2 * s)) .* r))
+
+    return [Jaa Jab Jac Jad; Jab Jbb Jbc Jbd; Jac Jbc Jcc Jcd; Jad Jbd Jcd Jdd]
+end
+
+function ∂²loss_∂p∂y(p, x, y)
+    a, b, c, d = p
+    L = length(x)
+
+    s = 1 ./ (1 .+ exp.(-d * (x .- c)))
+    s1 = s .* (1 .- s)  # s1 = s * (1 - s)
+
+    ∂²loss_∂p∂y_matrix = zeros(4, L)
+
+    ∂²loss_∂p∂y_matrix[1, :] .= -2  # ∂²loss/∂a∂y_i
+    ∂²loss_∂p∂y_matrix[2, :] = -2 * s  # ∂²loss/∂b∂y_i
+    ∂²loss_∂p∂y_matrix[3, :] = 2 * b * d * s1  # ∂²loss/∂c∂y_i
+    ∂²loss_∂p∂y_matrix[4, :] = -2 * b * s1 .* (x .- c)  # ∂²loss/∂d∂y_i
+
+    return ∂²loss_∂p∂y_matrix
+end
+
+# calculate jacobian with finite-difference. Borrowed form https://github.com/yuiyuiui/ACFlow
+function fdgradient(f::Function, x::Vector{T}) where {T<:Real}
+    J = zeros(T, length(x), length(x))
+    rel_step = cbrt(eps(real(eltype(x))))
+    abs_step = rel_step
+    @inbounds for i in 1:length(x)
+        xₛ = x[i]
+        ϵ = max(rel_step * abs(xₛ), abs_step)
+        x[i] = xₛ + ϵ
+        y₂ = vec(f(x))
+        x[i] = xₛ - ϵ
+        y₁ = vec(f(x))
+        J[:, i] = (y₂ - y₁) ./ (2 * ϵ)
+        x[i] = xₛ
+    end
+    return J
+end
+function fdgradient(f::Function, x::Vector{Complex{T}}) where {T<:Real}
+    return fdgradient(x->real(f(x)), x) + im * fdgradient(x->imag(f(x)), x)
+end
+
+# gradient of L2 loss function(vector to vector)
+function ∇L2loss(f::Function, x::Vector{T};w = missing) where {T<:Real}
+    J = fdgradient(f, x)
+    w==missing && (w = ones(T, size(J, 2)))
+    return ∇L2loss(J,w)
+end
+function  ∇L2loss(J::Matrix{T},w::Vector{T}) where T<:Number
+    _, S, V = svd(Diagonal(sqrt.(w))*J)
+    return S[1], V[:, 1] * S[1]
+end
