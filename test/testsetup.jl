@@ -41,6 +41,8 @@ function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     dx = η * x/norm(x)
     dy = f(x+dx) - f(x)
     dy_expect = real(conj(J)*dx)
+    @show dy
+    @show dy_expect
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
 # vector to number
@@ -50,5 +52,7 @@ function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     dx = η * J/norm(J)
     dy = f(J+dx) - f(J)
     dy_expect = η * norm(J)
+    @show dy
+    @show dy_expect
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end

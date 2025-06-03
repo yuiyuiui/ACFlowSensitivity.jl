@@ -1,13 +1,14 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra
+using LinearAlgebra, Zygote
 
 # export interfaces
 export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
 export make_mesh, UniformMesh, TangentMesh
-export solve, CtxData
+export solve, solvediff, CtxData
 export BarRat, MaxEntChi2kink
 export curve_fit, LsqFitResult
+export fdgradient
 
 include("math.jl")
 include("generaldata.jl")

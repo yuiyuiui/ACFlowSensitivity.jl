@@ -20,3 +20,6 @@ end
 @testset "solve" begin
     include("solve.jl")
 end
+@testset "solvediff" begin
+    include("solvediff.jl")
+end

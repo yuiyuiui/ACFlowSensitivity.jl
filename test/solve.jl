@@ -21,7 +21,7 @@ end
 
 @testset "cont barrat" begin
     for T in [Float32, Float64]
-        tol = T==Float64 ? 1.1e-2 : 1e-1
+        tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
@@ -37,7 +37,7 @@ end
 
 @testset "cont MaxEntChi2kink" begin
     for T in [Float32, Float64]
-        tol = T==Float64 ? 5e-3 : 1.1e-1
+        tol = T==Float32 ? 1.1e-1 : 5e-3
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)

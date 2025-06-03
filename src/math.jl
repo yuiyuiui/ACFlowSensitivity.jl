@@ -421,6 +421,31 @@ function ∂²lossϕDiv∂p∂y(p::Vector{T}, x::Vector{T}, y::Vector{T}) where 
 
     return ∂²loss_∂p∂y_matrix
 end
+#=
+function ∂lossϕDiv∂y(p, x, y)
+    a, b, c, d = p
+    s = 1 ./ (1 .+ exp.(-d * (x .- c)))
+    return -2 * (a .+ b * s .- y)
+end
+
+function lossϕ(p, x, y)
+    a, b, c, d=p
+    s=1 ./ (1 .+ exp.(-d*(x .- c)))
+    r=a .+ b*s - y
+    return sum(r .^ 2)
+end
+
+function ∂lossϕDiv∂p(p, x, y)
+    a, b, c, d=p
+    s=1 ./ (1 .+ exp.(-d*(x .- c)))
+    r=a .+ b*s - y
+    Ja=2*sum(r)
+    Jb=2*sum(s .* r)
+    Jc=-2*b*d*sum(s .* (1 .- s) .* r)
+    Jd=2*b*sum(s .* (1 .- s) .* (x .- c) .* r)
+    return [Ja, Jb, Jc, Jd]
+end
+=#
 
 # calculate jacobian with finite-difference. Borrowed form https://github.com/yuiyuiui/ACFlow
 # it accepts function that maps vector to vector or number
@@ -432,6 +457,7 @@ function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
     @inbounds for i in 1:length(x)
         xₛ = x[i]
         ϵ = max(rel_step * abs(xₛ), abs_step)
+        @show i, ϵ
         x[i] = xₛ + ϵ
         y₂ = vec(f(x))
         x[i] = xₛ - ϵ
@@ -442,6 +468,7 @@ function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
     T<:Complex && @inbounds for i in 1:length(x)
         xₛ = x[i]
         ϵ = max(rel_step * abs(xₛ), abs_step)
+        @show i, ϵ
         x[i] = xₛ + im * ϵ
         y₂ = vec(f(x))
         x[i] = xₛ - im * ϵ
@@ -456,9 +483,9 @@ end
 # C^n -> R^m -> loss, and this interface is easy to generalize
 function ∇L2loss(J::Matrix{T}, w::Vector{R}) where {T<:Number,R<:Real}
     @assert R == real(T)
-    n  = size(J,2)
+    n = size(J, 2)
     Dsw = Diagonal(sqrt.(w))
-    _, S, V = svd(Dsw * hcat(real(J),imag(J)))
-    T<:Real && return S[1], V[1:n,1] * S[1]
-    return S[1], (V[1:n,1] + im * V[n+1:2n,1]) * S[1]
+    _, S, V = svd(Dsw * hcat(real(J), imag(J)))
+    T<:Real && return S[1], V[1:n, 1] * S[1]
+    return S[1], (V[1:n, 1] + im * V[(n + 1):2n, 1]) * S[1]
 end
