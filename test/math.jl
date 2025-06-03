@@ -61,3 +61,65 @@ end
         @test isapprox(ϕ(x, res), y, atol=strict_tol(T))
     end
 end
+
+@testset "fdgradient" begin
+    for T in [Float32, Float64]
+        f = x -> [x[1]+x[2],x[1]*x[2]]
+        J = x -> [1 1;x[2] x[1]]
+        x = rand(T,2)
+        fdres = ACFlowSensitivity.fdgradient(f,x)
+        @test fdres isa Matrix{T}
+        @test isapprox(fdres,J(x),atol=strict_tol(T))
+        @test jacobian_check_v2v(f,fdres,x)
+    end
+    for T in [ComplexF32, ComplexF64]
+        f = x->[real(x[1])+imag(x[2]),imag(x[1])*real(x[2])]
+        J = x->[1 im;im*real(x[2]) imag(x[1])]
+        x = rand(T,2)
+        fdres = ACFlowSensitivity.fdgradient(f,x)
+        @test fdres isa Matrix{T}
+        @test isapprox(fdres,J(x),atol=strict_tol(T))
+        @test jacobian_check_v2v(f,fdres,x)
+    end
+end
+
+@testset "∇L2loss" begin
+    n=10
+    for T in [Float32, Float64, ComplexF32, ComplexF64]
+        rtol = (real(T) <: Float32) ? 1e-1 : 1e-2
+        A = rand(T,2*n,n)
+        f = x->real(A*x)
+        x0 = rand(T,n)
+        y0 = f(x0)
+        w = ones(real(T),2*n)
+        ls = x->loss(f(x),y0,w)
+        J = ACFlowSensitivity.fdgradient(f,x0)
+        ∇ls = ACFlowSensitivity.∇L2loss(J,w)
+        @test ∇ls[1] isa real(T)
+        @test ∇ls[2] isa Vector{T}
+        @test isapprox(norm(∇ls[2]), ∇ls[1], atol=strict_tol(real(T)))
+        @test gradient_check(ls,∇ls[2],x0;rtol=rtol)
+    end
+end
+
+@testset "partial derivative of sigmoid loss function" begin
+    n = 10
+    ϕ(x,p) = p[1] .+ p[2] ./ (1 .+ exp.(-p[4] .* (x .- p[3])))
+    for T in [Float32, Float64]
+        x0 = rand(T,n)
+        y0 = rand(T,n)
+        p0 = rand(T,4)
+        lossϕ = (p,y) -> sum(((x->ϕ(x,p)).(x0)-y).^2)
+        dl = (p,y) -> vec(ACFlowSensitivity.fdgradient(p1->lossϕ(p1,y),p))
+        Div∂p² = ACFlowSensitivity.fdgradient(p->dl(p,y0),p0)
+        Div∂p²_expect = ACFlowSensitivity.∂²lossϕDiv∂p²(p0,x0,y0)
+        @test Div∂p²_expect isa Matrix{T}
+        @show norm(Div∂p²- Div∂p²_expect)
+        relax_tol(T)
+        @test isapprox(Div∂p², Div∂p²_expect, atol=relax_tol(T), rtol = 1e-2)
+        Div∂p∂y = ACFlowSensitivity.fdgradient(y->dl(p0,y),y0)
+        Div∂p∂y_expect = ACFlowSensitivity.∂²lossϕDiv∂p∂y(p0,x0,y0)
+        @test Div∂p∂y_expect isa Matrix{T}
+        @test isapprox(Div∂p∂y, Div∂p∂y_expect, atol=relax_tol(T), rtol = 1e-2)
+    end
+end

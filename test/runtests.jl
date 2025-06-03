@@ -1,4 +1,5 @@
-using Test, Random, LinearAlgebra, TestExtras
+using Test, Random, TestExtras
+using LinearAlgebra
 using ACFlowSensitivity
 
 Random.seed!(6)

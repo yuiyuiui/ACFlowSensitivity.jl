@@ -3,7 +3,8 @@ strict_tol(T) = eps(real(T))^(2 // 3)
 relax_tol(T) = eps(real(T))^(1 // 4)
 
 # loss function
-function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{T}) where {T<:Real}
+function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:Real}
+    @assert S == real(T)
     return sqrt(sum(abs2.(G .- G₀) .* w))
 end
 
@@ -23,7 +24,7 @@ function dfcfg_cont(T::Type{<:Real};
     GFV = generate_GFV_cont(β, N, A; noise=noise)
     return A, ctx, GFV
 end
-
+#=
 function jacobian_check_m2v(f, J::Matrix{T}, A::Matrix{T}; η=1e-5, rtol=1e-2,
                             atol=1e-8) where {T<:Number}
     η = T(η)
@@ -32,11 +33,22 @@ function jacobian_check_m2v(f, J::Matrix{T}, A::Matrix{T}; η=1e-5, rtol=1e-2,
     dy_expect = real(conj(J)*vec(dA))
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
+=#
+# vector to vector
 function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
                             atol=1e-8) where {T<:Number}
     η = T(η)
     dx = η * x/norm(x)
     dy = f(x+dx) - f(x)
     dy_expect = real(conj(J)*dx)
+    return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
+end
+# vector to number
+function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
+                        atol=tolerance(T)) where {T<:Number}
+    η = real(T)(η)
+    dx = η * J/norm(J)
+    dy = f(J+dx) - f(J)
+    dy_expect = η * norm(J)
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end

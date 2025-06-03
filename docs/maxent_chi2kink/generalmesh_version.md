@@ -1,3 +1,6 @@
+# 1. Chi2cink
+![alt text](flow_chart.jpg)
+
 $$A(u) = m\circ \exp(Vu)$$
 
 $$\frac{\partial A}{\partial u} = \text{diag}(A)V$$
@@ -19,7 +22,7 @@ $$\frac{\partial Q}{\partial A}=0 \Longleftrightarrow J(u) = \alpha u+\frac{1}{\
 $$H(u) = \frac{\partial J}{\partial u} = \alpha I+\frac{1}{\sigma^2}S^2V'\text{diag}(w)\text{diag}(A)V$$
 
 -------
-![alt text](flow_chart.jpg)
+# 2. Differentiation of chi2cink
 $$\text{Function}:J(u,\alpha,G),\chi^2(u,G)$$
 
 $$J(u^{\text{opt}}_i,\alpha_i,G)=0\\
@@ -29,7 +32,11 @@ $$
 $$\frac{\partial \chi^{2~\text{opt}}_i}{\partial G} = \frac{\partial \chi^{2}}{\partial u}\frac{\partial u^{\text{opt}}_i}{\partial G}+\frac{\partial \chi^{2}}{\partial G}$$
 
 For curve fitting:
-$$\text{loss}(p) = \sum_{i=1}^L(p_1+\frac{p_2}{1+\exp(-p_3(x_i-p_4))}-y_i)^2$$
+$$\text{loss}(p,x,y) = \sum_{i=1}^L(p_1+\frac{p_2}{1+\exp(-p_3(x_i-p_4))}-y_i)^2$$
+
+$$\frac{\partial \text{loss}}{\partial p} (p^{\text{opt}}(y),x,y)=0\\
+\Longrightarrow \frac{\partial p^{\text{opt}}}{\partial y} = -(\frac{\partial \text{loss}}{\partial p})^{-1} \frac{\partial \text{loss}}{\partial y}
+$$
 
 
 For $\alpha^{\text{opt}}$ to $u^{\text{opt}}$
@@ -44,5 +51,28 @@ Supple differentiation:
 $$\frac{\partial J}{\partial G} = -\frac{1}{\sigma^2}SU'$$
 
 $$\frac{\partial J}{\partial \alpha} = u$$
+
+# 3. Differentiation of $L^2$ loss function
+
+$$f:\mathbb{C}^n \to \mathbb{C}^m,~\frac{\partial f(x)}{\partial x_r}=A,~\frac{\partial f(x)}{\partial x_i}=B$$
+
+$$\text{loss}(x) = \|f(x)-f(x_0)\|_{L^2} = \sqrt{\sum_{i=1}^m w_i |f(x_i)-y_{0i}|^2}$$
+
+$$\Longrightarrow \text{loss}^2(dx) = \sum_{i=1}^m w_i |Adx_r+Bdx_i|^2$$
+
+$$= X'[A,B]'\text{diag}(w)[A,B]X,~X=[x_r|x_i]$$
+
+Denote
+$$U,S,V = \text{svd}\left(\sqrt{\text{diag}(w)}[A,B]\right)$$
+
+So when the direction of $X$ is $V[1]$, the loss increase most rapidly. And the speed is $S[1]$. So the gradient is $S[1]V[1]$.
+
+
+
+
+
+
+
+
 
 

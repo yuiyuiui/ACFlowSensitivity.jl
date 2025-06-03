@@ -123,11 +123,11 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
             ∂reADiv∂G = chi2kink_diff(ss, model, ctx.mesh_weights, L, α₁, σ)
         end
     end
-    return ctx.mesh, reA, ∂reADiv∂G, ∇L2loss(∂reADiv∂G,ctx.mesh_weights)[2]
-end 
+    return ctx.mesh, reA, ∂reADiv∂G, ∇L2loss(∂reADiv∂G, ctx.mesh_weights)[2]
+end
 
 function chi2kink_diff(ss::SingularSpace{T}, model::Vector{T}, w::Vector{T}, L::Int, α₁::T,
-                  σ::T) where {T<:Real}
+                       σ::T) where {T<:Real}
     G, K, n, U, S, V = ss
     αvec = Vector{T}(undef, L)
     αvec[1] = α₁
@@ -146,10 +146,10 @@ function chi2kink_diff(ss::SingularSpace{T}, model::Vector{T}, w::Vector{T}, L::
     _∂ADiv∂u(u::Vector{T}) = Diagonal(A(u)) * V
 
     # ∂χ²/∂A, get a row matrix
-    _∂χ²Div∂u(u::Vector{T}) = Matrix(2/σ^2 * (A(u)'*KDw' - G')*KDw) * _∂ADiv∂u(u)
+    _∂χ²Div∂u(u::Vector{T}) = Matrix(2/σ^2 * (A(u)'*KDw' - G') * KDw) * _∂ADiv∂u(u)
 
     # ∂J/∂G 
-    ∂JDiv∂G = -1 / (σ^2) * DS*U'
+    ∂JDiv∂G = -1 / (σ^2) * DS * U'
 
     # ∂χ²/∂G, get a row matrix
     _∂χ²Div∂G(u::Vector{T}) = Matrix(2 / (σ^2) * (G' - A(u)' * K'))
@@ -157,7 +157,7 @@ function chi2kink_diff(ss::SingularSpace{T}, model::Vector{T}, w::Vector{T}, L::
     ∂χ²vecDiv∂G = Matrix{T}(undef, L, 2 * N)
 
     # 接下来用Newton method求最值点
-    u_guess = zeros(T,n)
+    u_guess = zeros(T, n)
     u_opt_vec = Vector{Vector{T}}(undef, L)
     for i in 1:L
         α = αvec[i]
@@ -183,7 +183,7 @@ function chi2kink_diff(ss::SingularSpace{T}, model::Vector{T}, w::Vector{T}, L::
         return @. p[1] + p[2] / (1.0 + exp(-p[4] * (x - p[3])))
     end
     guess_fit = [0.0, 5.0, 2.0, 0.0]
-    p= curve_fit(fitfun, log10.(αvec), log10.(χ²vec), guess_fit).param
+    p = curve_fit(fitfun, log10.(αvec), log10.(χ²vec), guess_fit).param
     adjust = T(5//2)
     α_opt = 10^(p[3]-adjust/p[4])
     u_guess = copy(u_opt_vec[findmin(abs.(αvec .- α_opt))[2]])
@@ -191,8 +191,9 @@ function chi2kink_diff(ss::SingularSpace{T}, model::Vector{T}, w::Vector{T}, L::
     u_opt, = newton(MaxEnt_J(α_opt, DSUadDivσ², KDw, model, V, G), _Hopt, u_guess)
 
     arg = (p, log10.(αvec), log10.(χ²vec))
-    ∂pDiv∂χ²vec = -pinv(∂²lossϕDiv∂p²(arg...)) * ∂²lossϕDiv∂p∂y(arg...) * Diagonal(1 ./ (χ²vec * T(log(10))))
-    ∂αoptDiv∂p = gradient( (par->10^(par[3]-adjust/par[4])), p)[1]
+    ∂pDiv∂χ²vec = -pinv(∂²lossϕDiv∂p²(arg...)) * ∂²lossϕDiv∂p∂y(arg...) *
+                  Diagonal(1 ./ (χ²vec * T(log(10))))
+    ∂αoptDiv∂p = gradient((par->10^(par[3]-adjust/par[4])), p)[1]
     ∂αoptDiv∂G = Matrix(∂αoptDiv∂p') * ∂pDiv∂χ²vec * ∂χ²vecDiv∂G
     _∂JDiv∂α(u::Vector{T}) = u
     ∂u_optDiv∂G = -pinv(_Hopt(u_opt)) * (_∂JDiv∂α(u_opt) * ∂αoptDiv∂G + ∂JDiv∂G)
