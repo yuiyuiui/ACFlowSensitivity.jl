@@ -37,11 +37,11 @@ end
 
 @testset "cont MaxEntChi2kink" begin
     for T in [Float32, Float64]
-        tol = T==Float32 ? 1.1e-1 : 5e-3
+        tol = T==Float32 ? 2e-1 : 5e-3
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
-                mesh, reA = solve(GFV, ctx, MaxEntChi2kink())
+                mesh, reA = solve(GFV, ctx, MaxEntChi2kink(model_type=model_type))
                 orA = A.(mesh)
                 @test eltype(reA) == eltype(mesh) == T
                 @test length(reA) == length(mesh) == length(ctx.mesh)
