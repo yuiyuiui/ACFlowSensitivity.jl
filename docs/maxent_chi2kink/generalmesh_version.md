@@ -5,9 +5,11 @@ $$A(u) = m\circ \exp(Vu)$$
 
 $$\frac{\partial A}{\partial u} = \text{diag}(A)V$$
 
-$$\chi^2(A) = \frac{1}{\sigma^2}(G-\widetilde{G})'(G-\widetilde{G}) = (K\text{diag}(w)A-G)'(K\text{diag}(w)A-G)$$
+$$\chi^2(A) = \frac{1}{\sigma^2}(G-\widetilde{G})'(G-\widetilde{G}) = \frac{1}{\sigma^2}(K\text{diag}(w)A-G)'(K\text{diag}(w)A-G)$$
 
 $$\frac{\partial \chi^2}{\partial A}=\frac{2}{\sigma^2}\text{diag}(w)K'(K\text{diag}(w)A-G)$$
+
+$$\frac{\partial \chi^2}{\partial G} = \frac{2}{\sigma^2}(G-K\text{diag}(w)A)$$
 
 $$\text{SJ} = A-m-A\circ \ln(A \circ/ m)$$
 

@@ -9,7 +9,7 @@ struct PreComput{T<:Real}
     S²VadDwDivσ²::Matrix{T}
 end
 function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-    alg::MaxEntChi2kink) where {T<:Real}
+                   alg::MaxEntChi2kink) where {T<:Real}
     L = alg.L
     α₁ = T(alg.α₁)
     σ = T(alg.σ)
@@ -116,7 +116,7 @@ function chi2kink(pc::PreComput{T}) where {T<:Real}
     _A = MaxEnt_A(pc.model, pc.ss.V)
     u_opt_vec, χ²vec, idx = G2χ²vec(pc)
     αopt = χ²vec2αopt(χ²vec[idx], pc.αvec[idx])
-    u_guess = copy(u_opt_vec[findmin(abs.(pc.αvec .- αopt))[2]])
+    u_guess = copy(u_opt_vec[findmin(abs.(log10.(pc.αvec) .- log10(αopt)))[2]])
     u_opt, = newton(MaxEnt_J(αopt, pc.DSUadDivσ², pc.KDw, pc.model, pc.ss.V, pc.ss.G),
                     MaxEnt_H(αopt, pc.S²VadDwDivσ², pc.model, pc.ss.V), u_guess)
     # recover the A
@@ -154,11 +154,11 @@ function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}
     ∂JDiv∂G = -1 / (σ^2) * pc.DS * U'
 
     # ∂χ²/∂G, get a row matrix
-    _∂χ²Div∂G(u::Vector{T}) = Matrix(2 / (σ^2) * (G' - _A(u)' * K'))
+    _∂χ²Div∂G(u::Vector{T}) = Matrix(2 / (σ^2) * (G' - _A(u)' * pc.KDw'))
 
     ∂χ²vecDiv∂G = Matrix{T}(undef, L, 2 * N)
 
-    # 接下来用Newton method求最值点
+    # then use Newton method to find the minimum point
     u_guess = zeros(T, n)
     u_opt_vec = Vector{Vector{T}}(undef, L)
     for i in 1:L
@@ -183,7 +183,7 @@ function _∂αoptDiv∂χ²vec(χ²vec::Vector{T}, pc::PreComput{T},
     χ²vec = χ²vec[idx]
     αvec = pc.αvec[idx]
     function fitfun(x, p)
-        return @. p[1] + p[2] / (1.0 + exp(-p[4] * (x - p[3])))
+        return @. p[1] + p[2] / (T(1) + exp(-p[4] * (x - p[3])))
     end
     guess_fit = [T(0), T(5), T(2), T(0)]
     p = curve_fit(fitfun, log10.(αvec), log10.(χ²vec), guess_fit).param

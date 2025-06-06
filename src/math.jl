@@ -457,7 +457,6 @@ function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
     @inbounds for i in 1:length(x)
         xₛ = x[i]
         ϵ = max(rel_step * abs(xₛ), abs_step)
-        @show i, ϵ
         x[i] = xₛ + ϵ
         y₂ = vec(f(x))
         x[i] = xₛ - ϵ
@@ -468,7 +467,6 @@ function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
     T<:Complex && @inbounds for i in 1:length(x)
         xₛ = x[i]
         ϵ = max(rel_step * abs(xₛ), abs_step)
-        @show i, ϵ
         x[i] = xₛ + im * ϵ
         y₂ = vec(f(x))
         x[i] = xₛ - im * ϵ
