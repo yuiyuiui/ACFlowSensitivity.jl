@@ -84,3 +84,15 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T<:Number}
     end
     return best_weight, grid[best_index], values[best_index], best_index
 end
+
+#---------------------------------
+# solve differentiation
+
+function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
+    _, _, _, idx = aaa(ctx.iwn, GFV; alg=alg)
+    reA = zeros(T, length(ctx.mesh))
+    for i in eachindex(ctx.mesh)
+        reA[i] = -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
+    end
+    return ctx.mesh, reA
+end
