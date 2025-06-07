@@ -167,12 +167,11 @@ end
 x=rand(2, 2)
 jacobian(my_func2, x)[1]
 
-
 #--------------------------------
 # AD for push and findmax
-using Zygote,LinearAlgebra
+using Zygote, LinearAlgebra
 
-a = [0.1,0.2,0.3]
+a = [0.1, 0.2, 0.3]
 function mf(a)
     idx = findmax(a)[2]
     return a[idx]
@@ -180,12 +179,12 @@ end
 mf(a)
 gradient(mf, a)
 
-function mf1(u,v)
+function mf1(u, v)
     n = length(u)
-    res = zeros(n,n)
-    for i=1:n
-        for j=1:n
-            (i!=j) && (res[i,j] = u[i]*v[j])
+    res = zeros(n, n)
+    for i in 1:n
+        for j in 1:n
+            (i!=j) && (res[i, j] = u[i]*v[j])
         end
     end
     return res

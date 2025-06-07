@@ -88,11 +88,24 @@ end
 #---------------------------------
 # solve differentiation
 
-function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
     _, _, _, idx = aaa(ctx.iwn, GFV; alg=alg)
     reA = zeros(T, length(ctx.mesh))
     for i in eachindex(ctx.mesh)
         reA[i] = -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
     end
     return ctx.mesh, reA
+end
+
+function aaa4diff(GFV::Vector{T}, idx::Vector{Int}, ctx::CtxData{T}) where {T<:Number}
+    wait_idx = filter(i->i∉idx, 1:ctx.N)
+    iwn = ctx.iwn[idx]
+    mesh = ctx.mesh
+    g = iwn[idx]
+    v = GFV[idx]
+    L = [((GFV[i] - GFV[j]) / (iwn[i] - iwn[j])):T(0) for i in wait_idx, j in idx]
+    w = svd(L).V[:, end]
+    res = [-imag(sum((w .* v) ./ (mesh[i] .- g))/sum(w ./ (mesh[i] .- g)))/T(π)
+           for i in 1:length(mesh)]
+    return res
 end
