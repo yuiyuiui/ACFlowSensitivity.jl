@@ -90,21 +90,20 @@ end
 
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
     _, _, _, idx = aaa(ctx.iwn, GFV; alg=alg)
-    reA = zeros(T, length(ctx.mesh))
-    for i in eachindex(ctx.mesh)
-        reA[i] = -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
-    end
-    return ctx.mesh, reA
+    reA = aaa4diff(GFV, idx, ctx)
+    reAdiff = Zygote.jacobian(x -> aaa4diff(x, idx, ctx), GFV)[1]
+    return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
 end
 
-function aaa4diff(GFV::Vector{T}, idx::Vector{Int}, ctx::CtxData{T}) where {T<:Number}
+function aaa4diff(GFV::Vector{Complex{T}}, idx::Vector{Int},
+                  ctx::CtxData{T}) where {T<:Real}
     wait_idx = filter(i->i∉idx, 1:ctx.N)
-    iwn = ctx.iwn[idx]
+    iwn = ctx.iwn
     mesh = ctx.mesh
     g = iwn[idx]
     v = GFV[idx]
-    L = [((GFV[i] - GFV[j]) / (iwn[i] - iwn[j])):T(0) for i in wait_idx, j in idx]
-    w = svd(L).V[:, end]
+    L = [((GFV[i] - GFV[j]) / (iwn[i] - iwn[j])) for i in wait_idx, j in idx]
+    w = svd(L)[3][:, end]
     res = [-imag(sum((w .* v) ./ (mesh[i] .- g))/sum(w ./ (mesh[i] .- g)))/T(π)
            for i in 1:length(mesh)]
     return res

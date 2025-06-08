@@ -18,4 +18,6 @@ include("barrat.jl")
 include("model.jl")
 include("maxent.jl")
 
+include("adrules/adrules.jl")
+
 end

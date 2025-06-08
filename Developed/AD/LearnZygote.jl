@@ -191,3 +191,47 @@ function mf1(u, v)
 end
 
 jacobian(mf1, rand(3), rand(3))
+
+#-----------------------
+# test for svd
+using Zygote, LinearAlgebra
+T = ComplexF64
+mf(A) = norm(svd(A).U)
+A = rand(T, 3, 3)
+gradient(mf, A)
+
+#-----
+#chainrule
+using Zygote, ChainRulesCore
+
+# 示例：定义一个可微分函数
+function mysquare(x)
+    return x^2
+end
+
+# 为 mysquare 定义自定义反向传播规则（rrule）
+function ChainRulesCore.rrule(::typeof(mysquare), x)
+    y = mysquare(x)
+    function pullback(ȳ)
+        return NoTangent(), 2x * ȳ
+    end
+    return y, pullback
+end
+
+# 使用 Zygote 测试
+using Zygote
+
+mf(v) = findmax(v)[2]
+
+v = [0.1, 0.3, 0.1]
+mf(v)
+
+Zygote.@adjoint function mf(v::Vector{T}) where {T}
+    idx = findmax(v)[2]
+    function pullback(ȳ)
+        return (zero(v),)
+    end
+    return idx, pullback
+end
+
+gradient(mf, v)

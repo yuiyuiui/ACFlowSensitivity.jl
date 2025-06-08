@@ -85,3 +85,27 @@ end
         end
     end
 end
+
+# Bote :∂loss has great instability (because of the huge maximum sigular value of ∂reA) here so we don't test it
+@testset "differentiation of chi2kink with BarRat" begin
+    for T in [Float32, Float64]
+        solve_tol = T==Float32 ? 1e-1 : 1.1e-2
+        for mesh_type in [UniformMesh(), TangentMesh()]
+            alg = BarRat()
+            A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+            mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
+            orA = A.(mesh)
+            @test mesh isa Vector{T}
+            @test reA isa Vector{T}
+            @test ∂reADiv∂G isa Matrix{Complex{T}}
+            @test ∂loss isa Vector{Complex{T}}
+            @test loss(reA, orA, ctx.mesh_weights) < solve_tol
+            #if T === Float64
+            G2A = G -> solve(G, ctx, alg)[2]
+            G2l = G -> loss(reA, G2A(G), ctx.mesh_weights)
+            T == Float64 &&
+                @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, atol=tolerance(T),
+                                         rtol=relax_tol(T))
+        end
+    end
+end

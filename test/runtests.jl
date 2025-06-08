@@ -1,5 +1,5 @@
 using Test, Random, TestExtras
-using LinearAlgebra
+using LinearAlgebra, Zygote
 using ACFlowSensitivity
 
 Random.seed!(6)
@@ -24,4 +24,7 @@ end
 end
 @testset "solvediff" begin
     include("solvediff.jl")
+end
+@testset "adrule" begin
+    include("adrules/adrules.jl")
 end
