@@ -4,7 +4,7 @@ using LinearAlgebra, Zygote
 
 # export interfaces
 export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
-export make_mesh, UniformMesh, TangentMesh
+export make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export BarRat, MaxEntChi2kink
 export curve_fit, LsqFitResult

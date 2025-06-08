@@ -1,11 +1,12 @@
 using Documenter
 using ACFlowSensitivity
 
-makedocs(; sitename="ACFlowSensitivity.jl",
-         format=Documenter.HTML(),
-         modules=[ACFlowSensitivity],
+makedocs(; modules=[ACFlowSensitivity],
+         sitename="ACFlowSensitivity.jl",
+         authors="Kaiwen Jin and collaborators",
          pages=["Home" => "index.md",
-                "API Reference" => "api.md"])
+                "Manual" => ["main/intro.md"]],
+         format=Documenter.HTML())
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual

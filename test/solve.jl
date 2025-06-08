@@ -6,7 +6,7 @@
         train_data = [f(z) for z in train_z]
         test_z = [randn(T) for _ in 1:N]
         test_data = [f(z) for z in test_z]
-        w, g, v = ACFlowSensitivity.aaa(train_z, train_data; alg=BarRat())
+        w, g, v = ACFlowSensitivity.aaa(train_z, train_data; alg=BarRat(Cont()))
         @test w isa Vector{T}
         @test g isa Vector{T}
         @test v isa Vector{T}
@@ -24,7 +24,7 @@ end
         tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
-            mesh, reA = solve(GFV, ctx, BarRat())
+            mesh, reA = solve(GFV, ctx, BarRat(Cont()))
             orA = A.(mesh)
             @test eltype(reA) == eltype(mesh) == T
             @test length(reA) == length(mesh) == length(ctx.mesh)

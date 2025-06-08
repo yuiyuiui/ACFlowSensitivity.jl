@@ -13,7 +13,7 @@ function plot_barrat_cont()
     end
     reA_vec = Vector{Vector{T}}(undef, length(noise_vec))
     for i in 1:length(noise_vec)
-        _, reA_vec[i] = solve(GFV_vec[i], ctx, BarRat())
+        _, reA_vec[i] = solve(GFV_vec[i], ctx, BarRat(Cont()))
     end
 
     # draw the pictures

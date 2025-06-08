@@ -19,15 +19,26 @@ struct CtxData{T<:Real}
     end
 end
 
+abstract type SpectrumType end
+
+struct Cont <: SpectrumType end
+struct Delta <: SpectrumType end
+struct Mixed <: SpectrumType end
+
+# abanda add singular values of the lowner matrix less than `minsgl` for numerical stability
+# this method is under developing
 struct BarRat
+    spt::SpectrumType
+    minsgl::Real
     aaa_tol::Real
     max_degree::Int
     lookaheaad::Int
-    function BarRat(;
+    function BarRat(spt::SpectrumType;
+                    minsgl::Real=0,
                     aaa_tol::Real=ACFSDefults.tol[],
                     max_degree::Int=150,
                     lookaheaad::Int=10,)
-        return new(aaa_tol, max_degree, lookaheaad)
+        return new(spt, minsgl, aaa_tol, max_degree, lookaheaad)
     end
 end
 

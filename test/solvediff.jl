@@ -91,7 +91,7 @@ end
     for T in [Float32, Float64]
         solve_tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
-            alg = BarRat()
+            alg = BarRat(Cont())
             A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
             mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
             orA = A.(mesh)
