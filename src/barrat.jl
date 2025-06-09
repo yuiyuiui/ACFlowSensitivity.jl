@@ -1,16 +1,20 @@
 # Aaa algorithm for continuous spectral density
+struct BarRatFunc{T<:Number} <: Function
+    w::Vector{T}
+    g::Vector{T}
+    v::Vector{T}
+end
+
+(f::BarRatFunc)(x) = sum((f.w .* f.v) ./ (x .- f.g))/sum(f.w ./ (x .- f.g))
 
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
-    w, g, v, _ = aaa(ctx.iwn, GFV; alg=alg)
-    reA = zeros(T, length(ctx.mesh))
-    for i in eachindex(ctx.mesh)
-        reA[i] = -imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
-    end
+    brf, _ = aaa(ctx.iwn, GFV; alg=alg)
+    reA = extract_spectrum(brf, ctx.mesh, alg, alg.spt)
     return ctx.mesh, reA
 end
 
 # aaa algorithm writen by myself
-function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T<:Number}
+function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     @assert length(grid)>0
     @assert length(grid)==length(values)
 
@@ -82,14 +86,19 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T<:Number}
         delete!(wait_index, next_index)
         R[next_index]=0
     end
-    return best_weight, grid[best_index], values[best_index], best_index
+    return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
+end
+
+function extract_spectrum(brf::BarRatFunc, mesh::Vector{T}, alg::BarRat,
+                          spt::Cont) where {T}
+    return -imag.(brf.(mesh))/T(π)
 end
 
 #---------------------------------
 # solve differentiation
 
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
-    _, _, _, idx = aaa(ctx.iwn, GFV; alg=alg)
+    _, idx = aaa(ctx.iwn, GFV; alg=alg)
     reA = aaa4diff(GFV, idx, ctx)
     reAdiff = Zygote.jacobian(x -> aaa4diff(x, idx, ctx), GFV)[1]
     return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]

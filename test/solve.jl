@@ -1,19 +1,17 @@
 @testset "aaa" begin
+    N = 10
     for T in [Float32, Float64, ComplexF32, ComplexF64]
         f(z) = (1) / (2 * z^2 + z + 1)
-        N = 10
         train_z = [randn(T) for _ in 1:N]
         train_data = [f(z) for z in train_z]
         test_z = [randn(T) for _ in 1:N]
         test_data = [f(z) for z in test_z]
-        w, g, v = ACFlowSensitivity.aaa(train_z, train_data; alg=BarRat(Cont()))
-        @test w isa Vector{T}
-        @test g isa Vector{T}
-        @test v isa Vector{T}
-        res = zero(test_data)
-        for i in eachindex(test_z)
-            res[i] += sum((w .* v) ./ (test_z[i] .- g)) / sum(w ./ (test_z[i] .- g))
-        end
+        brf, _ = ACFlowSensitivity.aaa(train_z, train_data; alg=BarRat(Cont()))
+        @test brf isa ACFlowSensitivity.BarRatFunc{T}
+        @test brf.w isa Vector{T}
+        @test brf.g isa Vector{T}
+        @test brf.v isa Vector{T}
+        res = brf.(test_z)
         @test res isa Vector{T}
         @test isapprox(res, test_data, atol=strict_tol(T))
     end
