@@ -1,11 +1,11 @@
-### 1. Prony approximation
+### 1. Prony Interpolation
 https://en.wikipedia.org/wiki/Prony%27s_method
 
 it fit a set of sampling data with a sum of complex exponential functions. That is to say, exponentially decaying triangular functions.
 
 $$f(t) = \sum_{i=1}^{N} A_i e^{\alpha_i t} \cos(\omega_i t + \phi_i)$$
 
-### 2. Improved Prony approximation
+### 2. Prony Approximation
 [*On approximation of functions by exponential sums*](https://www.sciencedirect.com/science/article/pii/S106352030500014X)
 
 * Summary: low-rank decomposition of sampling Hankel matrix.
@@ -31,3 +31,13 @@ satisfies: $|w_m|\geq \sigma_M$.
 
 Then we get the Prony approximation:
 $$\widetilde{f}(t) = \sum_{m=1}^M w_m \gamma_m^t \\ \|\widetilde{f}(k)-f(k)\| = O(\epsilon),~k=1,..,2N-1$$
+
+### Green's Function's Analytic Continuation with Prony Approximation
+Represent the Green's function:
+$$G(z) = \sum_{k=1}^M \frac{A_k}{z-\xi_k},~\xi_k\in\mathbb{C}, Im(z)\leq0$$
+
+1. Fit $\{G(iw_n)\}_{n=1}^N$ with Prony Approximation and get $G^1(z)$
+2. By using inverse Joukowsky transform, map the $[iw_1,iw_N]$ (and its copy) to the unit circle and map the real axis to a circle $\Gamma$ in the interior of the closed unit disk $D$. The lower complex plane is mapped to $D^o$. Then:
+$$h_k:=\frac{1}{2\pi i}\int_{\Gamma}G^1(z)z^kdz = \sum_{m=1}^M A_m \overline{\xi}_m^k$$ and form a prony problem
+3. Solve above prony problem and get 
+4. 
