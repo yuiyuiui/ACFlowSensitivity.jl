@@ -123,3 +123,28 @@ end
         @test isapprox(Div∂p∂y, Div∂p∂y_expect, atol=relax_tol(T), rtol=1e-2)
     end
 end
+
+@testset "testset" begin
+    N = 10
+    for T in [Float32, Float64, ComplexF32, ComplexF64]
+        x = rand(T, N)
+        w = rand(T, N)
+        u1 = ACFlowSensitivity.mean(x)
+        u2 = ACFlowSensitivity.mean(x, w)
+        @test u1 isa T && u2 isa T
+        @test isapprox(u1, sum(x)/N, atol=strict_tol(T))
+        @test isapprox(u2, sum(x .* w) / sum(w), atol=strict_tol(T))
+    end
+end
+
+@testset "Prony approximation" begin
+    N = 20
+    for T in [Float32, Float64]
+        f = x -> 10*exp(-x+im*x) + 20*exp(-2x-im*x+im)
+        x = collect(0:(N - 1)) .+ T(0)
+        y = f.(x)
+        rey = PronyApproximation(x, y)(x)
+        @test rey isa Vector{Complex{T}}
+        @test norm(rey - y)/norm(y) < 3e-2
+    end
+end

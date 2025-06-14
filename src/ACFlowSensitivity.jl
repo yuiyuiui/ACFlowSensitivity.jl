@@ -7,10 +7,10 @@ export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
 export make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export BarRat, MaxEntChi2kink
-export curve_fit, LsqFitResult
+export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient
 
-include("math.jl")
+include("math/math.jl")
 include("generaldata.jl")
 include("mesh.jl")
 include("solve.jl")

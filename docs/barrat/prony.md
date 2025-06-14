@@ -33,11 +33,13 @@ Then we get the Prony approximation:
 $$\widetilde{f}(t) = \sum_{m=1}^M w_m \gamma_m^t \\ \|\widetilde{f}(k)-f(k)\| = O(\epsilon),~k=1,..,2N-1$$
 
 ### Green's Function's Analytic Continuation with Prony Approximation
+[*Minimal Pole Representation and Controlled Analytic Continuation of Matsubara Response Functions*](https://arxiv.org/abs/2312.10576)
 Represent the Green's function:
-$$G(z) = \sum_{k=1}^M \frac{A_k}{z-\xi_k},~\xi_k\in\mathbb{C}, Im(z)\leq0$$
+$$G(z) = \sum_{k} \frac{A_k}{z-\xi_k},~\xi_k\in\mathbb{C}, Im(z)\leq0$$
 
 1. Fit $\{G(iw_n)\}_{n=1}^N$ with Prony Approximation and get $G^1(z)$
-2. By using inverse Joukowsky transform, map the $[iw_1,iw_N]$ (and its copy) to the unit circle and map the real axis to a circle $\Gamma$ in the interior of the closed unit disk $D$. The lower complex plane is mapped to $D^o$. Then:
-$$h_k:=\frac{1}{2\pi i}\int_{\Gamma}G^1(z)z^kdz = \sum_{m=1}^M A_m \overline{\xi}_m^k$$ and form a prony problem
-3. Solve above prony problem and get 
-4. 
+2. By using inverse Joukowsky transform, map the $[iw_1,iw_N]$ (and its copy) to the unit circle and map the real axis to a circle $\Gamma$ in the interior of the closed unit disk $D$. The lower complex plane is mapped to $D^o$. Then calculate:
+$$h_k:=\frac{1}{2\pi i}\int_{\Gamma}G^1(z)z^kdz = \sum_{m} A_m \widetilde{\xi}_m^k$$ and form a prony problem
+3. Solve above prony problem and get a compact representation: $\{\widetilde{\xi}_m\}_{m=1}^M$
+4. using Joukowsky transform and recover $\{\xi_k\}_{k=1}^M$
+

@@ -54,13 +54,6 @@ mesh, Aout, Σout = solve(grid, Σinp, Σerr)
 # Construct final self-energy function
 @. Σout = Σout + Σ∞
 #
-# Write self-energy function to sigma.data
-open("sigma.data", "w") do fout
-    for i in eachindex(mesh)
-        z = Σout[i]
-        @printf(fout, "%20.16f %20.16f %20.16f\n", mesh[i], real(z), imag(z))
-    end
-end
 
 plot(grid, imag(Σorigin))
 plot(mesh, real(Σout))

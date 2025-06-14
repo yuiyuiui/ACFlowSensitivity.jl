@@ -8,6 +8,10 @@ end
 (f::BarRatFunc)(x) = sum((f.w .* f.v) ./ (x .- f.g))/sum(f.w ./ (x .- f.g))
 
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
+    wn = ctx.wn
+    alg.denoisy &&
+        (GFV = (alg.prony_tol>0 ? PronyApproximation(GFV, wn, alg.prony_tol)(wn) :
+                PronyApproximation(GFV, wn)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
     reA = extract_spectrum(brf, ctx.mesh, alg, alg.spt)
     return ctx.mesh, reA
@@ -20,6 +24,7 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
 
     # preparation
     tol = alg.aaa_tol
+    minsgl = alg.minsgl
     max_degree = alg.max_degree
     lookaheaad = alg.lookaheaad
     m=length(grid)
@@ -56,7 +61,9 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
         end
 
         _, S, V=svd(L[collect(wait_index), 1:n])
-        w=V[:, end]
+        minsgl>S[1] && error("minsgl is too large, minsgl ∈ (S[end], S[1])")
+        minsgl_idx = findfirst(reverse(S) .>= minsgl)
+        w=V[:, end - minsgl_idx + 1]
 
         wait_active_C=view(C, collect(wait_index), 1:n)
         num=wait_active_C*(w .* active_values)
@@ -98,6 +105,8 @@ end
 # solve differentiation
 
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
+    alg.denoisy && error("denoisy is not supported for differentiation")
+    alg.minsgl > 0 && error("minsgl is not supported for differentiation")
     _, idx = aaa(ctx.iwn, GFV; alg=alg)
     reA = aaa4diff(GFV, idx, ctx)
     reAdiff = Zygote.jacobian(x -> aaa4diff(x, idx, ctx), GFV)[1]

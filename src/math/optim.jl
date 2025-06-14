@@ -1,47 +1,5 @@
-tolerance(T) = eps(real(T))^(1 // 2)
-strict_tol(T) = eps(real(T))^(2 // 3)
-relax_tol(T) = eps(real(T))^(1 // 4)
-
-function integral(f::Function, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
-    n_raw = floor((b - a) / h)
-    n = Int(n_raw)
-    if isodd(n)
-        n -= 1
-    end
-    if n < 2
-        error("step is too large")
-    end
-
-    fa = f(a)
-    !(typeof(fa) <: Union{T,Complex{T}}) &&
-        error("Type of the output of f should be consistent with its input")
-    fb = f(a + h * T(n))
-    acc = fa + fb
-
-    @inbounds for i in 1:(n - 1)
-        x = a + h * T(i)
-        coeff = isodd(i) ? T(4) : T(2)
-        acc += coeff * f(x)
-    end
-
-    return acc * (h / T(3))
-end
-
-function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
-    Tp = T(p)
-    return integral(x->abs(f(x))^Tp, a, b; h=h)^(1/Tp)
-end
-
-#-----------------------------------------
-
-#= for poles in discrete situation
-function kernel(ε::Float64)
-    return continous_spectral_density([0.0], [ε], [1 / (sqrt(2π) * ε)])
-end
-=#
-
 #=
- Newton Method and curve fitting are copied from https://github.com/yuiyuiui/ACFlow
+ Newton Method and curve fitting are borrowed from https://github.com/huangli712/ACFlow
 =#
 
 # Newton Method
@@ -95,7 +53,7 @@ function newton(fun::Function, grad::Function, guess::Vector{T}; maxiter::Int=20
     return back, counter, reach_tol
 end
 
-# curve_fit is copied from https://github.com/yuiyuiui/ACFlow
+# curve_fit is borrowed from https://github.com/huangli712/ACFlow
 """
     OnceDifferentiable
 
@@ -446,44 +404,3 @@ function ∂lossϕDiv∂p(p, x, y)
     return [Ja, Jb, Jc, Jd]
 end
 =#
-
-# calculate jacobian with finite-difference. Borrowed form https://github.com/yuiyuiui/ACFlow
-# it accepts function that maps vector to vector or number
-Base.vec(x::Number) = [x]
-function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
-    J = zeros(T, length(f(x)), length(x))
-    rel_step = cbrt(eps(real(eltype(x))))
-    abs_step = rel_step
-    @inbounds for i in 1:length(x)
-        xₛ = x[i]
-        ϵ = max(rel_step * abs(xₛ), abs_step)
-        x[i] = xₛ + ϵ
-        y₂ = vec(f(x))
-        x[i] = xₛ - ϵ
-        y₁ = vec(f(x))
-        J[:, i] .+= (y₂ - y₁) ./ (2 * ϵ)
-        x[i] = xₛ
-    end
-    T<:Complex && @inbounds for i in 1:length(x)
-        xₛ = x[i]
-        ϵ = max(rel_step * abs(xₛ), abs_step)
-        x[i] = xₛ + im * ϵ
-        y₂ = vec(f(x))
-        x[i] = xₛ - im * ϵ
-        y₁ = vec(f(x))
-        J[:, i] .+= im * (y₂ - y₁) ./ (2 * ϵ)
-        x[i] = xₛ
-    end
-    return J
-end
-
-# gradient of L2 loss function(vector to vector)
-# C^n -> R^m -> loss, and this interface is easy to generalize
-function ∇L2loss(J::Matrix{T}, w::Vector{R}) where {T<:Number,R<:Real}
-    @assert R == real(T)
-    n = size(J, 2)
-    Dsw = Diagonal(sqrt.(w))
-    _, S, V = svd(Dsw * hcat(real(J), imag(J)))
-    T<:Real && return S[1], V[1:n, 1] * S[1]
-    return S[1], (V[1:n, 1] + im * V[(n + 1):2n, 1]) * S[1]
-end

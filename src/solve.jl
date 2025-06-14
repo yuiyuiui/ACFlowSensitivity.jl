@@ -33,12 +33,16 @@ struct BarRat
     aaa_tol::Real
     max_degree::Int
     lookaheaad::Int
+    denoisy::Bool
+    prony_tol::Real
     function BarRat(spt::SpectrumType;
                     minsgl::Real=0,
                     aaa_tol::Real=ACFSDefults.tol[],
                     max_degree::Int=150,
-                    lookaheaad::Int=10,)
-        return new(spt, minsgl, aaa_tol, max_degree, lookaheaad)
+                    lookaheaad::Int=10,
+                    denoisy::Bool=false,
+                    prony_tol::Real=-1)
+        return new(spt, minsgl, aaa_tol, max_degree, lookaheaad, denoisy, prony_tol)
     end
 end
 
