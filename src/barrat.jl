@@ -10,8 +10,8 @@ end
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
     wn = ctx.wn
     alg.denoisy &&
-        (GFV = (alg.prony_tol>0 ? PronyApproximation(GFV, wn, alg.prony_tol)(wn) :
-                PronyApproximation(GFV, wn)(wn)))
+        (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
+                PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
     reA = extract_spectrum(brf, ctx.mesh, alg, alg.spt)
     return ctx.mesh, reA

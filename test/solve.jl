@@ -31,6 +31,23 @@ end
     end
 end
 
+@testset "prony barrat" begin
+    for T in [Float32, Float64]
+        tol = T==Float32 ? 3e-1 : 1e-1
+        for mesh_type in [UniformMesh(), TangentMesh()]
+            A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+            for prony_tol in [0, (T==Float32 ? 1e-4 : 1e-8)]
+                mesh, reA = solve(GFV, ctx,
+                                  BarRat(Cont(); denoisy=true, prony_tol=prony_tol))
+                orA = A.(mesh)
+                @test eltype(reA) == eltype(mesh) == T
+                @test length(reA) == length(mesh) == length(ctx.mesh)
+                @test loss(reA, orA, ctx.mesh_weights) < tol
+            end
+        end
+    end
+end
+
 @testset "cont MaxEntChi2kink" begin
     for T in [Float32, Float64]
         tol = T==Float32 ? 2e-1 : 5.1e-3

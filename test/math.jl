@@ -136,15 +136,18 @@ end
         @test isapprox(u2, sum(x .* w) / sum(w), atol=strict_tol(T))
     end
 end
-
+Random.seed!(6)
 @testset "Prony approximation" begin
     N = 20
     for T in [Float32, Float64]
         f = x -> 10*exp(-x+im*x) + 20*exp(-2x-im*x+im)
         x = collect(0:(N - 1)) .+ T(0)
         y = f.(x)
-        rey = PronyApproximation(x, y)(x)
-        @test rey isa Vector{Complex{T}}
-        @test norm(rey - y)/norm(y) < 3e-2
+        rey1 = PronyApproximation(x, y)(x)
+        rey2 = PronyApproximation(x, y, 1e-2)(x)
+        @test rey1 isa Vector{Complex{T}}
+        @test rey2 isa Vector{Complex{T}}
+        @test norm(rey1 - y)/norm(y) < 3e-2
+        @test norm(rey2 - y)/norm(y) < 3e-2
     end
 end
