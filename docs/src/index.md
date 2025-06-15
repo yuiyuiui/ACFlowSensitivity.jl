@@ -16,7 +16,7 @@ The high level interface of ACFlowSensitivity is provided by the following funct
 
 |Method|RI [`Cont`](@ref)|RI [`Delta`](@ref)|RI [`Mixed`](@ref)|
 |:---|:---|:---|:---|
-|[`BarRat`](@ref)|✅|||
+|[`BarRat`](@ref)|✅|✅||
 |[`MaxEntChi2kink`](@ref)|✅|❌|❌|
 
 

@@ -173,28 +173,13 @@ function last(brc::BarRatContext)
         end
     end
 
-    # By default, we should write the analytic continuation results
-    # into the external files.
-    _fwrite = get_b("fwrite")
-    fwrite = isa(_fwrite, Missing) || _fwrite ? true : false
-
-    # Write information about Prony approximation
-    fwrite && (get_r("denoise") != "none") && begin
-        write_prony(brc.𝒫.𝑁ₚ, brc.𝒫.Γₚ, brc.𝒫.Ωₚ)
-        write_prony(brc.grid, brc.𝒫(brc.grid.ω))
-    end
-
-    # Write information about barycentric rational function
-    fwrite && write_barycentric(brc.ℬ.nodes, brc.ℬ.values, brc.ℬ.weights)
 
     # Calculate full response function on real axis and write them
     _G = brc.ℬ.(brc.mesh.mesh)
     get_r("atype") == "delta" && pole_green!(_G)
-    fwrite && write_complete(brc.mesh, _G)
 
     # Calculate and write the spectral function
     Aout = -imag.(_G) ./ π
-    fwrite && write_spectrum(brc.mesh, Aout)
 
     # Regenerate the input data and write them
     #

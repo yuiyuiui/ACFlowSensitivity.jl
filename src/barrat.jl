@@ -13,8 +13,9 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
         (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
-    reA = extract_spectrum(brf, ctx, alg)
-    return ctx.mesh, reA
+    alg.spt isa Cont && return ctx.mesh, extract_spectrum(brf, ctx, alg)
+    alg.spt isa Delta && return ctx.mesh, poles(GFV, brf, ctx.iwn, alg.pcut)
+    # For Mixed spectrum:
 end
 
 # aaa algorithm writen by myself
@@ -98,7 +99,7 @@ end
 
 function extract_spectrum(brf::BarRatFunc, ctx::CtxData, alg::BarRat)
     alg.spt == Cont && return -imag.(brf.(ctx.mesh))/T(π)
-    alg.spt == Delta && return -imag.(brf.(ctx.mesh .+ ctx.η*im))/T(π)
+    error("Now only support continuous spectrum")
 end
 
 # deal with poles
@@ -174,8 +175,7 @@ function poles(GFV::Vector{T}, f::BarRatFunc{T}, iwn::Vector{T}, pcut) where {T}
         γᵢ = γopt[i]
         @show (pᵢ, γᵢ)
     end
-
-    return p, γopt
+    return (real(p), γopt)
 end
 
 #---------------------------------

@@ -48,6 +48,17 @@ end
     end
 end
 
+@testset "delta barrat" begin
+    for T in [Float32, Float64]
+        (poles, γ), ctx, GFV = dfcfg_cont(T; spt=Delta(), poles_num=2)
+        mesh, (rep, reγ) = solve(GFV, ctx, BarRat(Delta()))
+        @test rep isa Vector{T}
+        @test reγ isa Vector{T}
+        T == Float64 && @test norm(poles - rep)<strict_tol(T)
+        T == Float64 && @test norm(γ - reγ)<strict_tol(T)
+    end
+end
+
 @testset "cont barrat" begin
     for T in [Float32, Float64]
         tol = T==Float32 ? 1e-1 : 1.1e-2

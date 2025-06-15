@@ -18,11 +18,21 @@ function dfcfg_cont(T::Type{<:Real};
                     N=20,
                     noise=T(0)::T,
                     mb=T(8)::T,
-                    ml=801::Int,)
+                    ml=801::Int,
+                    spt::SpectrumType=Cont(),
+                    poles_num::Int=4,)
+                    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
+    if spt isa Cont
     A=continous_spectral_density(μ, σ, amplitude)
-    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
-    GFV = generate_GFV_cont(β, N, A; noise=noise)
-    return A, ctx, GFV
+        GFV = generate_GFV_cont(β, N, A; noise=noise)
+        return A, ctx, GFV
+    elseif spt isa Delta
+        poles = collect(1:poles_num) .+ rand(T,poles_num) * T(1//2)
+        γ = rand(T,poles_num)
+        γ ./= sum(γ)
+        GFV = generate_GFV_delta(β,N,poles,γ;noise=noise)
+        return (poles, γ), ctx, GFV
+    end
 end
 #=
 function jacobian_check_m2v(f, J::Matrix{T}, A::Matrix{T}; η=1e-5, rtol=1e-2,
