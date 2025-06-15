@@ -219,8 +219,6 @@ function PronyApproximation(ω₁::Vector{T}, 𝐺₁::Vector{Complex{T}}) where
         # Evaluate the difference and record it
         err_ave = mean(abs.(𝐺ₙ - 𝐺ₚ))
         err_list[i] = err_ave
-        #
-        println("Prony approximation: $i -> $err_ave, $S[idx]")
     end
     #
     # (5) Find the optimal `v`, which should minimize |𝐺ₙ - 𝐺ₚ|
@@ -280,10 +278,7 @@ function prony_svd(𝑁ₚ::Int, 𝐺ₚ::Vector{T}) where {T}
     end
     #
     _, S, V = LinearAlgebra.svd(ℋ)
-
-    for i in eachindex(S)
-        println("Singular values: $i -> $S[i]")
-    end
+    println("Singular values: $S")
 
     return S, V
 end

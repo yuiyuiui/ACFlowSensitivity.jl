@@ -1,8 +1,8 @@
 # Aaa algorithm for continuous spectral density
 struct BarRatFunc{T<:Number} <: Function
-    w::Vector{T}
-    g::Vector{T}
-    v::Vector{T}
+    w::Vector{T} # weights
+    g::Vector{T} # grids
+    v::Vector{T} # values
 end
 
 (f::BarRatFunc)(x) = sum((f.w .* f.v) ./ (x .- f.g))/sum(f.w ./ (x .- f.g))
@@ -13,7 +13,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
         (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
-    reA = extract_spectrum(brf, ctx.mesh, alg, alg.spt)
+    reA = extract_spectrum(brf, ctx, alg)
     return ctx.mesh, reA
 end
 
@@ -96,9 +96,86 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
 end
 
-function extract_spectrum(brf::BarRatFunc, mesh::Vector{T}, alg::BarRat,
-                          spt::Cont) where {T}
-    return -imag.(brf.(mesh))/T(π)
+function extract_spectrum(brf::BarRatFunc, ctx::CtxData, alg::BarRat)
+    alg.spt == Cont && return -imag.(brf.(ctx.mesh))/T(π)
+    alg.spt == Delta && return -imag.(brf.(ctx.mesh .+ ctx.η*im))/T(π)
+end
+
+# deal with poles
+"""
+    bc_poles(f::BarRatFunc{T}) where {T}
+
+Return the poles of the rational function `f`.
+
+### Arguments
+* f -> A BarRatFunc struct.
+
+### Returns
+* pole -> List of poles.
+"""
+function bc_poles(f::BarRatFunc{T}) where {T}
+    w = f.w
+    z = f.g
+    rT = real(T)
+    nonzero = @. !iszero(w)
+    z, w = z[nonzero], w[nonzero]
+    m = length(w)
+    B = diagm([zero(rT); ones(rT, m)])
+    E = [zero(rT) transpose(w); ones(rT, m) diagm(z)]
+    pole = [] # Put it into scope
+    try
+        pole = filter(isfinite, eigvals(E, B))
+    catch
+        # Generalized eigen not available in extended precision, so:
+        λ = filter(z->abs(z)>1e-13, eigvals(E\B))
+        pole = 1 ./ λ
+    end
+    return pole
+end
+
+function poles(GFV::Vector{T}, f::BarRatFunc{T}, iwn::Vector{T}, pcut) where {T}
+    # Get positions of the poles
+    p = bc_poles(f)
+    # Print their positions
+    println("Raw poles:")
+    for i in eachindex(p)
+        pᵢ = (real(p[i]), imag(p[i]))
+        @show pᵢ
+    end
+    #
+    # Filter unphysical poles
+    filter!(z -> abs(imag(z)) < pcut, p)
+    if length(p) == 0
+        error("The number of poles is zero. You should increase pcut")
+    end
+    #
+    # Print their positions again
+    println("New poles after filtering:")
+    for i in eachindex(p)
+        pᵢ = (real(p[i]), imag(p[i]))
+        @show pᵢ
+    end
+
+    # Now we know positions of these poles, and we need to figure out
+    # their amplitudes. This is a typical optimization problem. We just
+    # employ the BFGS algorithm to do this job.
+    ker = [1/(iwn[i] - p[j]) for i in 1:length(iwn), j in eachindex(p)]
+    K = [real(ker); imag(ker)]
+    G = vcat(real(GFV), imag(GFV))
+    KtK = K'*K
+    KtG = K'*G
+    γ₀ = ones(real(T), length(p)) ./ length(p)
+    γopt, _, _ = newton(x->KtK*x-KtG, x->KtK, γ₀)
+
+    # Print their weights / amplitudes.
+    println("New poles:")
+    for i in eachindex(p)
+        pᵢ = p[i]
+        γᵢ = γopt[i]
+        @show (pᵢ, γᵢ)
+    end
+
+    return p, γopt
 end
 
 #---------------------------------

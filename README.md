@@ -31,7 +31,7 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 
 |Method|RI cont|RI delta|RI mixed|SA cont|SA delta|SA mixed|
 |:---|:---|:---|:---|:---|:---|:---|
-|BarRat(no prony)|✅|||✅||
+|BarRat|✅|||✅||
 |MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
 |SSK||
 |SAC||

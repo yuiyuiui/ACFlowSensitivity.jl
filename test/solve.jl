@@ -17,6 +17,37 @@
     end
 end
 
+@testset "bc_poles" begin
+    for T in [Float32, Float64]
+        w = T.([-1.5, 4, -1.5]) .+ 0im
+        g = T.([1, 0, -1]) .+ 0im
+        v = rand(T, 3) .+ 0im
+        r = ACFlowSensitivity.BarRatFunc(w, g, v)
+        p = ACFlowSensitivity.bc_poles(r)
+        @test p isa Vector{Complex{T}}
+        @test isapprox(p, [-2, 2], atol=strict_tol(T))
+    end
+end
+
+# w = [-3/2,4,-3/2], g = [1,0,-1], v = [-1,0,1]
+# f = 1.5/(x-2) + 1.5/(x+2)
+@testset "poles" begin
+    N = 20
+    for T in [Float32, Float64]
+        CT = Complex{T}
+        w = CT.([-1.5, 4, -1.5])
+        g = CT.([1, 0, -1])
+        v = CT.([-1, 0, 1])
+        r = ACFlowSensitivity.BarRatFunc(w, g, v)
+        iwn = collect(1:N) * T(1)im
+        GFV = r.(iwn)
+        p, γ = ACFlowSensitivity.poles(GFV, r, iwn, 1e-3)
+        @test p isa Vector{Complex{T}}
+        @test isapprox(p, [-2, 2], atol=strict_tol(T))
+        @test isapprox(γ, [1.5, 1.5], atol=strict_tol(T))
+    end
+end
+
 @testset "cont barrat" begin
     for T in [Float32, Float64]
         tol = T==Float32 ? 1e-1 : 1.1e-2

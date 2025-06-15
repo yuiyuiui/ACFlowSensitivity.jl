@@ -228,6 +228,39 @@ function last(brc::BarRatContext)
 end
 
 """
+    bc_poles(r::BarycentricFunction)
+
+Return the poles of the rational function `r`.
+
+### Arguments
+* r -> A BarycentricFunction struct.
+
+### Returns
+* pole -> List of poles.
+"""
+function bc_poles(r::BarycentricFunction)
+    w = bc_weights(r)
+    z = bc_nodes(r)
+    nonzero = @. !iszero(w)
+    z, w = z[nonzero], w[nonzero]
+    #
+    m = length(w)
+    B = diagm([zero(F64); ones(F64, m)])
+    E = [zero(F64) transpose(w); ones(F64, m) diagm(z)];
+    #
+    pole = [] # Put it into scope
+    try
+        pole = filter(isfinite, eigvals(E, B))
+    catch
+        # Generalized eigen not available in extended precision, so:
+        λ = filter(z->abs(z)>1e-13, eigvals(E\B))
+        pole = 1 ./ λ
+    end
+
+    return pole
+end
+
+"""
     poles!(brc::BarRatContext)
 
 Convert the barycentric rational function approximation to the classic
@@ -265,12 +298,26 @@ function poles!(brc::BarRatContext)
     # Get positions of the poles
     𝑃 = bc_poles(brc.ℬ)
     #
+    # Print their positions
+    println("Raw poles:")
+    for i in eachindex(𝑃)
+        z = 𝑃[i]
+        @printf("P %4i -> %16.12f + %16.12f im \n", i, real(z), imag(z))
+    end
+    #
     # Filter unphysical poles
     filter!(z -> abs(imag(z)) < get_r("pcut"), 𝑃)
     if length(𝑃) == 0
         error("The number of poles is zero. You should increase pcut")
     end
-
+    #
+    # Print their positions again
+    println("New poles:")
+    for i in eachindex(𝑃)
+        z = 𝑃[i]
+        @printf("P %4i -> %16.12f + %16.12f im \n", i, real(z), imag(z))
+    end
+    #
     # Update BarRatContext
     brc.ℬP = 𝑃
 
@@ -279,8 +326,15 @@ function poles!(brc::BarRatContext)
     # employ the BFGS algorithm to do this job.
     𝐴 = zeros(C64, length(𝑃))
     res = optimize(𝑓, 𝐽!, 𝐴; max_iter=500)
-    return brc.ℬA = res.minimizer
-
+    brc.ℬA = res.minimizer
+    #
+    # Print their weights / amplitudes.
+    println("New poles:")
+    for i in eachindex(𝐴)
+        z = brc.ℬA[i]
+        @printf("A %4i -> %16.12f + %16.12f im \n", i, real(z), imag(z))
+    end
+    #
     # Well, we should check whether these amplitudes are reasonable.
     #@assert all(z -> abs(imag(z)) < get_r("pcut"), brc.ℬA)
 end
