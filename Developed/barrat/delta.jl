@@ -173,7 +173,6 @@ function last(brc::BarRatContext)
         end
     end
 
-
     # Calculate full response function on real axis and write them
     _G = brc.ℬ.(brc.mesh.mesh)
     get_r("atype") == "delta" && pole_green!(_G)

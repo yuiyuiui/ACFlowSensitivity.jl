@@ -97,9 +97,10 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
 end
 
-function extract_spectrum(brf::BarRatFunc, ctx::CtxData, alg::BarRat)
-    alg.spt == Cont && return -imag.(brf.(ctx.mesh))/T(π)
-    error("Now only support continuous spectrum")
+function extract_spectrum(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T},
+                          alg::BarRat) where {T}
+    alg.spt isa Cont && return -imag.(brf.(ctx.mesh))/T(π)
+    return error("Now only support continuous spectrum")
 end
 
 # deal with poles
@@ -180,26 +181,35 @@ end
 
 #---------------------------------
 # solve differentiation
-
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
     alg.denoisy && error("denoisy is not supported for differentiation")
     alg.minsgl > 0 && error("minsgl is not supported for differentiation")
     _, idx = aaa(ctx.iwn, GFV; alg=alg)
-    reA = aaa4diff(GFV, idx, ctx)
-    reAdiff = Zygote.jacobian(x -> aaa4diff(x, idx, ctx), GFV)[1]
-    return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
+    reA = -imag(BarRatFunc(aaa4diff(GFV, idx, ctx.iwn)...).(ctx.mesh))/T(π)
+    if alg.spt isa Cont
+        function fc(x)
+            w, g, v = aaa4diff(x, idx, ctx.iwn)
+            res = [-imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
+                   for i in 1:length(ctx.mesh)]
+            return res
+        end
+        reAdiff = Zygote.jacobian(fc, GFV)[1]
+        return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
+    elseif alg.spt isa Delta
+        function fd(x)
+            w, g, v = aaa4diff(x, idx, ctx.iwn)
+        end
+    else
+        error("Now only support continuous and delta spectrum")
+    end
 end
 
 function aaa4diff(GFV::Vector{Complex{T}}, idx::Vector{Int},
-                  ctx::CtxData{T}) where {T<:Real}
-    wait_idx = filter(i->i∉idx, 1:ctx.N)
-    iwn = ctx.iwn
-    mesh = ctx.mesh
+                  iwn::Vector{Complex{T}}) where {T<:Real}
+    wait_idx = filter(i->i∉idx, 1:length(GFV))
     g = iwn[idx]
     v = GFV[idx]
     L = [((GFV[i] - GFV[j]) / (iwn[i] - iwn[j])) for i in wait_idx, j in idx]
     w = svd(L)[3][:, end]
-    res = [-imag(sum((w .* v) ./ (mesh[i] .- g))/sum(w ./ (mesh[i] .- g)))/T(π)
-           for i in 1:length(mesh)]
-    return res
+    return w, g, v
 end

@@ -87,7 +87,7 @@ end
 end
 
 # Bote :∂loss has great instability (because of the huge maximum sigular value of ∂reA) here so we don't test it
-@testset "differentiation of chi2kink with BarRat" begin
+@testset "differentiation of BarRat with Cont spectrum" begin
     for T in [Float32, Float64]
         solve_tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
