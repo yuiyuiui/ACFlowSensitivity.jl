@@ -121,6 +121,8 @@ end
         @test ∂pDiv∂G isa Matrix{Complex{T}}
         @test ∂γDiv∂G isa Matrix{Complex{T}}
         if T == Float64
+            @test norm(orp - p)<strict_tol(T)
+            @test norm(orγ - γ)<strict_tol(T)
             G2p = G -> solve(G, ctx, BarRat(Delta()))[2][1]
             G2γ = G -> solve(G, ctx, BarRat(Delta()))[2][2]
             jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
