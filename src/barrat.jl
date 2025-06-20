@@ -212,15 +212,14 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
         pg, pw = brf.g[nnz], brf.w[nnz]
         m = length(pw)
         ∂pDiv∂wg = zeros(T, length(p), 4*m)
-        for pᵢ in p
+        for (i, pᵢ) in enumerate(p)
             tmp = sum(pw ./ (pg .- pᵢ) .^ 2)
-            ∂pDiv∂wg[i, 1:m] = 1 ./ (pᵢ .- pg) / tmp
-            ∂pDiv∂wg[i, (m + 1):(2 * m)] = im * ∂pDiv∂wg[i, 1:m]
-            ∂pDiv∂wg[i, (2 * m + 1):(3 * m)] = pw ./ (pg .- pᵢ) .^ 2 / tmp
-            ∂pDiv∂wg[i, (3 * m):(4 * m)] = im * ∂pDiv∂wg[i, (2 * m + 1):(3 * m)]
+            ∂pDiv∂wg[i, 1:m] = real(1 ./ (pᵢ .- pg) / tmp)
+            ∂pDiv∂wg[i, (m + 1):(2 * m)] = real(im * ∂pDiv∂wg[i, 1:m])
+            ∂pDiv∂wg[i, (2 * m + 1):(3 * m)] = real(pw ./ (pg .- pᵢ) .^ 2 / tmp)
+            ∂pDiv∂wg[i, (3 * m + 1):(4 * m)] = real(im * ∂pDiv∂wg[i, (2 * m + 1):(3 * m)])
         end
-        ∂pᵣDiv∂wg = real(∂pDivwg)
-        ∂pDiv∂G = ∂pᵣDiv∂wg * ∂wgDiv∂G
+        ∂pDiv∂G = ∂pDiv∂wg * ∂wgDiv∂G
         function pG2γ(x, y) # x is p, y is G
             ker = [1/(poles.iwn[i] - x[j]) for i in 1:length(poles.iwn), j in eachindex(x)]
             K = real(ker)'*real(ker) + imag(ker)'*imag(ker)

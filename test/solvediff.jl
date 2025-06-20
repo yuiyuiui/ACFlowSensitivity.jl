@@ -109,3 +109,22 @@ end
         end
     end
 end
+
+@testset "differentiation of BarRat with Delta spectrum" begin
+    for T in [Float32, Float64] # mesh is not uesd so no test for mesh
+        T = Float64
+        (orp, orγ), ctx, GFV = dfcfg_cont(T; spt=Delta(), poles_num=2)
+        mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat(Delta()))
+        @test mesh isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+        if T == Float64
+            G2p = G -> solve(G, ctx, BarRat(Delta()))[2][1]
+            G2γ = G -> solve(G, ctx, BarRat(Delta()))[2][2]
+            jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
+            jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+        end
+    end
+end
