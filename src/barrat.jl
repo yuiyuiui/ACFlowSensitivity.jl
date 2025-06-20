@@ -14,7 +14,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
     alg.spt isa Cont && return ctx.mesh, extract_spectrum(brf, ctx, alg)
-    alg.spt isa Delta && return ctx.mesh, poles(GFV, brf, ctx.iwn, alg.pcut)
+    alg.spt isa Delta && return ctx.mesh, Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
     # For Mixed spectrum:
 end
 
@@ -115,29 +115,32 @@ Return the poles of the rational function `f`.
 ### Returns
 * pole -> List of poles.
 """
-function bc_poles(f::BarRatFunc{T}) where {T}
-    w = f.w
-    z = f.g
+function bc_poles(w::Vector{T}, g::Vector{T}) where {T}
     rT = real(T)
     nonzero = @. !iszero(w)
-    z, w = z[nonzero], w[nonzero]
+    g, w = g[nonzero], w[nonzero]
     m = length(w)
     B = diagm([zero(rT); ones(rT, m)])
-    E = [zero(rT) transpose(w); ones(rT, m) diagm(z)]
+    E = [zero(rT) transpose(w); ones(rT, m) diagm(g)]
     pole = [] # Put it into scope
     try
         pole = filter(isfinite, eigvals(E, B))
     catch
         # Generalized eigen not available in extended precision, so:
-        λ = filter(z->abs(z)>1e-13, eigvals(E\B))
+        λ = filter(g->abs(g)>1e-13, eigvals(E\B))
         pole = 1 ./ λ
     end
     return pole
 end
 
-function poles(GFV::Vector{T}, f::BarRatFunc{T}, iwn::Vector{T}, pcut) where {T}
+struct Poles{T<:Complex,S<:Real}<:Function
+    GFV::Vector{T}
+    iwn::Vector{T}
+    pcut::S
+end
+function (poles::Poles{T,S})(w::Vector{T}, g::Vector{T}) where {T,S}
     # Get positions of the poles
-    p = bc_poles(f)
+    p = bc_poles(w, g)
     # Print their positions
     println("Raw poles:")
     for i in eachindex(p)
@@ -146,7 +149,7 @@ function poles(GFV::Vector{T}, f::BarRatFunc{T}, iwn::Vector{T}, pcut) where {T}
     end
     #
     # Filter unphysical poles
-    filter!(z -> abs(imag(z)) < pcut, p)
+    filter!(z -> abs(imag(z)) < poles.pcut, p)
     if length(p) == 0
         error("The number of poles is zero. You should increase pcut")
     end
@@ -161,9 +164,9 @@ function poles(GFV::Vector{T}, f::BarRatFunc{T}, iwn::Vector{T}, pcut) where {T}
     # Now we know positions of these poles, and we need to figure out
     # their amplitudes. This is a typical optimization problem. We just
     # employ the BFGS algorithm to do this job.
-    ker = [1/(iwn[i] - p[j]) for i in 1:length(iwn), j in eachindex(p)]
+    ker = [1/(poles.iwn[i] - p[j]) for i in 1:length(poles.iwn), j in eachindex(p)]
     K = [real(ker); imag(ker)]
-    G = vcat(real(GFV), imag(GFV))
+    G = vcat(real(poles.GFV), imag(poles.GFV))
     KtK = K'*K
     KtG = K'*G
     γ₀ = ones(real(T), length(p)) ./ length(p)
@@ -184,9 +187,9 @@ end
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:Real}
     alg.denoisy && error("denoisy is not supported for differentiation")
     alg.minsgl > 0 && error("minsgl is not supported for differentiation")
-    _, idx = aaa(ctx.iwn, GFV; alg=alg)
-    reA = -imag(BarRatFunc(aaa4diff(GFV, idx, ctx.iwn)...).(ctx.mesh))/T(π)
+    brf, idx = aaa(ctx.iwn, GFV; alg=alg)
     if alg.spt isa Cont
+        reA = -imag(BarRatFunc(aaa4diff(GFV, idx, ctx.iwn)...).(ctx.mesh))/T(π)
         function fc(x)
             w, g, v = aaa4diff(x, idx, ctx.iwn)
             res = [-imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
@@ -196,9 +199,37 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
         reAdiff = Zygote.jacobian(fc, GFV)[1]
         return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
     elseif alg.spt isa Delta
+        poles = Poles(GFV, ctx.iwn, alg.pcut)
+        p, _ = poles(brf.w, brf.g)
         function fd(x)
-            w, g, v = aaa4diff(x, idx, ctx.iwn)
+            w, g, _ = aaa4diff(x, idx, ctx.iwn)
+            nnz = @. !iszero(w)
+            g1, w1 = g[nnz], w[nnz]
+            return vcat(real(w1), imag(w1), real(g1), imag(g1))
         end
+        ∂wgDiv∂G = Zygote.jacobian(fd, GFV)[1]
+        nnz = @. !iszero(brf.w)
+        pg, pw = brf.g[nnz], brf.w[nnz]
+        m = length(pw)
+        ∂pDiv∂wg = zeros(T, length(p), 4*m)
+        for pᵢ in p
+            tmp = sum(pw ./ (pg .- pᵢ) .^ 2)
+            ∂pDiv∂wg[i, 1:m] = 1 ./ (pᵢ .- pg) / tmp
+            ∂pDiv∂wg[i, (m + 1):(2 * m)] = im * ∂pDiv∂wg[i, 1:m]
+            ∂pDiv∂wg[i, (2 * m + 1):(3 * m)] = pw ./ (pg .- pᵢ) .^ 2 / tmp
+            ∂pDiv∂wg[i, (3 * m):(4 * m)] = im * ∂pDiv∂wg[i, (2 * m + 1):(3 * m)]
+        end
+        ∂pᵣDiv∂wg = real(∂pDivwg)
+        ∂pDiv∂G = ∂pᵣDiv∂wg * ∂wgDiv∂G
+        function pG2γ(x, y) # x is p, y is G
+            ker = [1/(poles.iwn[i] - x[j]) for i in 1:length(poles.iwn), j in eachindex(x)]
+            K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
+            G = real(ker)'*real(y) + imag(ker)'*imag(y)
+            return pinv(K)*G
+        end
+        γ = pG2γ(p, GFV)
+        ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian(pG2γ, p, GFV)
+        return ctx.mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)
     else
         error("Now only support continuous and delta spectrum")
     end
