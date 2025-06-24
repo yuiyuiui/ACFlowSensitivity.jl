@@ -50,7 +50,7 @@ end
 
 @testset "delta barrat" begin
     for T in [Float32, Float64]
-        (poles, γ), ctx, GFV = dfcfg_cont(T; spt=Delta(), poles_num=2)
+        (poles, γ), ctx, GFV = dfcfg(T; spt=Delta(), poles_num=2)
         mesh, (rep, reγ) = solve(GFV, ctx, BarRat(Delta()))
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -63,7 +63,7 @@ end
     for T in [Float32, Float64]
         tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
-            A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+            A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
             mesh, reA = solve(GFV, ctx, BarRat(Cont()))
             orA = A.(mesh)
             @test eltype(reA) == eltype(mesh) == T
@@ -77,7 +77,7 @@ end
     for T in [Float32, Float64]
         tol = T==Float32 ? 3e-1 : 1e-1
         for mesh_type in [UniformMesh(), TangentMesh()]
-            A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+            A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
             for prony_tol in [0, (T==Float32 ? 1e-4 : 1e-8)]
                 mesh, reA = solve(GFV, ctx,
                                   BarRat(Cont(); denoisy=true, prony_tol=prony_tol))
@@ -95,7 +95,7 @@ end
         tol = T==Float32 ? 2e-1 : 5.1e-3
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
-                A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+                A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
                 mesh, reA = solve(GFV, ctx, MaxEntChi2kink(model_type=model_type))
                 orA = A.(mesh)
                 @test eltype(reA) == eltype(mesh) == T
@@ -112,9 +112,9 @@ end
     T = Float64
     for mesh_type in [UniformMesh(), TangentMesh()]
         for model_type in ["Gaussian", "flat"]
-            A, ctx1, GFV1 = dfcfg_cont(T; noise=T(1e-3))
+            A, ctx1, GFV1 = dfcfg(T; noise=T(1e-3))
             mesh, reA1 = solve(GFV1, ctx1, MaxEntChi2kink())
-            _, ctx2, GFV2 = dfcfg_cont(T; noise=T(1e-3))
+            _, ctx2, GFV2 = dfcfg(T; noise=T(1e-3))
             mesh, reA2 = solve(GFV2, ctx2, MaxEntChi2kink(; maxiter=2))
             orA = A.(mesh)
             @show error1 = loss(reA1, orA, ctx1.mesh_weights)

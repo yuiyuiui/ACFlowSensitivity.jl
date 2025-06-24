@@ -32,7 +32,7 @@ end
     for T in [Float32, Float64]
         v1 = Vector{T}(1:n)
         v2 = Vector{Complex{T}}(1:n)
-        _, ctx, GFV = dfcfg_cont(T)
+        _, ctx, GFV = dfcfg(T)
         ss = ACFlowSensitivity.SingularSpace(GFV, ctx.mesh, ctx.iwn)
         G, K, n, U, S, V = ss
         @test typeof(ss) <: ACFlowSensitivity.SingularSpace{T}

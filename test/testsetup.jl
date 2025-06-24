@@ -9,7 +9,7 @@ function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:R
 end
 
 # default configuration
-function dfcfg_cont(T::Type{<:Real};
+function dfcfg(T::Type{<:Real};
                     μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
                     σ=[T(1 // 5), T(4 // 5)]::Vector{T},
                     amplitude=[T(1), T(3 // 10)]::Vector{T},

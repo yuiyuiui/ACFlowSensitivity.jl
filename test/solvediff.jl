@@ -1,7 +1,7 @@
 @testset "_∂χ²vecDiv∂G" begin
     T = Float64
     N = 20
-    A, ctx, GFV = dfcfg_cont(T)
+    A, ctx, GFV = dfcfg(T)
     G0 = vcat(real(GFV), imag(GFV))
     pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
     ∂χ²_expect = ACFlowSensitivity._∂χ²vecDiv∂G(pc)[1]
@@ -13,7 +13,7 @@ end
 @testset "_∂αoptDiv∂χ²vec" begin
     T = Float64
     N = 20
-    A, ctx, GFV = dfcfg_cont(T)
+    A, ctx, GFV = dfcfg(T)
     G0 = vcat(real(GFV), imag(GFV))
     pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
     _, _, χ²vec, idx = ACFlowSensitivity._∂χ²vecDiv∂G(pc)
@@ -39,7 +39,7 @@ Thus L2loss is not a suitable way to measure the sensitivity. But I have not fou
     ∂loss_rtol = 1e-1
     for T in [Float32, Float64]
         solve_tol = T==Float32 ? 1.1e-1 : 5e-3
-        A, ctx, GFV = dfcfg_cont(T; mesh_type=TangentMesh())
+        A, ctx, GFV = dfcfg(T; mesh_type=TangentMesh())
         mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx,
                                                 MaxEntChi2kink(model_type="Gaussian"))
         orA = A.(mesh)
@@ -64,7 +64,7 @@ end
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 alg = MaxEntChi2kink(model_type=model_type)
-                A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+                A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
                 mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
                 orA = A.(mesh)
                 @test mesh isa Vector{T}
@@ -92,7 +92,7 @@ end
         solve_tol = T==Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             alg = BarRat(Cont())
-            A, ctx, GFV = dfcfg_cont(T; mesh_type=mesh_type)
+            A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
             mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
             orA = A.(mesh)
             @test mesh isa Vector{T}
@@ -113,7 +113,7 @@ end
 @testset "differentiation of BarRat with Delta spectrum" begin
     for T in [Float32, Float64] # mesh is not uesd so no test for mesh
         T = Float64
-        (orp, orγ), ctx, GFV = dfcfg_cont(T; spt=Delta(), poles_num=2)
+        (orp, orγ), ctx, GFV = dfcfg(T; spt=Delta(), poles_num=2)
         mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat(Delta()))
         @test mesh isa Vector{T}
         @test p isa Vector{T}

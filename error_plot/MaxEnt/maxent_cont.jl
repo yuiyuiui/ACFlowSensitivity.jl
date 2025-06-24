@@ -5,7 +5,7 @@ Random.seed!(4)
 function plot_maxent_cont()
     T = Float64
     noise_vec = [0.0, 1e-5, 1e-4, 1e-3]
-    A, ctx, GFV = dfcfg_cont(T; mesh_type=TangentMesh())
+    A, ctx, GFV = dfcfg(T; mesh_type=TangentMesh())
     GFV_vec = Vector{Vector{Complex{T}}}(undef, length(noise_vec))
     GFV_vec[1] = GFV
     for i in 2:length(noise_vec)
