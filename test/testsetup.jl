@@ -10,17 +10,17 @@ end
 
 # default configuration
 function dfcfg(T::Type{<:Real};
-                    μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
-                    σ=[T(1 // 5), T(4 // 5)]::Vector{T},
-                    amplitudes=[T(1), T(3 // 10)]::Vector{T},
-                    mesh_type=UniformMesh(),
-                    β=T(10)::T,
-                    N=20,
-                    noise=T(0)::T,
-                    mb=T(8)::T,
-                    ml=801::Int,
-                    spt::SpectrumType=Cont(),
-                    poles_num::Int=4,)
+               μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
+               σ=[T(1 // 5), T(4 // 5)]::Vector{T},
+               amplitudes=[T(1), T(3 // 10)]::Vector{T},
+               mesh_type=UniformMesh(),
+               β=T(10)::T,
+               N=20,
+               noise=T(0)::T,
+               mb=T(8)::T,
+               ml=801::Int,
+               spt::SpectrumType=Cont(),
+               poles_num::Int=4,)
     ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
     if spt isa Cont
         A=continous_spectral_density(μ, σ, amplitudes)
