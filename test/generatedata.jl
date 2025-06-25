@@ -2,8 +2,8 @@
     for T in [Float32, Float64]
         u = [T(1)]
         σ = [T(2)]
-        amplitude = [T(3)]
-        A = continous_spectral_density(u, σ, amplitude)
+        amplitudes = [T(3)]
+        A = continous_spectral_density(u, σ, amplitudes)
         @test typeof(A(T(0))) === T
         @test A(T(1)) == T(3)
     end
@@ -13,10 +13,10 @@ end
     for T in [Float32, Float64]
         u = [T(1), T(2)]
         σ = [T(2), T(3)]
-        amplitude = [T(3), T(4)]
+        amplitudes = [T(3), T(4)]
         N = 10
         β = T(10)
-        A = continous_spectral_density(u, σ, amplitude)
+        A = continous_spectral_density(u, σ, amplitudes)
         G = generate_GFV_cont(β, N, A; noise=T(1e-4))
         @test typeof(G) === Vector{Complex{T}}
         @test length(G) == N

@@ -151,3 +151,20 @@ Random.seed!(6)
         @test norm(rey2 - y)/norm(y) < 3e-2
     end
 end
+
+@testset "find_peaks" begin
+    n=2
+    for T in [Float32, Float64]
+        μ = T(0.5)*rand(T,n) .+ collect(1:n)
+        σ = [T(0.01),T(0.01)]
+        sort!(μ)
+        A, ctx, _ = dfcfg(T;μ=μ,σ=σ)
+        v = A.(ctx.mesh)
+        d = findmax(ctx.mesh[2:end] - ctx.mesh[1:end-1])[1] # max grid width
+        idx = ACFlowSensitivity.find_peaks(v, 0.1)
+        @test length(idx) == n
+        @test isapprox(ctx.mesh[idx], μ, atol=d*sqrt(2))
+    end
+end
+
+

@@ -12,7 +12,7 @@ end
 function dfcfg(T::Type{<:Real};
                     μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
                     σ=[T(1 // 5), T(4 // 5)]::Vector{T},
-                    amplitude=[T(1), T(3 // 10)]::Vector{T},
+                    amplitudes=[T(1), T(3 // 10)]::Vector{T},
                     mesh_type=UniformMesh(),
                     β=T(10)::T,
                     N=20,
@@ -23,7 +23,7 @@ function dfcfg(T::Type{<:Real};
                     poles_num::Int=4,)
     ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
     if spt isa Cont
-        A=continous_spectral_density(μ, σ, amplitude)
+        A=continous_spectral_density(μ, σ, amplitudes)
         GFV = generate_GFV_cont(β, N, A; noise=noise)
         return A, ctx, GFV
     elseif spt isa Delta

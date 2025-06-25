@@ -1,13 +1,13 @@
 # construct combanition of gauss waves
 function continous_spectral_density(μ::Vector{T},
                                     σ::Vector{T},
-                                    amplitude::Vector{T}) where {T<:Real}
-    @assert length(μ)==length(σ)==length(amplitude)
+                                    amplitudes::Vector{T}) where {T<:Real}
+    @assert length(μ)==length(σ)==length(amplitudes)
     n=length(μ)
     function y(x::T)
         res=T(0)
         for i in 1:n
-            res+=amplitude[i]*exp(-(x-μ[i])^2/(2*σ[i]^2))
+            res+=amplitudes[i]*exp(-(x-μ[i])^2/(2*σ[i]^2))
         end
         return res
     end

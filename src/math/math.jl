@@ -55,3 +55,4 @@ end
 
 include("prony.jl")
 include("statistic.jl")
+include("poles.jl")
