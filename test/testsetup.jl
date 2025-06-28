@@ -70,3 +70,13 @@ function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     @show dy_expect
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
+
+function ave_grad(J::Matrix{T}; try_num::Int=1000) where {T<:Number}
+    res = zeros(real(T), size(J, 1))
+    N = size(J, 2)
+    for i in 1:try_num
+        dx = randn(T, N)
+        res += abs.(real(conj(J)*dx))
+    end
+    return res / try_num
+end

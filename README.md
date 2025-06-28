@@ -39,7 +39,8 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |SOM||
 |NAC||
 
-By using `ACFlowSensitivity`, you can get a error bound:
+Example of using `ACFlowSensitivity` to plot the error bound of a specific method is shown in the file folder `error_plot`.
 
-![Error Bound Example](./error_plot/MaxEnt/error_bound.svg)
+By using `ACFlowSensitivity`, you can get a error bound like this:
 
+![Error Bound Example](./error_plot/MaxEnt/eb-maxent-cont.svg)
