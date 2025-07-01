@@ -6,16 +6,18 @@ struct CtxData{T<:Real}
     mesh::Vector{T}
     mesh_weights::Vector{T}
     η::T
+    σ::T
     function CtxData(β::T,
                      N::Int;
                      mesh_bound=ACFSDefults.mesh_bound[]::Real,
                      mesh_length=ACFSDefults.mesh_length[]::Int,
                      mesh_type::Mesh=ACFSDefults.mesh_type[]::Mesh,
-                     η::T=T(1e-2),) where {T<:Real}
+                     η::T=T(1e-2),
+                     σ::T=T(1e-4),) where {T<:Real}
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
         mesh, mesh_weights = make_mesh(T(mesh_bound), mesh_length, mesh_type)
-        return new{T}(β, N, wn, iwn, mesh, mesh_weights, η)
+        return new{T}(β, N, wn, iwn, mesh, mesh_weights, η, σ)
     end
 end
 
@@ -25,9 +27,10 @@ struct Cont <: SpectrumType end
 struct Delta <: SpectrumType end
 struct Mixed <: SpectrumType end
 
+abstract type Solver end
 # abanda add singular values of the lowner matrix less than `minsgl` for numerical stability
 # this method is under developing
-struct BarRat
+struct BarRat <: Solver
     spt::SpectrumType
     minsgl::Real
     aaa_tol::Real
@@ -48,22 +51,32 @@ struct BarRat
     end
 end
 
-abstract type MaxEnt end
+abstract type MaxEnt <: Solver end
 
 struct MaxEntChi2kink <: MaxEnt
     maxiter::Int
     L::Int
     α₁::Real
-    σ::Real
     model_type::String
     function MaxEntChi2kink(;
                             maxiter::Int=1,
                             L::Int=16,
                             α₁::Real=1e12,
-                            σ::Real=1e-4,
                             model_type::String="Gaussian",)
-        return new(maxiter, L, α₁, σ, model_type)
+        return new(maxiter, L, α₁, model_type)
     end
+end
+
+mutable struct SSK{I<:Int,T} <: Solver
+    nfine::I
+    poles_num::I
+    fine_mesh::Vector{T}
+    nwarm::I
+    nstep::I
+    retry::I
+    θ::T
+    ratio::T
+    method::String
 end
 
 module ACFSDefults

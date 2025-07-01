@@ -27,13 +27,13 @@ As a result we calculate:
 ![Loss derivative](https://latex.codecogs.com/svg.image?\frac{\partial\text{Loss}(\mathcal{G},\mathcal{G}_0)}{\partial\mathcal{G}}|_{\mathcal{G}=\mathcal{G}_0})
 
 
-Our purpose is to implement following methods (not all) and their sensitivity analysis (`RI` means reimplement. `SA` means Sensitivity Analysis. `cont,delta,mixed` are spectrum types):
+Our purpose is to implement following methods (not all) and their sensitivity analysis (`RI` means reimplement. `SA` means Sensitivity Analysis for both fermionic and bosonic systems (Only fermionic now). `cont,delta,mixed` are spectrum types):
 
 |Method|RI cont|RI delta|RI mixed|SA cont|SA delta|SA mixed|
 |:---|:---|:---|:---|:---|:---|:---|
 |BarRat|✅|✅||✅|✅|
 |MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
-|SSK||
+|SSK|❌||❌|❌||❌|
 |SAC||
 |SPX||
 |SOM||

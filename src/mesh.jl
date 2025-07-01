@@ -37,8 +37,9 @@ struct SingularSpace{T<:Real}
     S::Vector{T}
     V::Matrix{T}
 end
-function SingularSpace(GFV::Vector{Complex{T}}, mesh::Vector{T},
-                       iwn::Vector{Complex{T}}) where {T<:Real}
+function SingularSpace(GFV::Vector{Complex{T}},
+                       iwn::Vector{Complex{T}},
+                       mesh::Vector{T}) where {T<:Real}
     kernel = Matrix{Complex{T}}(undef, length(GFV), length(mesh))
     for i in 1:length(GFV)
         for j in 1:length(mesh)
@@ -64,4 +65,53 @@ function Base.iterate(ss::SingularSpace, state)
     state == 4 && return (ss.S, 5)
     state == 5 && return (ss.V, 6)
     return nothing
+end
+
+"""
+    nearest(am::AbstractMesh, r::F64)
+
+Given a position `r` (0.0 ≤ r ≤ 1.0), and return the index of the nearest
+point in the mesh `am`.
+
+### Arguments
+See above explanations.
+
+### Returns
+See above explanations.
+
+### Examples
+```julia
+am = LinearMesh(1001, -10.0, 10.0)
+pos = nearest(am, 0.2) # pos = 201
+println(am[pos]) # -6.0
+```
+
+See also: [`AbstractMesh`](@ref).
+"""
+function nearest(mesh::Vector{T}, mesh_weight::Vector{T}, r::S) where {T<:Real,S<:Real}
+    # Check r and evaluate the corresponding value
+    @assert 0 ≤ r ≤ 1
+    val = mesh[1] + (mesh[end] - mesh[1]) * r
+
+    # Try to locate val in the mesh by using the bisection algorithm
+    left = 1
+    right = length(mesh)
+    @assert mesh[left] ≤ val ≤ mesh[right]
+
+    while right - left ≥ 2
+        mid = round(I64, (left + right) / 2)
+        if val < mesh[mid]
+            right = mid
+        else
+            left = mid
+        end
+    end
+
+    # Well, now we have the left and right boundaries. We should return
+    # the closer one.
+    if mesh[right] - val > val - mesh[left]
+        return left
+    else
+        return right
+    end
 end

@@ -16,12 +16,13 @@ function dfcfg(T::Type{<:Real};
                mesh_type=UniformMesh(),
                β=T(10)::T,
                N=20,
+               GFVσ=T(1e-4)::T,
                noise=T(0)::T,
                mb=T(8)::T,
                ml=801::Int,
                spt::SpectrumType=Cont(),
                poles_num::Int=4,)
-    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
+    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ)
     if spt isa Cont
         A=continous_spectral_density(μ, σ, amplitudes)
         GFV = generate_GFV_cont(β, N, A; noise=noise)

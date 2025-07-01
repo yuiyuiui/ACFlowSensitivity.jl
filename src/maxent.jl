@@ -12,9 +12,9 @@ function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                    alg::MaxEntChi2kink) where {T<:Real}
     L = alg.L
     α₁ = T(alg.α₁)
-    σ = T(alg.σ)
+    σ = T(ctx.σ)
     w = ctx.mesh_weights
-    ss = SingularSpace(GFV, ctx.mesh, ctx.iwn)
+    ss = SingularSpace(GFV, ctx.iwn, ctx.mesh)
     reA = make_model(alg.model_type, ctx)
     αvec = Vector{T}(undef, L)
     αvec[1] = α₁
