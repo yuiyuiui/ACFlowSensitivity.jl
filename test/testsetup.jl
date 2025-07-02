@@ -29,8 +29,7 @@ function dfcfg(T::Type{<:Real};
         return A, ctx, GFV
     elseif spt isa Delta
         poles = collect(1:poles_num) .+ rand(T, poles_num) * T(1//2)
-        γ = rand(T, poles_num)
-        γ ./= sum(γ)
+        γ = ones(T, poles_num) ./ poles_num
         GFV = generate_GFV_delta(β, N, poles, γ; noise=noise)
         return (poles, γ), ctx, GFV
     end

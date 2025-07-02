@@ -68,7 +68,7 @@ function Base.iterate(ss::SingularSpace, state)
 end
 
 """
-    nearest(am::AbstractMesh, r::F64)
+    nearest(mesh::Vector{T}, r::Real) where {T<:Real}
 
 Given a position `r` (0.0 ≤ r ≤ 1.0), and return the index of the nearest
 point in the mesh `am`.
@@ -88,7 +88,7 @@ println(am[pos]) # -6.0
 
 See also: [`AbstractMesh`](@ref).
 """
-function nearest(mesh::Vector{T}, mesh_weight::Vector{T}, r::S) where {T<:Real,S<:Real}
+function nearest(mesh::Vector{T}, r::Real) where {T<:Real}
     # Check r and evaluate the corresponding value
     @assert 0 ≤ r ≤ 1
     val = mesh[1] + (mesh[end] - mesh[1]) * r
@@ -99,7 +99,7 @@ function nearest(mesh::Vector{T}, mesh_weight::Vector{T}, r::S) where {T<:Real,S
     @assert mesh[left] ≤ val ≤ mesh[right]
 
     while right - left ≥ 2
-        mid = round(I64, (left + right) / 2)
+        mid = round(Int, (left + right) / 2)
         if val < mesh[mid]
             right = mid
         else

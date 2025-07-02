@@ -33,7 +33,7 @@ end
         v1 = Vector{T}(1:n)
         v2 = Vector{Complex{T}}(1:n)
         _, ctx, GFV = dfcfg(T)
-        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.mesh, ctx.iwn)
+        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.iwn, ctx.mesh)
         G, K, n, U, S, V = ss
         @test typeof(ss) <: ACFlowSensitivity.SingularSpace{T}
         kernel = Matrix{Complex{T}}(undef, length(GFV), length(ctx.mesh))
@@ -46,5 +46,15 @@ end
         K0 = [real(kernel); imag(kernel)]
         @test G == G0
         @test isapprox(K, K0, atol=n*strict_tol(T))
+    end
+end
+
+@testset "nearest" begin
+    N = 1000000
+    for T in [Float32, Float64]
+        v = collect(range(T(0), T(1), N))
+        r = rand(T)
+        idx = findmin(abs.(v .- r))[2]
+        @test idx == ACFlowSensitivity.nearest(v, r)
     end
 end

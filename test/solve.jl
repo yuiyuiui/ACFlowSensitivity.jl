@@ -109,17 +109,48 @@ end
 
 #=
 @testset "MaxEntChi2kink with iterative model" begin
-    T = Float64
-    for mesh_type in [UniformMesh(), TangentMesh()]
-        for model_type in ["Gaussian", "flat"]
-            A, ctx1, GFV1 = dfcfg(T; noise=T(1e-3))
-            mesh, reA1 = solve(GFV1, ctx1, MaxEntChi2kink())
-            _, ctx2, GFV2 = dfcfg(T; noise=T(1e-3))
-            mesh, reA2 = solve(GFV2, ctx2, MaxEntChi2kink(; maxiter=2))
-            orA = A.(mesh)
-            @show error1 = loss(reA1, orA, ctx1.mesh_weights)
-            @show error2 = loss(reA2, orA, ctx2.mesh_weights)
-        end
-    end
+	T = Float64
+	for mesh_type in [UniformMesh(), TangentMesh()]
+		for model_type in ["Gaussian", "flat"]
+			A, ctx1, GFV1 = dfcfg(T; noise=T(1e-3))
+			mesh, reA1 = solve(GFV1, ctx1, MaxEntChi2kink())
+			_, ctx2, GFV2 = dfcfg(T; noise=T(1e-3))
+			mesh, reA2 = solve(GFV2, ctx2, MaxEntChi2kink(; maxiter=2))
+			orA = A.(mesh)
+			@show error1 = loss(reA1, orA, ctx1.mesh_weights)
+			@show error2 = loss(reA2, orA, ctx2.mesh_weights)
+		end
+	end
 end
 =#
+
+@testset "serve functions in ssk" begin
+    pn = 2
+    T = Float64
+    Random.seed!(1234)
+    (poles, γ), ctx, GFV = dfcfg(T; poles_num=pn, spt=Delta())
+    alg = SSK(pn)
+    fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    MC = @constinferred ACFlowSensitivity.init_mc(alg)
+    SE = @constinferred ACFlowSensitivity.init_element(alg, MC.rng, ctx)
+    SC = @constinferred ACFlowSensitivity.init_context(SE, GFV, fine_mesh, ctx, alg)
+    Aout, _, _ = @constinferred ACFlowSensitivity.run(MC, SE, SC, alg)
+end
+
+# I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
+# But in some random case I don't record it does succeed and the result is type stable.
+@testset "ssk" begin
+    T = Float64
+    alg = SSK(2)
+    # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
+    (poles, γ), ctx, GFV = dfcfg(T; poles_num=2, spt=Delta(), ml = alg.nfine,
+                                 mesh_type=TangentMesh())
+    mesh, (rep, reγ) = solve(GFV, ctx, alg)
+    @test mesh isa Vector{T}
+    @test rep isa Vector{T}
+    @test reγ isa Vector{T}
+    @show norm(poles - rep)
+    @show norm(γ - reγ)
+    @test norm(poles - rep) < 5 * relax_tol(T)
+    @test norm(γ - reγ) < 5 * relax_tol(T)
+end

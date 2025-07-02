@@ -164,13 +164,7 @@ function (poles::Poles{T,S})(w::Vector{T}, g::Vector{T}) where {T,S}
     # Now we know positions of these poles, and we need to figure out
     # their amplitudes. This is a typical optimization problem. We just
     # employ the BFGS algorithm to do this job.
-    ker = [1/(poles.iwn[i] - p[j]) for i in 1:length(poles.iwn), j in eachindex(p)]
-    K = [real(ker); imag(ker)]
-    G = vcat(real(poles.GFV), imag(poles.GFV))
-    KtK = K'*K
-    KtG = K'*G
-    γ₀ = ones(real(T), length(p)) ./ length(p)
-    γopt, _, _ = newton(x->KtK*x-KtG, x->KtK, γ₀)
+    γopt = poles2realγ(p, poles.GFV, poles.iwn)
 
     # Print their weights / amplitudes.
     println("New poles:")

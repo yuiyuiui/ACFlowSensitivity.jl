@@ -164,5 +164,7 @@ end
         idx = ACFlowSensitivity.find_peaks(v, 0.1)
         @test length(idx) == n
         @test isapprox(ctx.mesh[idx], μ, atol=d*sqrt(2))
+        idx1 = ACFlowSensitivity.find_peaks(ctx.mesh, v, 0.1)
+        @test idx == idx1
     end
 end

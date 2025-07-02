@@ -67,16 +67,25 @@ struct MaxEntChi2kink <: MaxEnt
     end
 end
 
-mutable struct SSK{I<:Int,T} <: Solver
-    nfine::I
-    poles_num::I
-    fine_mesh::Vector{T}
-    nwarm::I
-    nstep::I
-    retry::I
-    θ::T
-    ratio::T
+mutable struct SSK <: Solver
+    nfine::Int
+    poles_num::Int
+    nwarm::Int
+    nstep::Int
+    retry::Int
+    θ::Real
+    ratio::Real
     method::String
+end
+function SSK(poles_num::Int;
+             nfine::Int=100000,
+             nwarm::Int=1000,
+             nstep::Int=20000,
+             retry::Int=10,
+             θ::Real=1e6,
+             ratio::Real=0.9,
+             method::String="chi2min")
+    return SSK(nfine, poles_num, nwarm, nstep, retry, θ, ratio, method)
 end
 
 module ACFSDefults
