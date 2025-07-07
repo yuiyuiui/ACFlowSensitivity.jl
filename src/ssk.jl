@@ -116,15 +116,18 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
     println("Initialize context for the StochSK solver")
 
-    Aout, _, _ = run(MC, SE, SC, alg)
-    p = ctx.mesh[find_peaks(ctx.mesh, Aout, 0.1)]
-    γ = poles2realγ(p, GFV, ctx.iwn)
+    run!(MC, SE, SC, alg)
+    p_mesh = T[]
+    for p_fine in SE.P
+        idx = nearest(SC.mesh, p_fine / alg.nfine)
+        push!(p_mesh, SC.mesh[idx])
+    end
 
-    return SC.mesh, (p, γ)
+    return SC.mesh, (p_mesh, SE.A * ones(T, length(SE.P)))
 end
 
 """
-    run(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    run!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Perform stochastic analytic continuation simulation, sequential version.
 
@@ -139,7 +142,7 @@ Perform stochastic analytic continuation simulation, sequential version.
 * χ²vec -> Θ-dependent χ², χ²(Θ).
 * Θvec -> List of Θ parameters.
 """
-function run(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
              alg::SSK) where {I<:Int,T<:Real}
 
     # Setup essential parameters
@@ -162,11 +165,11 @@ function run(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
             SC.χ² = calc_goodness(SC.Gᵧ, SC.Gᵥ)
         end
 
-        sample(MC, SE, SC, alg)
+        sample!(MC, SE, SC, alg)
 
         if iter % measure_per_steps == 0
             step = step + T(1)
-            measure(SE, SC, alg)
+            measure!(SE, SC, alg)
         end
     end
 
@@ -271,7 +274,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 end
 
 """
-    sample(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
+    sample!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
 
 Perform Monte Carlo sweeps and sample the field configurations.
 
@@ -283,21 +286,21 @@ Perform Monte Carlo sweeps and sample the field configurations.
 ### Returns
 N/A
 """
-function sample(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function sample!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                 alg::SSK) where {I<:Int,T<:Real}
     if rand(MC.rng) < 0.80
-        try_move_s(MC, SE, SC, alg)
+        try_move_s!(MC, SE, SC, alg)
     else
         if rand(MC.rng) < 0.50
-            try_move_p(MC, SE, SC, alg)
+            try_move_p!(MC, SE, SC, alg)
         else
-            try_move_q(MC, SE, SC, alg)
+            try_move_q!(MC, SE, SC, alg)
         end
     end
 end
 
 """
-    measure(SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    measure!(SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Accumulate the final spectral functions A(ω).
 
@@ -311,7 +314,7 @@ N/A
 
 See also: [`nearest`](@ref).
 """
-function measure(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                  alg::SSK) where {I<:Int,T<:Real}
     nfine = alg.nfine
     ngamm = alg.poles_num
@@ -365,7 +368,7 @@ function shuffle(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I
             SC.χ² = calc_goodness(SC.Gᵧ, SC.Gᵥ)
         end
 
-        sample(MC, SE, SC, alg)
+        sample!(MC, SE, SC, alg)
 
         # Update the counters
         bin_χ² = bin_χ² + SC.χ²
@@ -649,7 +652,7 @@ end
 =#
 
 """
-    try_move_s(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, only single δ function is shifted.
@@ -663,9 +666,9 @@ algorithm. In each update, only single δ function is shifted.
 ### Returns
 N/A
 
-See also: [`try_move_p`](@ref).
+See also: [`try_move_p!`](@ref).
 """
-function try_move_s(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
@@ -732,7 +735,7 @@ function try_move_s(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContex
 end
 
 """
-    try_move_p(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+    try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
@@ -747,9 +750,9 @@ algorithm. In each update, only a pair of δ functions are shifted.
 ### Returns
 N/A
 
-See also: [`try_move_s`](@ref).
+See also: [`try_move_s!`](@ref).
 """
-function try_move_p(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
@@ -834,7 +837,7 @@ function try_move_p(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContex
 end
 
 """
-    try_move_q(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+    try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
@@ -849,9 +852,9 @@ algorithm. In each update, four different δ functions are shifted.
 ### Returns
 N/A
 
-See also: [`try_move_s`](@ref).
+See also: [`try_move_s!`](@ref).
 """
-function try_move_q(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine

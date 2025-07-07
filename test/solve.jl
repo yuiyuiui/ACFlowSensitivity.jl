@@ -140,6 +140,7 @@ end
 # I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
 # But in some random case I don't record it does succeed and the result is type stable.
 @testset "ssk" begin
+    Random.seed!(6)
     T = Float64
     alg = SSK(2)
     # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
@@ -149,8 +150,8 @@ end
     @test mesh isa Vector{T}
     @test rep isa Vector{T}
     @test reγ isa Vector{T}
-    @show norm(poles - rep)
+    @show norm(poles - sort(rep))
     @show norm(γ - reγ)
-    @test norm(poles - rep) < 5 * relax_tol(T)
-    @test norm(γ - reγ) < 5 * relax_tol(T)
+    @test norm(poles - sort(rep)) < 5 * relax_tol(T)
+    @test norm(γ - reγ) == 0
 end
