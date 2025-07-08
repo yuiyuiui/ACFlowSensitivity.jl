@@ -134,7 +134,7 @@ end
     MC = @constinferred ACFlowSensitivity.init_mc(alg)
     SE = @constinferred ACFlowSensitivity.init_element(alg, MC.rng, ctx)
     SC = @constinferred ACFlowSensitivity.init_context(SE, GFV, fine_mesh, ctx, alg)
-    Aout, _, _ = @constinferred ACFlowSensitivity.run(MC, SE, SC, alg)
+    Aout, _, _ = @constinferred ACFlowSensitivity.run!(MC, SE, SC, alg)
 end
 
 # I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
@@ -142,16 +142,14 @@ end
 @testset "ssk" begin
     Random.seed!(6)
     T = Float64
-    alg = SSK(2)
+    pn = 2
+    alg = SSK(pn)
     # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
-    (poles, γ), ctx, GFV = dfcfg(T; poles_num=2, spt=Delta(), ml = alg.nfine,
-                                 mesh_type=TangentMesh())
+    (poles, γ), ctx, GFV = dfcfg(T; poles_num=pn, spt=Delta(), ml = alg.nfine)
     mesh, (rep, reγ) = solve(GFV, ctx, alg)
     @test mesh isa Vector{T}
     @test rep isa Vector{T}
     @test reγ isa Vector{T}
-    @show norm(poles - sort(rep))
-    @show norm(γ - reγ)
-    @test norm(poles - sort(rep)) < 5 * relax_tol(T)
+    @test norm(poles - rep) < 5 * relax_tol(T)
     @test norm(γ - reγ) == 0
 end
