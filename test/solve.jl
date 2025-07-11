@@ -145,7 +145,7 @@ end
     pn = 2
     alg = SSK(pn)
     # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
-    (poles, γ), ctx, GFV = dfcfg(T; poles_num=pn, spt=Delta(), ml = alg.nfine)
+    (poles, γ), ctx, GFV = dfcfg(T; poles_num=pn, spt=Delta(), ml=alg.nfine)
     mesh, (rep, reγ) = solve(GFV, ctx, alg)
     @test mesh isa Vector{T}
     @test rep isa Vector{T}

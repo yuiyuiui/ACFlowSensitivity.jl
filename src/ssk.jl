@@ -1,5 +1,5 @@
 """
-    StochSKElement
+	StochSKElement
 
 Mutable struct. It is used to record the field configurations, which will
 be sampled by Monte Carlo sweeping procedure.
@@ -20,7 +20,7 @@ mutable struct StochSKElement{I<:Int,T<:Real}
 end
 
 """
-    StochSKContext
+	StochSKContext
 
 Mutable struct. It is used within the StochSK solver only.
 
@@ -57,7 +57,7 @@ mutable struct StochSKContext{I<:Int,T<:Real}
 end
 
 """
-    StochSKMC
+	StochSKMC
 
 Mutable struct. It is used within the StochSK solver. It includes random
 number generator and some counters.
@@ -88,7 +88,7 @@ end
 =#
 
 """
-    solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+	solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
 
 Main driver function for the StochSK solver.
 
@@ -116,18 +116,25 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
     println("Initialize context for the StochSK solver")
 
-    run!(MC, SE, SC, alg)
-    p_mesh = T[]
-    for p_fine in SE.P
-        idx = nearest(SC.mesh, p_fine / alg.nfine)
-        push!(p_mesh, SC.mesh[idx])
+    Aout, _, _ = run!(MC, SE, SC, alg)
+    p = ctx.mesh[find_peaks(ctx.mesh, Aout, 0.1)]
+    # If length(p) != poles_num, then we just use SE.P
+    if length(p) != alg.poles_num
+        p = T[]
+        for p_fine in SE.P
+            idx = nearest(SC.mesh, p_fine / alg.nfine)
+            push!(p, SC.mesh[idx])
+        end
+        sort!(p)
     end
-    sort!(p_mesh)
-    return SC.mesh, (p_mesh, SE.A * ones(T, length(SE.P)))
+    # γ = poles2realγ(p, GFV, ctx.iwn)
+    γ = ones(T, alg.poles_num) / alg.poles_num
+
+    return SC.mesh, (p, γ)
 end
 
 """
-    run!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+	run!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Perform stochastic analytic continuation simulation, sequential version.
 
@@ -143,7 +150,7 @@ Perform stochastic analytic continuation simulation, sequential version.
 * Θvec -> List of Θ parameters.
 """
 function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-             alg::SSK) where {I<:Int,T<:Real}
+              alg::SSK) where {I<:Int,T<:Real}
 
     # Setup essential parameters
     nstep = alg.nstep
@@ -177,7 +184,7 @@ function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T}
 end
 
 """
-    average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
+	average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
 
 Postprocess the results generated during the stochastic analytic
 continuation simulations. It will generate the spectral functions.
@@ -201,7 +208,7 @@ end
 =#
 
 """
-    warmup(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+	warmup(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Warmup the Monte Carlo engine to acheieve thermalized equilibrium. Then
 it will try to figure out the optimized Θ and the corresponding Monte
@@ -274,7 +281,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 end
 
 """
-    sample!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
+	sample!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
 
 Perform Monte Carlo sweeps and sample the field configurations.
 
@@ -287,7 +294,7 @@ Perform Monte Carlo sweeps and sample the field configurations.
 N/A
 """
 function sample!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-                alg::SSK) where {I<:Int,T<:Real}
+                 alg::SSK) where {I<:Int,T<:Real}
     if rand(MC.rng) < 0.80
         try_move_s!(MC, SE, SC, alg)
     else
@@ -300,7 +307,7 @@ function sample!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I
 end
 
 """
-    measure!(SE::StochSKElement, SC::StochSKContext, alg::SSK)
+	measure!(SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Accumulate the final spectral functions A(ω).
 
@@ -315,7 +322,7 @@ N/A
 See also: [`nearest`](@ref).
 """
 function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-                 alg::SSK) where {I<:Int,T<:Real}
+                  alg::SSK) where {I<:Int,T<:Real}
     nfine = alg.nfine
     ngamm = alg.poles_num
 
@@ -335,7 +342,7 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
 end
 
 """
-    shuffle(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+	shuffle(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Try to shuffle the Monte Carlo field configuration via the Metropolis
 algorithm. Then the window for shifting the δ functions is adjusted.
@@ -404,7 +411,7 @@ end
 =#
 
 """
-    init_mc(S::SSK)
+	init_mc(S::SSK)
 
 Try to create a StochSKMC struct. Some counters for Monte Carlo updates
 are initialized here.
@@ -434,11 +441,11 @@ function init_mc(alg::SSK)
 end
 
 """
-    init_element(
-        alg::SSK,
-        rng::AbstractRNG,
-        ctx::CtxData{T}
-    )
+	init_element(
+		alg::SSK,
+		rng::AbstractRNG,
+		ctx::CtxData{T}
+	)
 
 Randomize the configurations for future Monte Carlo sampling. It will
 return a StochSKElement struct.
@@ -513,7 +520,7 @@ function init_context(SE::StochSKElement{I,T},
 end
 
 """
-    calc_correlator(SE::StochSKElement, kernel::Array{F64,2})
+	calc_correlator(SE::StochSKElement, kernel::Array{F64,2})
 
 Try to calculate correlator with the kernel function and the Monte Carlo
 field configuration. This correlator will then be used to evaluate the
@@ -536,7 +543,7 @@ function calc_correlator(SE::StochSKElement{I,T}, kernel::Array{T,2}) where {I<:
 end
 
 """
-    calc_goodness(Gₙ::Vector{F64}, Gᵥ::Vector{F64})
+	calc_goodness(Gₙ::Vector{F64}, Gᵥ::Vector{F64})
 
 Try to calculate the goodness-of-fit function (i.e, χ²), which measures
 the distance between input and regenerated correlators.
@@ -556,7 +563,7 @@ function calc_goodness(Gₙ::Vector{T}, Gᵥ::Vector{T}) where {T<:Real}
 end
 
 """
-    calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T<:Real}
+	calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T<:Real}
 
 Try to locate the optimal Θ and χ². This function implements the `chi2min`
 and `chi2kink` algorithms. Note that the `chi2min` algorithm is preferred.
@@ -606,7 +613,7 @@ end
 
 #=
 """
-    constraints(S::StochSKSolver, fmesh::AbstractMesh)
+	constraints(S::StochSKSolver, fmesh::AbstractMesh)
 
 Try to implement the constrained stochastic analytic continuation
 method. This function will return a collection. It contains all the
@@ -622,37 +629,37 @@ allowable indices. Be careful, `fmesh` should be a fine linear mesh.
 See also: [`StochSKSolver`](@ref).
 """
 function constraints(S::StochSKSolver, fmesh::AbstractMesh)
-    exclude = get_b("exclude")
-    nfine = get_k("nfine")
-    @assert nfine == length(fmesh)
+	exclude = get_b("exclude")
+	nfine = get_k("nfine")
+	@assert nfine == length(fmesh)
 
-    allow = Int[]
+	allow = Int[]
 
-    # Go through the fine mesh and check every mesh point.
-    # Is is excluded?
-    for i in eachindex(fmesh)
-        is_excluded = false
-        #
-        if !isa(exclude, Missing)
-            for j in eachindex(exclude)
-                if exclude[j][1] ≤ fmesh[i] ≤ exclude[j][2]
-                    is_excluded = true
-                    break
-                end
-            end
-        end
-        #
-        if !is_excluded
-            push!(allow, i)
-        end
-    end
+	# Go through the fine mesh and check every mesh point.
+	# Is is excluded?
+	for i in eachindex(fmesh)
+		is_excluded = false
+		#
+		if !isa(exclude, Missing)
+			for j in eachindex(exclude)
+				if exclude[j][1] ≤ fmesh[i] ≤ exclude[j][2]
+					is_excluded = true
+					break
+				end
+			end
+		end
+		#
+		if !is_excluded
+			push!(allow, i)
+		end
+	end
 
-    return allow
+	return allow
 end
 =#
 
 """
-    try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+	try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, only single δ function is shifted.
@@ -669,7 +676,7 @@ N/A
 See also: [`try_move_p!`](@ref).
 """
 function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-                    alg::SSK) where {I<:Int,T<:Real}
+                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
     ngamm = alg.poles_num
@@ -735,8 +742,8 @@ function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 """
-    try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-               alg::SSK) where {I<:Int,T<:Real}
+	try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+			   alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, only a pair of δ functions are shifted.
@@ -753,7 +760,7 @@ N/A
 See also: [`try_move_s!`](@ref).
 """
 function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-                    alg::SSK) where {I<:Int,T<:Real}
+                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
     ngamm = alg.poles_num
@@ -837,8 +844,8 @@ function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 """
-    try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-               alg::SSK) where {I<:Int,T<:Real}
+	try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+			   alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, four different δ functions are shifted.
@@ -855,7 +862,7 @@ N/A
 See also: [`try_move_s!`](@ref).
 """
 function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-                    alg::SSK) where {I<:Int,T<:Real}
+                     alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
     ngamm = alg.poles_num
@@ -972,16 +979,17 @@ end
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     N = ctx.N
     n = alg.poles_num
-    function f(p,G)
+    function f(p, G)
         res = 0
         for j in 1:N
             res += abs2(sum(1 ./ (ctx.iwn[j] .- p)) / n - G[j])
         end
         return res
     end
-    f₁(p,G) = Zygote.gradient(p₁->f(p₁,G), p)[1]
-    f₁₁(p,G) = Zygote.jacobian(p₁->f₁(p₁,G), p)[1]
-    f₁₂(p,G) = Zygote.jacobian(G₁->f₁(p,G₁), G)[1]
+    f₁(p, G) = Zygote.gradient(p₁->f(p₁, G), p)[1]
+    f₁₁(p, G) = Zygote.jacobian(p₁->f₁(p₁, G), p)[1]
+    f₁₂(p, G) = Zygote.jacobian(G₁->f₁(p, G₁), G)[1]
     mesh, (rep, reγ) = solve(GFV, ctx, alg)
-    return mesh, (rep, reγ), (- pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
+    return mesh, (rep, reγ),
+           (- pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
 end

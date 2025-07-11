@@ -9,7 +9,7 @@ function find_peaks(v, minipeak)
     return res
 end
 
-function find_peaks(mesh, v, minipeak; wind = 0.01)
+function find_peaks(mesh, v, minipeak; wind=0.01)
     @assert length(mesh) == length(v)
     n = length(mesh)
     idx = findall(x -> x > minipeak, v)

@@ -148,6 +148,6 @@ end
     @show norm(orγ - γ)
     G2p = G -> solve(G, ctx, alg)[2][1]
     G2γ = G -> solve(G, ctx, alg)[2][2]
-    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=8e-3, rtol=2e-1) # extremly unstable
+    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=1e-1) # extremly unstable
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
 end
