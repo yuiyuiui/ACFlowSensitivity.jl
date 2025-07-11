@@ -33,11 +33,11 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |:---|:---|:---|:---|:---|:---|:---|
 |BarRat|✅|✅||✅|✅|
 |MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
-|SSK|❌||❌|❌||❌|
-|SAC||
+|SSK|❌|✅|❌|❌|✅|❌|
 |SPX||
-|SOM||
+|SAC||
 |NAC||
+|SOM||
 
 Example of using `ACFlowSensitivity` to plot the error bound of a specific method is shown in the file folder `error_plot`.
 
