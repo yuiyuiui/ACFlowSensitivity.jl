@@ -34,8 +34,8 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |BarRat|✅|✅||✅|✅|
 |MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
 |SSK|❌|✅|❌|❌|✅|❌|
-|SPX||
 |SAC||
+|SPX||
 |NAC||
 |SOM||
 
