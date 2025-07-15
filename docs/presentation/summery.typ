@@ -1,78 +1,55 @@
-#import "@preview/cetz:0.2.2"
-#import "@preview/fletcher:0.4.5" as fletcher: node, edge
-#import "@preview/touying:0.4.2": *
-#import "@preview/touying-simpl-hkustgz:0.1.1" as hkustgz-theme
+#import "@preview/cetz:0.3.3"
+#import "@preview/fletcher:0.5.5" as fletcher: node, edge
+#import "@preview/touying:0.6.1": *
+#import "./lib.typ": *
 
 // cetz and fletcher bindings for touying
 #let cetz-canvas = touying-reducer.with(reduce: cetz.canvas, cover: cetz.draw.hide.with(bounds: true))
 #let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
-// Register university theme
-// You can replace it with other themes and it can still work normally
-#let s = hkustgz-theme.register()
-
-// Set the numbering of section and subsection
-#let s = (s.methods.numbering)(self: s, section: "1.", "1.1")
-
-// Set the speaker notes configuration, you can show it by pympress
-// #let s = (s.methods.show-notes-on-second-screen)(self: s, right)
-
-// Global information configuration
-#let s = (s.methods.info)(
-  self: s,
-  title: [Summery of ACFlowSensitivity],
-  subtitle: [],
-  author: [Kaiwen Jin],
-  date: datetime.today(),
-  institution: [HKUST-GZ],
-  others: none
-)
-
-// Pdfpc configuration
-#let s = (s.methods.append-preamble)(self: s, pdfpc.config(
-  duration-minutes: 30,
-  start-time: datetime(hour: 14, minute: 00, second: 0),
-  end-time: datetime(hour: 14, minute: 30, second: 0),
-  last-minutes: 5,
-  note-font-size: 12,
-  disable-markdown: false,
-  default-transition: (
-    type: "push",
-    duration-seconds: 2,
-    angle: ltr,
-    alignment: "vertical",
-    direction: "inward",
+#show: hkustgz-theme.with(
+  // Lang and font configuration
+  lang: "en",
+  font: (
+    (
+      name: "Libertinus Serif",
+      covers: "latin-in-cjk",
+    ),
+    "Source Han Sans SC", "Source Han Sans",
   ),
-))
 
-// Extract methods
-#let (init, slides, touying-outline, alert, speaker-note, tblock) = utils.methods(s)
-#show: init.with(
-  lang: "zh",
-  font: ("Linux Libertine", "Source Han Sans SC", "Source Han Sans"),
+  // Basic information
+  config-info(
+    title: [Summery of ACFlowSensitivity],
+    subtitle: [],
+    author: [Kaiwen Jin],
+    date: datetime.today(),
+    institution: [HKUST-GZ],
+  ),
+
+  // Pdfpc configuration
+  // typst query --root . ./examples/main.typ --field value --one "<pdfpc-file>" > ./examples/main.pdfpc
+  config-common(preamble: pdfpc.config(
+    duration-minutes: 30,
+    start-time: datetime(hour: 14, minute: 10, second: 0),
+    end-time: datetime(hour: 14, minute: 40, second: 0),
+    last-minutes: 5,
+    note-font-size: 12,
+    disable-markdown: false,
+    default-transition: (
+      type: "push",
+      duration-seconds: 2,
+      angle: ltr,
+      alignment: "vertical",
+      direction: "inward",
+    ),
+  )),
 )
 
-#show strong: alert
+#title-slide()
 
-// Extract slide functions
-#let (slide, empty-slide, title-slide, outline-slide, new-section-slide, ending-slide) = utils.slides(s)
-#show: slides.with()
 
-== Denotation
-
-Only consider fermionic system. 
-
-The real Green's function is: $cal(G)$
-
-The measure Green's function on the imag axis is: $G = [G_1,..,G_N]$
-
-Denote the reconstructed Green's function as: $tilde(cal(G))$ . And denote $tilde(G) = [tilde(G)_1,..,tilde(G)_N] = [tilde(cal(G))(i w_1),..,tilde(cal(G))(i w_N)]$.
-
-The real spectrum is: $cal(A)$
-
-The date of the spectrum we calculate on the output mesh: $A = [A_1,..,A_M]$
-
-Denote the reconstructed spectrum as: $tilde(cal(A))$.
+== Example
 
 == Methods Summary
 1. Mathematical method: Barycentric Rational Approximation (AAA + prony denoise), Nevanlinna
