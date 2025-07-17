@@ -51,6 +51,13 @@
 
 == Example
 
+Consider an Ising model of fermionic system with Hamiltonian $H$ and 2 operators $A$ and $B$. Our purpose is to get
+$
+  & S_(A B)(t) = 1/Z tr(e^(-beta H) A(t) B)\
+  & A(t) = e^(i t H) A e^(-i t H), quad Z = tr(e^(-beta H))
+$
+
+First we use Monte Carlo method to $G_(A B)(tau) = S_(A B)(-i tau)$. Then 
 == Methods Summary
 1. Mathematical method: Barycentric Rational Approximation (AAA + prony denoise), Nevanlinna
 2. Maximal Entropy Method. According to parameters choosing: Historic Algorithm, Classic Algorithm, Chi2kink Algorithm, Bryan Algorithm (average).

@@ -1,7 +1,7 @@
 @testset "_∂χ²vecDiv∂G" begin
     T = Float64
     N = 20
-    A, ctx, GFV = dfcfg(T)
+    A, ctx, GFV = dfcfg(T, Cont())
     G0 = vcat(real(GFV), imag(GFV))
     pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
     ∂χ²_expect = ACFlowSensitivity._∂χ²vecDiv∂G(pc)[1]
@@ -15,7 +15,7 @@ end
 @testset "_∂αoptDiv∂χ²vec" begin
     T = Float64
     N = 20
-    A, ctx, GFV = dfcfg(T)
+    A, ctx, GFV = dfcfg(T, Cont())
     G0 = vcat(real(GFV), imag(GFV))
     pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
     _, _, χ²vec, idx = ACFlowSensitivity._∂χ²vecDiv∂G(pc)
@@ -41,7 +41,7 @@ Thus L2loss is not a suitable way to measure the sensitivity. But I have not fou
     ∂loss_rtol = 1e-1
     for T in [Float32, Float64]
         solve_tol = T == Float32 ? 1.1e-1 : 5e-3
-        A, ctx, GFV = dfcfg(T; mesh_type=TangentMesh())
+        A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
         mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx,
                                                 MaxEntChi2kink(; model_type="Gaussian"))
         orA = A.(mesh)
@@ -66,7 +66,7 @@ end
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 alg = MaxEntChi2kink(; model_type=model_type)
-                A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
+                A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
                 mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
                 orA = A.(mesh)
                 @test mesh isa Vector{T}
@@ -93,8 +93,8 @@ end
     for T in [Float32, Float64]
         solve_tol = T == Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
-            alg = BarRat(Cont())
-            A, ctx, GFV = dfcfg(T; mesh_type=mesh_type)
+            alg = BarRat()
+            A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
             mesh, reA, ∂reADiv∂G, ∂loss = solvediff(GFV, ctx, alg)
             orA = A.(mesh)
             @test mesh isa Vector{T}
@@ -114,8 +114,8 @@ end
 
 @testset "differentiation of BarRat with Delta spectrum" begin
     for T in [Float32, Float64] # mesh is not uesd so no test for mesh
-        (orp, orγ), ctx, GFV = dfcfg(T; spt=Delta(), poles_num=2)
-        mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat(Delta()))
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
+        mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat())
         @test mesh isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
@@ -124,8 +124,8 @@ end
         if T == Float64
             @test norm(orp - p) < strict_tol(T)
             @test norm(orγ - γ) < strict_tol(T)
-            G2p = G -> solve(G, ctx, BarRat(Delta()))[2][1]
-            G2γ = G -> solve(G, ctx, BarRat(Delta()))[2][2]
+            G2p = G -> solve(G, ctx, BarRat())[2][1]
+            G2γ = G -> solve(G, ctx, BarRat())[2][2]
             jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
             jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
         end
@@ -137,8 +137,8 @@ end
     T = Float64
     pn = 2
     alg = SSK(pn)
-    (orp, orγ), ctx, GFV = dfcfg(T; poles_num=pn, spt=Delta(), ml=alg.nfine)
-    mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+    (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
+    mesh, Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
     @test mesh isa Vector{T}
     @test p isa Vector{T}
     @test γ isa Vector{T}
@@ -146,8 +146,8 @@ end
     @test ∂γDiv∂G isa Matrix{Complex{T}}
     @show norm(orp - p)
     @show norm(orγ - γ)
-    G2p = G -> solve(G, ctx, alg)[2][1]
-    G2γ = G -> solve(G, ctx, alg)[2][2]
+    G2p = G -> solve(G, ctx, alg)[3][1]
+    G2γ = G -> solve(G, ctx, alg)[3][2]
     @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=1e-1) # extremly unstable
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
 end

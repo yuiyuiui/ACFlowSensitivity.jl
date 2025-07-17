@@ -117,20 +117,26 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
     println("Initialize context for the StochSK solver")
 
     Aout, _, _ = run!(MC, SE, SC, alg)
-    p = ctx.mesh[find_peaks(ctx.mesh, Aout, 0.1)]
-    # If length(p) != poles_num, then we just use SE.P
-    if length(p) != alg.poles_num
-        p = T[]
-        for p_fine in SE.P
-            idx = nearest(SC.mesh, p_fine / alg.nfine)
-            push!(p, SC.mesh[idx])
+    if ctx.spt isa Delta
+        p = ctx.mesh[find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        # If length(p) != npole, then we just use SE.P
+        if length(p) != alg.npole
+            p = T[]
+            for p_fine in SE.P
+                idx = nearest(SC.mesh, p_fine / alg.nfine)
+                push!(p, SC.mesh[idx])
+            end
+            sort!(p)
         end
-        sort!(p)
-    end
-    # γ = poles2realγ(p, GFV, ctx.iwn)
-    γ = ones(T, alg.poles_num) / alg.poles_num
+        # γ = poles2realγ(p, GFV, ctx.iwn)
+        γ = ones(T, alg.npole) / alg.npole
 
-    return SC.mesh, (p, γ)
+        return SC.mesh, Aout, (p, γ)
+    elseif ctx.spt isa Cont
+        return SC.mesh, Aout
+    else
+        error("Unsupported spectral function type")
+    end
 end
 
 """
@@ -324,9 +330,9 @@ See also: [`nearest`](@ref).
 function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                   alg::SSK) where {I<:Int,T<:Real}
     nfine = alg.nfine
-    ngamm = alg.poles_num
+    pn = alg.npole
 
-    for j in 1:ngamm
+    for j in 1:pn
         d_pos = SE.P[j]
         # d_pos / nfine denotes the position of the selected δ-like peak
         # in the fine linear mesh.
@@ -389,8 +395,8 @@ function shuffle(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I
     # The transition probability will be kept around 0.5.
     𝑝 = bin_acc / bin_try
     #
-    if 𝑝 > 1//2
-        r = SE.W * (3//2)
+    if 𝑝 > 1 // 2
+        r = SE.W * (3 // 2)
         if ceil(I, r) < nfine
             SE.W = ceil(I, r)
         else
@@ -398,8 +404,8 @@ function shuffle(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I
         end
     end
     #
-    if 𝑝 < 2//5
-        SE.W = ceil(I, SE.W / (3//2))
+    if 𝑝 < 2 // 5
+        SE.W = ceil(I, SE.W / (3 // 2))
     end
 
     # Update χ² with averaged χ²
@@ -467,11 +473,11 @@ function init_element(alg::SSK,
     wmax = ctx.mesh[end]
     wmin = ctx.mesh[1]
     nfine = alg.nfine
-    poles_num = alg.poles_num
+    pn = alg.npole
 
-    position = rand(rng, 1:nfine, poles_num)
+    position = rand(rng, 1:nfine, pn)
     #
-    amplitude = T(1) / poles_num
+    amplitude = T(1) / pn
     #
     δf = (wmax - wmin) / (nfine - 1)
     average_freq = abs(log(T(2)) / β)
@@ -499,7 +505,7 @@ function init_context(SE::StochSKElement{I,T},
     θvec = zeros(T, nwarm)
 
     # Build kernel matrix
-    _, _, _, U, S, V = SingularSpace(GFV, ctx.iwn*ctx.σ, fine_mesh*ctx.σ)
+    _, _, _, U, S, V = SingularSpace(GFV, ctx.iwn * ctx.σ, fine_mesh * ctx.σ)
 
     # Get new kernel matrix
     kernel = Diagonal(S) * V'
@@ -514,7 +520,7 @@ function init_context(SE::StochSKElement{I,T},
     𝚾 = calc_goodness(Gᵧ, Gᵥ)
     χ², χ²min = 𝚾, 𝚾
 
-    return StochSKContext(Gᵥ, Gᵧ, 1/ctx.σ, collect(1:alg.nfine), ctx.wn, ctx.mesh,
+    return StochSKContext(Gᵥ, Gᵧ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh,
                           ctx.mesh_weights, kernel, Aout,
                           χ², χ²min, χ²vec, θ, θvec)
 end
@@ -536,8 +542,8 @@ goodness-of-fit function χ².
 See also: [`calc_goodness`](@ref).
 """
 function calc_correlator(SE::StochSKElement{I,T}, kernel::Array{T,2}) where {I<:Int,T<:Real}
-    ngamm = length(SE.P)
-    𝐴 = fill(SE.A, ngamm)
+    pn = length(SE.P)
+    𝐴 = fill(SE.A, pn)
     𝐾 = kernel[:, SE.P]
     return 𝐾 * 𝐴
 end
@@ -603,7 +609,7 @@ function calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T
         fit = curve_fit(fitfun, log10.(SC.Θvec[1:c]), log10.(SC.χ²vec[1:c]), guess)
         _, _, a, b = fit.param
         #
-        fit_pos = T(5//2)
+        fit_pos = T(5 // 2)
         Θ_opt = a - fit_pos / b
         c = argmin(abs.(log10.(SC.Θvec[1:c]) .- Θ_opt))
     end
@@ -679,26 +685,26 @@ function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
                      alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
-    ngamm = alg.poles_num
+    pn = alg.npole
 
     # Reset counters
     MC.Sacc = 0
-    MC.Stry = ngamm
+    MC.Stry = pn
     @assert 1 < SE.W ≤ nfine
 
     # Allocate memory for new correlator
     Gₙ = zeros(T, size(SC.Gᵧ))
     ΔG = zeros(T, size(SC.Gᵧ))
 
-    for _ in 1:ngamm
+    for _ in 1:pn
         # Choose single δ function
-        s = rand(MC.rng, 1:ngamm)
+        s = rand(MC.rng, 1:pn)
 
         # Evaluate new position for the δ function
         pcurr = SE.P[s]
         #
         if 1 < SE.W < nfine
-            δW = rand(MC.rng, 1:SE.W)
+            δW = rand(MC.rng, 1:(SE.W))
             #
             if rand(MC.rng) > 0.5
                 pnext = pcurr + δW
@@ -723,7 +729,7 @@ function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         @. ΔG = Gₙ - SC.Gᵥ
         χ²new = dot(ΔG, ΔG)
         #
-        prob = exp(1//2 * (SC.χ² - χ²new) / SC.Θ)
+        prob = exp(1 // 2 * (SC.χ² - χ²new) / SC.Θ)
 
         # Important sampling, if true, the δ function is shifted and the
         # corresponding objects are updated.
@@ -763,26 +769,26 @@ function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
                      alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
-    ngamm = alg.poles_num
+    pn = alg.npole
 
     # We have to make sure that there are at least two δ functions here.
-    ngamm < 2 && return
+    pn < 2 && return
 
     # Reset counters
     MC.Pacc = 0
-    MC.Ptry = ngamm
+    MC.Ptry = pn
     @assert 1 < SE.W ≤ nfine
 
     # Allocate memory for new correlator
     Gₙ = zeros(T, size(SC.Gᵧ))
     ΔG = zeros(T, size(SC.Gᵧ))
 
-    for _ in 1:ngamm
+    for _ in 1:pn
         # Choose a pair of δ functions
-        s₁ = rand(MC.rng, 1:ngamm)
+        s₁ = rand(MC.rng, 1:pn)
         s₂ = s₁
         while s₁ == s₂
-            s₂ = rand(MC.rng, 1:ngamm)
+            s₂ = rand(MC.rng, 1:pn)
         end
 
         # Evaluate new positions for the two δ functions
@@ -790,8 +796,8 @@ function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         pcurr₂ = SE.P[s₂]
         #
         if 1 < SE.W < nfine
-            δW₁ = rand(MC.rng, 1:SE.W)
-            δW₂ = rand(MC.rng, 1:SE.W)
+            δW₁ = rand(MC.rng, 1:(SE.W))
+            δW₂ = rand(MC.rng, 1:(SE.W))
             #
             if rand(MC.rng) > 0.5
                 pnext₁ = pcurr₁ + δW₁
@@ -824,7 +830,7 @@ function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         @. ΔG = Gₙ - SC.Gᵥ
         χ²new = dot(ΔG, ΔG)
         #
-        prob = exp(1//2 * (SC.χ² - χ²new) / SC.Θ)
+        prob = exp(1 // 2 * (SC.χ² - χ²new) / SC.Θ)
 
         # Important sampling, if true, the δ functions are shifted and the
         # corresponding objects are updated.
@@ -865,25 +871,25 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
                      alg::SSK) where {I<:Int,T<:Real}
     # Get parameters
     nfine = alg.nfine
-    ngamm = alg.poles_num
+    pn = alg.npole
 
     # We have to make sure that there are at least four δ functions here.
-    ngamm < 4 && return
+    pn < 4 && return
 
     # Reset counters
     MC.Qacc = 0
-    MC.Qtry = ngamm
+    MC.Qtry = pn
     @assert 1 < SE.W ≤ nfine
 
     # Allocate memory for new correlator
     Gₙ = zeros(T, size(SC.Gᵧ))
     ΔG = zeros(T, size(SC.Gᵧ))
 
-    for _ in 1:ngamm
+    for _ in 1:pn
         # Choose four different δ functions
         𝑆 = nothing
         while true
-            𝑆 = rand(MC.rng, 1:ngamm, 4)
+            𝑆 = rand(MC.rng, 1:pn, 4)
             𝒮 = unique(𝑆)
             if length(𝑆) == length(𝒮)
                 break
@@ -898,10 +904,10 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         pcurr₄ = SE.P[s₄]
         #
         if 1 < SE.W < nfine
-            δW₁ = rand(MC.rng, 1:SE.W)
-            δW₂ = rand(MC.rng, 1:SE.W)
-            δW₃ = rand(MC.rng, 1:SE.W)
-            δW₄ = rand(MC.rng, 1:SE.W)
+            δW₁ = rand(MC.rng, 1:(SE.W))
+            δW₂ = rand(MC.rng, 1:(SE.W))
+            δW₃ = rand(MC.rng, 1:(SE.W))
+            δW₄ = rand(MC.rng, 1:(SE.W))
             #
             if rand(MC.rng) > 0.5
                 pnext₁ = pcurr₁ + δW₁
@@ -954,7 +960,7 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         @. ΔG = Gₙ - SC.Gᵥ
         χ²new = dot(ΔG, ΔG)
         #
-        prob = exp(1//2 * (SC.χ² - χ²new) / SC.Θ)
+        prob = exp(1 // 2 * (SC.χ² - χ²new) / SC.Θ)
 
         # Important sampling, if true, the δ functions are shifted and the
         # corresponding objects are updated.
@@ -978,7 +984,7 @@ end
 # solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     N = ctx.N
-    n = alg.poles_num
+    n = alg.npole
     function f(p, G)
         res = 0
         for j in 1:N
@@ -986,10 +992,10 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<
         end
         return res
     end
-    f₁(p, G) = Zygote.gradient(p₁->f(p₁, G), p)[1]
-    f₁₁(p, G) = Zygote.jacobian(p₁->f₁(p₁, G), p)[1]
-    f₁₂(p, G) = Zygote.jacobian(G₁->f₁(p, G₁), G)[1]
-    mesh, (rep, reγ) = solve(GFV, ctx, alg)
-    return mesh, (rep, reγ),
-           (- pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
+    f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, G), p)[1]
+    f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
+    f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
+    mesh, Asum, (rep, reγ) = solve(GFV, ctx, alg)
+    return mesh, Asum, (rep, reγ),
+           (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
 end

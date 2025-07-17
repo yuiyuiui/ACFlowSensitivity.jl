@@ -13,8 +13,8 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
         (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
-    alg.spt isa Cont && return ctx.mesh, extract_spectrum(brf, ctx, alg)
-    alg.spt isa Delta && return ctx.mesh, Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
+    ctx.spt isa Cont && return ctx.mesh, extract_spectrum(brf, ctx)
+    ctx.spt isa Delta && return ctx.mesh, Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
     # For Mixed spectrum:
 end
 
@@ -97,9 +97,8 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
 end
 
-function extract_spectrum(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T},
-                          alg::BarRat) where {T}
-    alg.spt isa Cont && return -imag.(brf.(ctx.mesh))/T(π)
+function extract_spectrum(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T}) where {T}
+    ctx.spt isa Cont && return -imag.(brf.(ctx.mesh))/T(π)
     return error("Now only support continuous spectrum")
 end
 
@@ -182,7 +181,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
     alg.denoisy && error("denoisy is not supported for differentiation")
     alg.minsgl > 0 && error("minsgl is not supported for differentiation")
     brf, idx = aaa(ctx.iwn, GFV; alg=alg)
-    if alg.spt isa Cont
+    if ctx.spt isa Cont
         reA = -imag(BarRatFunc(aaa4diff(GFV, idx, ctx.iwn)...).(ctx.mesh))/T(π)
         function fc(x)
             w, g, v = aaa4diff(x, idx, ctx.iwn)
@@ -192,7 +191,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
         end
         reAdiff = Zygote.jacobian(fc, GFV)[1]
         return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
-    elseif alg.spt isa Delta
+    elseif ctx.spt isa Delta
         poles = Poles(GFV, ctx.iwn, alg.pcut)
         p, _ = poles(brf.w, brf.g)
         function fd(x)

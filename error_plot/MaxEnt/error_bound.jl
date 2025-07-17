@@ -23,7 +23,7 @@ function error_bound_cont(;
                           ml=801,
                           perm=1e-4,
                           permu_num=4)
-    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
+    ctx = CtxData(Cont(), β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type)
     A=continous_spectral_density(μ, σ, amplitudes)
     GFV = generate_GFV_cont(β, N, A; noise=noise)
     GFV_perm = Vector{Vector{ComplexF64}}(undef, permu_num)

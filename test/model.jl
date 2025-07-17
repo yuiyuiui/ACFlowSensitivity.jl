@@ -3,7 +3,7 @@
         β = T(10)
         N = 10
         for mesh_type in [TangentMesh(), UniformMesh()]
-            ctx = CtxData(β, N)
+            ctx = CtxData(Cont(), β, N; mesh_type=mesh_type)
             for model_type in ["Gaussian", "flat"]
                 if model_type == "Gaussian"
                     f = x->exp(-x^2/4)

@@ -9,7 +9,7 @@ function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:R
 end
 
 # default configuration
-function dfcfg(T::Type{<:Real};
+function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
                σ=[T(1 // 5), T(4 // 5)]::Vector{T},
                amplitudes=[T(1), T(3 // 10)]::Vector{T},
@@ -20,16 +20,18 @@ function dfcfg(T::Type{<:Real};
                noise=T(0)::T,
                mb=T(8)::T,
                ml=801::Int,
-               spt::SpectrumType=Cont(),
-               poles_num::Int=4,)
-    ctx = CtxData(β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ)
+               npole::Int=4,
+               fp_ww::Real=T(0.01),
+               fp_mp::Real=T(0.1))
+    ctx = CtxData(spt, β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ,
+                  fp_ww=fp_ww, fp_mp=fp_mp)
     if spt isa Cont
         A=continous_spectral_density(μ, σ, amplitudes)
         GFV = generate_GFV_cont(β, N, A; noise=noise)
         return A, ctx, GFV
     elseif spt isa Delta
-        poles = collect(1:poles_num) .+ rand(T, poles_num) * T(1//2)
-        γ = ones(T, poles_num) ./ poles_num
+        poles = collect(1:npole) .+ rand(T, npole) * T(1//2)
+        γ = ones(T, npole) ./ npole
         GFV = generate_GFV_delta(β, N, poles, γ; noise=noise)
         return (poles, γ), ctx, GFV
     end

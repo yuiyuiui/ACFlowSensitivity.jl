@@ -1,5 +1,5 @@
 # Consider n-site 1 demension local Ising model with J = 1, H = -\sum \sigma_j \sigma_{j+1}
-using SparseArrays, LinearAlgebra, ACFlowSensitivity
+using LinearAlgebra, ACFlowSensitivity
 using Random, Plots
 
 function example()
@@ -8,22 +8,42 @@ function example()
     β = 10.0
     nGFV = 20
     T = Float64
-    function hamiltonian(nsite::Int)
-        N = 1 << nsite  # 2^nsite
-        diag = zeros(Float64, N)
-        for state in 0:(N - 1)
-            e = 0.0
-            for i in 0:(nsite - 2)
-                b1 = (state >> i) & 1 == 1 ? 1.0 : -1.0
-                b2 = (state >> (i + 1)) & 1 == 1 ? 1.0 : -1.0
-                e += -(b1 * b2)
-            end
-            diag[state + 1] = e
+
+    # Create annihilation operator at site i with Jordan–Wigner string
+    function c_op(n::Int, i::Int)
+        # Initialize identity operators of correct type
+        I2 = Matrix{Float64}(I, 2, 2)
+        ops = [I2 for _ in 1:n]
+        # Pauli Z and local annihilation operator as Float64 matrices
+        σz = Float64[1 0; 0 -1]
+        c_local = Float64[0 1; 0 0]
+        # Apply parity string
+        for j in 1:(i - 1)
+            ops[j] = σz
         end
-        return spdiagm(0 => diag)
+        # Local annihilation at site i
+        ops[i] = c_local
+        # Kronecker product over all sites
+        M = ops[1]
+        for k in 2:n
+            M = kron(M, ops[k])
+        end
+        return M
     end
 
-    H = Matrix(hamiltonian(nsite))
+    # Build the dense tight‑binding Hamiltonian
+    function fermion_chain(n::Int, t::Float64=1.0)
+        dim = 2^n
+        H = zeros(Float64, dim, dim)
+        for i in 1:(n - 1)
+            ci = c_op(n, i)
+            cip1 = c_op(n, i + 1)
+            H .-= t * (ci' * cip1 + cip1' * ci)
+        end
+        return H
+    end
+
+    H = fermion_chain(nsite)
 
     N = 1 << nsite
     A0 = rand(N, N)
@@ -49,7 +69,7 @@ function example()
     end
 
     alg = MaxEntChi2kink(; model_type="Gaussian")
-    ctx = CtxData(β, nGFV)
+    ctx = CtxData(Cont(), β, nGFV)
 
     mesh, reA = solve(GFV, ctx, alg)
 
@@ -57,4 +77,5 @@ function example()
 end
 
 mesh, reA = example()
-plot(mesh, reA)
+plot(mesh, reA; label="reconstructed A(w)", title="MaxEntChi2kink", xlabel="w",
+     ylabel="A(w)")
