@@ -83,25 +83,6 @@ end
     end
 end
 
-@testset "∇L2loss" begin
-    n=10
-    for T in [Float32, Float64, ComplexF32, ComplexF64]
-        rtol = (real(T) <: Float32) ? 1e-1 : 1e-2
-        A = rand(T, 2*n, n)
-        f = x->real(A*x)
-        x0 = rand(T, n)
-        y0 = f(x0)
-        w = ones(real(T), 2*n)
-        ls = x->loss(f(x), y0, w)
-        J = fdgradient(f, x0)
-        ∇ls = ACFlowSensitivity.∇L2loss(J, w)
-        @test ∇ls[1] isa real(T)
-        @test ∇ls[2] isa Vector{T}
-        @test isapprox(norm(∇ls[2]), ∇ls[1], atol=strict_tol(real(T)))
-        @test gradient_check(ls, ∇ls[2], x0; rtol=rtol)
-    end
-end
-
 @testset "partial derivative of sigmoid loss function" begin
     n = 10
     ϕ(x, p) = p[1] .+ p[2] ./ (1 .+ exp.(-p[4] .* (x .- p[3])))

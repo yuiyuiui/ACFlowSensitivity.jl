@@ -131,7 +131,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         error("maxiter>1 is not stable for cont spectrum solve differentiation")
     pc = PreComput(GFV, ctx, alg)
     reA, ∂reADiv∂G = chi2kink_diff(pc)
-    return ctx.mesh, reA, ∂reADiv∂G, ∇L2loss(∂reADiv∂G, ctx.mesh_weights)[2]
+    return ctx.mesh, reA, ∂reADiv∂G
 end
 
 function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}

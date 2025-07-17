@@ -2,12 +2,6 @@ tolerance(T) = eps(real(T))^(1 // 2)
 strict_tol(T) = eps(real(T))^(2 // 3)
 relax_tol(T) = eps(real(T))^(1 // 4)
 
-# loss function
-function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:Real}
-    @assert S == real(T)
-    return sqrt(sum(abs2.(G .- G₀) .* w))
-end
-
 # default configuration
 function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                μ=[T(1 // 2), T(-5 // 2)]::Vector{T},

@@ -30,7 +30,7 @@ struct CtxData{T<:Real}
                      mesh_bound=ACFSDefults.mesh_bound[]::Real,
                      mesh_length=ACFSDefults.mesh_length[]::Int,
                      mesh_type::Mesh=ACFSDefults.mesh_type[]::Mesh,
-                     η::T=T(1e-2),
+                     η::T=T(1e-4),
                      σ::T=T(1e-4),
                      fp_ww::Real=T(0.01),
                      fp_mp::Real=T(0.1)) where {T<:Real}

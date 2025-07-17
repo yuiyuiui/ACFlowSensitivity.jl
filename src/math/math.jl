@@ -42,17 +42,6 @@ function fdgradient(f::Function, x::Vector{T}) where {T<:Number}
     return J
 end
 
-# gradient of L2 loss function(vector to vector)
-# C^n -> R^m -> loss, and this interface is easy to generalize
-function ∇L2loss(J::Matrix{T}, w::Vector{R}) where {T<:Number,R<:Real}
-    @assert R == real(T)
-    n = size(J, 2)
-    Dsw = Diagonal(sqrt.(w))
-    _, S, V = svd(Dsw * hcat(real(J), imag(J)))
-    T<:Real && return S[1], V[1:n, 1] * S[1]
-    return S[1], (V[1:n, 1] + im * V[(n + 1):2n, 1]) * S[1]
-end
-
 include("prony.jl")
 include("statistic.jl")
 include("poles.jl")

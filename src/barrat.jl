@@ -13,8 +13,9 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
         (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
-    ctx.spt isa Cont && return ctx.mesh, extract_spectrum(brf, ctx)
-    ctx.spt isa Delta && return ctx.mesh, Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
+    ctx.spt isa Cont && return ctx.mesh, brf2A(brf, ctx)
+    ctx.spt isa Delta &&
+        return ctx.mesh, brf2A(brf, ctx), Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
     # For Mixed spectrum:
 end
 
@@ -97,8 +98,9 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
 end
 
-function extract_spectrum(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T}) where {T}
+function brf2A(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T}) where {T}
     ctx.spt isa Cont && return -imag.(brf.(ctx.mesh))/T(π)
+    ctx.spt isa Delta && return -imag.(brf.(ctx.mesh .+ im*ctx.η))/T(π)
     return error("Now only support continuous spectrum")
 end
 
@@ -181,8 +183,8 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
     alg.denoisy && error("denoisy is not supported for differentiation")
     alg.minsgl > 0 && error("minsgl is not supported for differentiation")
     brf, idx = aaa(ctx.iwn, GFV; alg=alg)
+    reA = brf2A(brf, ctx)
     if ctx.spt isa Cont
-        reA = -imag(BarRatFunc(aaa4diff(GFV, idx, ctx.iwn)...).(ctx.mesh))/T(π)
         function fc(x)
             w, g, v = aaa4diff(x, idx, ctx.iwn)
             res = [-imag(sum((w .* v) ./ (ctx.mesh[i] .- g))/sum(w ./ (ctx.mesh[i] .- g)))/T(π)
@@ -190,7 +192,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
             return res
         end
         reAdiff = Zygote.jacobian(fc, GFV)[1]
-        return ctx.mesh, reA, reAdiff, ∇L2loss(reAdiff, ctx.mesh_weights)[2]
+        return ctx.mesh, reA, reAdiff
     elseif ctx.spt isa Delta
         poles = Poles(GFV, ctx.iwn, alg.pcut)
         p, _ = poles(brf.w, brf.g)
@@ -221,7 +223,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
         end
         γ = pG2γ(p, GFV)
         ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian(pG2γ, p, GFV)
-        return ctx.mesh, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)
+        return ctx.mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)
     else
         error("Now only support continuous and delta spectrum")
     end
