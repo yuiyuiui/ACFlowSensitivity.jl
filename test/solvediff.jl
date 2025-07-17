@@ -144,10 +144,25 @@ end
     @test γ isa Vector{T}
     @test ∂pDiv∂G isa Matrix{Complex{T}}
     @test ∂γDiv∂G isa Matrix{Complex{T}}
-    @show norm(orp - p)
-    @show norm(orγ - γ)
     G2p = G -> solve(G, ctx, alg)[3][1]
     G2γ = G -> solve(G, ctx, alg)[3][2]
     @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=1e-1) # extremly unstable
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+end
+
+@testset "differentiation of SAC with Delta spectrum" begin
+    for T in [Float32, Float64]
+        Random.seed!(6)
+        pn = 2
+        alg = SAC(pn)
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine, fp_ww=0.2, fp_mp=2.0)
+        mesh, Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+        @test size(∂pDiv∂G) == (pn, length(GFV))
+        @test size(∂γDiv∂G) == (pn, length(GFV))
+    end
 end
