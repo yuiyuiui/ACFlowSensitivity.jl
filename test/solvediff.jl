@@ -146,3 +146,22 @@ end
         @test size(∂γDiv∂G) == (pn, length(GFV))
     end
 end
+
+@testset "differentiation of SOM" begin # It can run no matter its spectrumtype is Delta or Cont
+    for T in [Float32, Float64]
+        Random.seed!(6)
+        alg = SOM()
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5)
+        mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test reA isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+        @test size(∂pDiv∂G) == (length(p), length(GFV))
+        @test size(∂γDiv∂G) == (length(p), length(GFV))
+    end
+end
+
+# add plot!!!

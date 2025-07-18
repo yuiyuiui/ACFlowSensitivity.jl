@@ -132,6 +132,43 @@ function SAC(npole::Int;
     return SAC(nfine, npole, nwarm, nstep, ndump, nalph, alpha, ratio)
 end
 
+struct SOM <: Solver
+    ntry::Int
+    nstep::Int
+    nbox::Int
+    sbox::Real
+    wbox::Real
+end
+function SOM(;
+             ntry::Int=3000,
+             nstep::Int=1000,
+             nbox::Int=200,
+             sbox::Real=0.0025,
+             wbox::Real=0.02)
+    return SOM(ntry, nstep, nbox, sbox, wbox)
+end
+
+StochSolver = Union{SSK,SAC,SOM}
+# solve differentiation
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
+                   alg::StochSolver) where {T<:Real}
+    N = ctx.N
+    mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+    n = length(rep)
+    function f(p, G)
+        res = 0
+        for j in 1:N
+            res += abs2(sum(1 ./ (ctx.iwn[j] .- p)) / n - G[j])
+        end
+        return res
+    end
+    f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, G), p)[1]
+    f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
+    f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
+    return mesh, Aout, (rep, reγ),
+           (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
+end
+
 # ================================
 # Defaults
 # ================================

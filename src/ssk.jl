@@ -980,22 +980,3 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
         end
     end
 end
-
-# solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
-    N = ctx.N
-    n = alg.npole
-    function f(p, G)
-        res = 0
-        for j in 1:N
-            res += abs2(sum(1 ./ (ctx.iwn[j] .- p)) / n - G[j])
-        end
-        return res
-    end
-    f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, G), p)[1]
-    f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
-    f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
-    mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-    return mesh, Aout, (rep, reγ),
-           (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
-end

@@ -1,3 +1,4 @@
+# integral.jl
 @testset "integral" begin
     for T in [Float32, Float64]
         f = x->x^2
@@ -36,6 +37,7 @@ end
     end
 end
 
+# optim.jl
 @testset "Nowton Method" begin
     for T in [Float32, Float64]
         n = 10
@@ -62,27 +64,6 @@ end
     end
 end
 
-@testset "fdgradient" begin
-    for T in [Float32, Float64]
-        f = x -> [x[1]+x[2], x[1]*x[2]]
-        J = x -> [1 1; x[2] x[1]]
-        x = rand(T, 2)
-        fdres = fdgradient(f, x)
-        @test fdres isa Matrix{T}
-        @test isapprox(fdres, J(x), atol=strict_tol(T))
-        @test jacobian_check_v2v(f, fdres, x)
-    end
-    for T in [ComplexF32, ComplexF64]
-        f = x->[real(x[1])+imag(x[2]), imag(x[1])*real(x[2])]
-        J = x->[1 im; im*real(x[2]) imag(x[1])]
-        x = rand(T, 2)
-        fdres = fdgradient(f, x)
-        @test fdres isa Matrix{T}
-        @test isapprox(fdres, J(x), atol=strict_tol(T))
-        @test jacobian_check_v2v(f, fdres, x)
-    end
-end
-
 @testset "partial derivative of sigmoid loss function" begin
     n = 10
     ϕ(x, p) = p[1] .+ p[2] ./ (1 .+ exp.(-p[4] .* (x .- p[3])))
@@ -105,7 +86,49 @@ end
     end
 end
 
-@testset "testset" begin
+# math.jl
+@testset "fdgradient" begin
+    for T in [Float32, Float64]
+        f = x -> [x[1]+x[2], x[1]*x[2]]
+        J = x -> [1 1; x[2] x[1]]
+        x = rand(T, 2)
+        fdres = fdgradient(f, x)
+        @test fdres isa Matrix{T}
+        @test isapprox(fdres, J(x), atol=strict_tol(T))
+        @test jacobian_check_v2v(f, fdres, x)
+    end
+    for T in [ComplexF32, ComplexF64]
+        f = x->[real(x[1])+imag(x[2]), imag(x[1])*real(x[2])]
+        J = x->[1 im; im*real(x[2]) imag(x[1])]
+        x = rand(T, 2)
+        fdres = fdgradient(f, x)
+        @test fdres isa Matrix{T}
+        @test isapprox(fdres, J(x), atol=strict_tol(T))
+        @test jacobian_check_v2v(f, fdres, x)
+    end
+end
+
+@testset "∇L2loss" begin
+    n=10
+    for T in [Float32, Float64, ComplexF32, ComplexF64]
+        rtol = (real(T) <: Float32) ? 1e-1 : 1e-2
+        A = rand(T, 2*n, n)
+        f = x->real(A*x)
+        x0 = rand(T, n)
+        y0 = f(x0)
+        w = ones(real(T), 2*n)
+        ls = x->loss(f(x), y0, w)
+        J = fdgradient(f, x0)
+        ∇ls = ACFlowSensitivity.∇L2loss(J, w)
+        @test ∇ls[1] isa real(T)
+        @test ∇ls[2] isa Vector{T}
+        @test isapprox(norm(∇ls[2]), ∇ls[1], atol=strict_tol(real(T)))
+        @test gradient_check(ls, ∇ls[2], x0; rtol=rtol)
+    end
+end
+
+# statistic.jl
+@testset "mean" begin
     N = 10
     for T in [Float32, Float64, ComplexF32, ComplexF64]
         x = rand(T, N)
@@ -117,7 +140,21 @@ end
         @test isapprox(u2, sum(x .* w) / sum(w), atol=strict_tol(T))
     end
 end
-Random.seed!(6)
+
+@testset "median" begin
+    for T in [Float32, Float64]
+        v = T.([3, 6, 8, 1])
+        x = ACFlowSensitivity.median(v)
+        @test x isa T
+        @test x == T(4.5)
+        w = T.([3, 7, 0, -3, 8])
+        x = ACFlowSensitivity.median(w)
+        @test x isa T
+        @test x == T(3)
+    end
+end
+
+# poles.jl
 @testset "Prony approximation" begin
     N = 20
     for T in [Float32, Float64]
