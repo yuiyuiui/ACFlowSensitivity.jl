@@ -148,7 +148,26 @@ function SOM(;
     return SOM(ntry, nstep, nbox, sbox, wbox)
 end
 
-StochSolver = Union{SSK,SAC,SOM}
+struct SPX <: Solver
+    method::String
+    nfine::Int
+    npole::Int
+    ntry::Int
+    nstep::Int
+    theta::Real
+    eta::Real
+end
+function SPX(npole::Int;
+             method::String="mean",
+             nfine::Int=100000,
+             ntry::Int=1000,
+             nstep::Int=10000,
+             theta::Real=1e6,
+             eta::Real=1e-4)
+    return SPX(method, nfine, npole, ntry, nstep, theta, eta)
+end
+
+StochSolver = Union{SSK,SAC,SOM,SPX}
 # solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                    alg::StochSolver) where {T<:Real}

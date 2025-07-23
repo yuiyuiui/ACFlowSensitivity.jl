@@ -20,7 +20,7 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                noise=T(0)::T,
                mb=T(8)::T,
                ml=801::Int,
-               npole::Int=4,
+               npole::Int=2,
                fp_ww::Real=T(0.01),
                fp_mp::Real=T(0.1))
     ctx = CtxData(spt, β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ,

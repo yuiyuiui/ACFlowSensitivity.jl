@@ -7,7 +7,7 @@ export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
 export make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed
-export BarRat, MaxEntChi2kink, SSK, SAC, SOM
+export BarRat, MaxEntChi2kink, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient, ∇L2loss
 
@@ -21,6 +21,7 @@ include("maxent.jl")
 include("ssk.jl")
 include("sac.jl")
 include("som.jl")
+include("spx.jl")
 
 include("adrules/adrules.jl")
 

@@ -34,4 +34,5 @@ Example of using `ACFlowSensitivity` to plot the error bound of a specific metho
 
 By using `ACFlowSensitivity`, you can get a error bound like this:
 
-![Error Bound Example](./error_plot/MaxEnt/eb-maxent-cont.svg)
+![Error Bound Example](./plot/MaxEnt/maxent_cont_eb.svg)
+

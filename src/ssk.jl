@@ -102,6 +102,7 @@ Main driver function for the StochSK solver.
 * Aout -> Spectral function.
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+    println("[ StochSK ]")
     fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
 
     # Initialize counters for Monte Carlo engine

@@ -174,10 +174,11 @@ end
 end
 
 @testset "som for delta" begin
+    pn = 2
     for T in [Float32, Float64]
         Random.seed!(6)
         alg = SOM()
-        A, ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5)
+        _, ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5, npole=pn)
         mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test mesh isa Vector{T}
         @test Aout isa Vector{T}
@@ -196,5 +197,20 @@ end
         @test mesh isa Vector{T}
         @test Aout isa Vector{T}
         @test loss(Aout, A.(mesh), ctx.mesh_weights) < 0.5
+    end
+end
+
+@testset "spx for delta" begin # It's extremely slow for Cont() because there're much more polese for Cont().
+    pn = 2
+    for T in [Float32, Float64]
+        T = Float32
+        alg = SPX(pn)
+        (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=2.0, fp_ww=0.1, npole=pn) # It's recommended to use tangent mesh.
+        Random.seed!(6)
+        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test Aout isa Vector{T}
+        @test rep isa Vector{T}
+        @test reγ isa Vector{T}
     end
 end
