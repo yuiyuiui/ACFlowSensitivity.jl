@@ -164,20 +164,23 @@ end
     end
 end
 
-@testset "differentiation of SPX with delta spectrum" begin
+@testset "differentiation of SPX with delta spectrum, method = mean" begin
     pn = 2
     for T in [Float32, Float64]
-        Random.seed!(6)
-        alg = SPX(pn)
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); fp_mp=2.0, fp_ww=0.1, npole=pn)
-        mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test mesh isa Vector{T}
-        @test reA isa Vector{T}
-        @test p isa Vector{T}
-        @test γ isa Vector{T}
-        @test ∂pDiv∂G isa Matrix{Complex{T}}
-        @test ∂γDiv∂G isa Matrix{Complex{T}}
-        @test size(∂pDiv∂G) == (length(p), length(GFV))
-        @test size(∂γDiv∂G) == (length(p), length(GFV))
+        for method in ["mean", "best"]
+            (fp_mp, fp_ww) = method == "mean" ? (2.0, 0.1) : (0.1, 0.01)
+            alg = SPX(pn; method=method)
+            (orp, orγ), ctx, GFV = dfcfg(T, Delta(); fp_mp=fp_mp, fp_ww=fp_ww, npole=pn)
+            Random.seed!(6)
+            mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+            @test mesh isa Vector{T}
+            @test reA isa Vector{T}
+            @test p isa Vector{T}
+            @test γ isa Vector{T}
+            @test ∂pDiv∂G isa Matrix{Complex{T}}
+            @test ∂γDiv∂G isa Matrix{Complex{T}}
+            @test size(∂pDiv∂G) == (length(p), length(GFV))
+            @test size(∂γDiv∂G) == (length(p), length(GFV))
+        end
     end
 end

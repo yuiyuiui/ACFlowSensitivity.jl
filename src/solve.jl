@@ -158,7 +158,7 @@ struct SPX <: Solver
     eta::Real
 end
 function SPX(npole::Int;
-             method::String="mean",
+             method::String="best",
              nfine::Int=100000,
              ntry::Int=1000,
              nstep::Int=10000,

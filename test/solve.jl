@@ -62,7 +62,7 @@ end
 
 @testset "cont barrat" begin
     for T in [Float32, Float64]
-        tol = T==Float32 ? 1e-1 : 1.1e-2
+        tol = T == Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
             mesh, reA = solve(GFV, ctx, BarRat())
@@ -76,10 +76,10 @@ end
 
 @testset "prony barrat" begin
     for T in [Float32, Float64]
-        tol = T==Float32 ? 3e-1 : 1e-1
+        tol = T == Float32 ? 3e-1 : 1e-1
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-            for prony_tol in [0, (T==Float32 ? 1e-4 : 1e-8)]
+            for prony_tol in [0, (T == Float32 ? 1e-4 : 1e-8)]
                 mesh, reA = solve(GFV, ctx,
                                   BarRat(; denoisy=true, prony_tol=prony_tol))
                 orA = A.(mesh)
@@ -93,11 +93,11 @@ end
 
 @testset "cont MaxEntChi2kink" begin
     for T in [Float32, Float64]
-        tol = T==Float32 ? 2e-1 : 5.1e-3
+        tol = T == Float32 ? 2e-1 : 5.1e-3
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-                mesh, reA = solve(GFV, ctx, MaxEntChi2kink(model_type=model_type))
+                mesh, reA = solve(GFV, ctx, MaxEntChi2kink(; model_type=model_type))
                 orA = A.(mesh)
                 @test eltype(reA) == eltype(mesh) == T
                 @test length(reA) == length(mesh) == length(ctx.mesh)
@@ -200,17 +200,32 @@ end
     end
 end
 
-@testset "spx for delta" begin # It's extremely slow for Cont() because there're much more polese for Cont().
+@testset "spx for delta with mean " begin # It's extremely slow for Cont() because there're much more polese for Cont().
     pn = 2
     for T in [Float32, Float64]
-        T = Float32
-        alg = SPX(pn)
-        (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=2.0, fp_ww=0.1, npole=pn) # It's recommended to use tangent mesh.
+        alg = SPX(pn; method="mean")
+        (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=2.0, fp_ww=0.1, npole=pn)
         Random.seed!(6)
         mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test mesh isa Vector{T}
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
+    end
+end
+
+# It's recommended to use best method for spx.
+@testset "spx for delta with best " begin
+    pn = 2
+    for T in [Float32, Float64]
+        alg = SPX(pn; method="best")
+        (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=0.1, npole=pn, ml=alg.nfine)
+        Random.seed!(6)
+        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test Aout isa Vector{T}
+        @test rep isa Vector{T}
+        @test reγ isa Vector{T}
+        @test norm(rep - poles) < 0.01
     end
 end
