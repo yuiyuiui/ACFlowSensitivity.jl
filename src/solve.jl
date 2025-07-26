@@ -46,6 +46,8 @@ end
 # ================================
 
 abstract type Solver end
+
+# BarRat ==========================
 # abanda add singular values of the lowner matrix less than `minsgl` for numerical stability
 # this method is under developing
 struct BarRat <: Solver
@@ -56,16 +58,35 @@ struct BarRat <: Solver
     denoisy::Bool
     prony_tol::Real
     pcut::Real
-    function BarRat(;
-                    minsgl::Real=0,
-                    aaa_tol::Real=ACFSDefults.tol[],
-                    max_degree::Int=150,
-                    lookaheaad::Int=10,
-                    denoisy::Bool=false,
-                    prony_tol::Real=-1,
-                    pcut::Real=1e-3)
-        return new(minsgl, aaa_tol, max_degree, lookaheaad, denoisy, prony_tol, pcut)
-    end
+end
+
+function BarRat(;
+                minsgl::Real=0,
+                aaa_tol::Real=ACFSDefults.tol[],
+                max_degree::Int=150,
+                lookaheaad::Int=10,
+                denoisy::Bool=false,
+                prony_tol::Real=-1,
+                pcut::Real=1e-3)
+    return BarRat(minsgl, aaa_tol, max_degree, lookaheaad, denoisy, prony_tol, pcut)
+end
+
+# NAC ==========================
+struct NAC
+    pick::Bool
+    hardy::Bool
+    hmax::Int
+    alpha::Real
+    eta::Real
+end
+
+function NAC(; pick=true,
+             hardy=true,
+             hmax=50,
+             alpha=1e-4,
+             eta=1e-2,)
+    @info("For delta type spectrum, `pick = false` and `hardy = false` are recommended")
+    return NAC(pick, hardy, hmax, alpha, eta)
 end
 
 # MaxEnt ==========================
@@ -77,13 +98,13 @@ struct MaxEntChi2kink <: MaxEnt
     L::Int
     α₁::Real
     model_type::String
-    function MaxEntChi2kink(;
-                            maxiter::Int=1,
-                            L::Int=16,
-                            α₁::Real=1e12,
-                            model_type::String="Gaussian",)
-        return new(maxiter, L, α₁, model_type)
-    end
+end
+function MaxEntChi2kink(;
+                        maxiter::Int=1,
+                        L::Int=16,
+                        α₁::Real=1e12,
+                        model_type::String="Gaussian",)
+    return MaxEntChi2kink(maxiter, L, α₁, model_type)
 end
 
 # SSK ==========================
@@ -132,6 +153,7 @@ function SAC(npole::Int;
     return SAC(nfine, npole, nwarm, nstep, ndump, nalph, alpha, ratio)
 end
 
+# SOM ==========================
 struct SOM <: Solver
     ntry::Int
     nstep::Int
@@ -148,6 +170,7 @@ function SOM(;
     return SOM(ntry, nstep, nbox, sbox, wbox)
 end
 
+# SPX ==========================
 struct SPX <: Solver
     method::String
     nfine::Int

@@ -1,108 +1,23 @@
-#
-# Project : Gardenia
-# Source  : nac.jl
-# Author  : Li Huang (huangli@caep.cn)
-# Status  : Unstable
-#
-# Last modified: 2024/09/30
-#
-
-#
-# Note:
-#
-# The following codes for the NevanAC solver are mostly adapted from
-#
-#     https://github.com/SpM-lab/Nevanlinna.jl
-#
-# See
-#
-#     Nevanlinna.jl: A Julia implementation of Nevanlinna analytic continuation
-#     Kosuke Nogaki, Jiani Fei, Emanuel Gull, Hiroshi Shinaoka
-#     SciPost Phys. Codebases 19 (2023)
-#
-# for more details. And we thank Dr. Shuang Liang for her help.
-#
-
-#=
-### *Customized Structs* : *NevanAC Solver*
-=#
-
-"""
-    NevanACContext
-
-Mutable struct. It is used within the NevanAC solver only.
-
-### Members
-* Gᵥ   -> Input data for correlator.
-* grid -> Grid for input data.
-* mesh -> Mesh for output spectrum.
-* Φ    -> `Φ` vector in Schur algorithm.
-* 𝒜    -> Coefficients matrix `abcd` in Schur algorithm.
-* ℋ    -> Hardy matrix for Hardy basis optimization.
-* 𝑎𝑏   -> Coefficients matrix for expanding `θ` with Hardy basis.
-* hmin -> Minimal value of the order of Hardy basis functions.
-* hopt -> Optimal value of the order of Hardy basis functions.
-"""
-mutable struct NevanACContext
+mutable struct NevanACContext{T<:Real,I<:Int}
     Gᵥ::Vector{APC}
     grid::AbstractGrid
     mesh::AbstractMesh
     Φ::Vector{APC}
     𝒜::Array{APC,3}
     ℋ::Array{APC,2}
-    𝑎𝑏::Vector{C64}
-    hmin::I64
-    hopt::I64
+    𝑎𝑏::Vector{Complex{T}}
+    hmin::I
+    hopt::I
 end
 
-#=
-### *Global Drivers*
-=#
-
-"""
-    solve(S::NevanACSolver, rd::RawData)
-
-Solve the analytic continuation problem by the Nevanlinna analytical
-continuation method. It is the driver for the NevanAC solver.
-
-This solver suits Matsubara Green's functions for fermionic systems. It
-can not be used directly to treat the bosonic correlators. It will return
-A(ω) all the time, similar to the StochPX and BarRat solvers.
-
-This solver is numerically unstable. Sometimes it is hard to get converged
-solution, especially when the noise is medium.
-
-### Arguments
-* S -> A NevanACSolver struct.
-* rd -> A RawData struct, containing raw data for input correlator.
-
-### Returns
-* mesh -> Real frequency mesh, ω.
-* Aout -> Spectral function, A(ω).
-* Gout -> Retarded Green's function, G(ω).
-"""
-function solve(S::NevanACSolver, rd::RawData)
+function solve(GFV::Vector{Complex{T}}, ctx::ContextData{T}, alg::NevanAC) where {T<:Real}
     println("[ NevanAC ]")
-    #
     nac = init(S, rd)
     run(nac)
-    Aout, Gout = last(nac)
-    #
-    return nac.mesh.mesh, Aout, Gout
+    Aout, _ = last(nac)
+    return nac.mesh.mesh, Aout
 end
 
-"""
-    init(S::NevanACSolver, rd::RawData)
-
-Initialize the NevanAC solver and return a NevanACContext struct.
-
-### Arguments
-* S -> A NevanACSolver struct.
-* rd -> A RawData struct, containing raw data for input correlator.
-
-### Returns
-* mec -> A NevanACContext struct.
-"""
 function init(S::NevanACSolver, rd::RawData)
     # Setup numerical precision. Note that the NAC method is extremely
     # sensitive to the float point precision.
@@ -142,19 +57,6 @@ function init(S::NevanACSolver, rd::RawData)
     return NevanACContext(Gᵥ, grid, mesh, Φ, 𝒜, ℋ, 𝑎𝑏, 1, 1)
 end
 
-"""
-    run(nac::NevanACContext)
-
-Perform Hardy basis optimization to smooth the spectrum. the members `ℋ`,
-`𝑎𝑏`, `hmin`, and `hopt` of the NevanACContext struct (`nac`) should be
-updated in this function.
-
-### Arguments
-* nac -> A NevanACContext struct.
-
-### Returns
-N/A
-"""
 function run(nac::NevanACContext)
     hardy = get_n("hardy")
     #
@@ -169,19 +71,6 @@ function run(nac::NevanACContext)
     end
 end
 
-"""
-    last(nac::NevanACContext)
-
-Postprocess the results generated during the Nevanlinna analytical
-continuation simulations.
-
-### Arguments
-* nac -> A NevanACContext struct.
-
-### Returns
-* Aout -> Spectral function, A(ω).
-* Gout -> Retarded Green's function, G(ω).
-"""
 function last(nac::NevanACContext)
     # By default, we should write the analytic continuation results
     # into the external files.
@@ -206,209 +95,6 @@ function last(nac::NevanACContext)
     return Aout, -_G
 end
 
-#=
-### *Service Functions*
-=#
-
-#=
-*Remarks* :
-
-**Mobius transformation**
-
-```math
-\begin{equation}
-z \mapsto \frac{z - i}{z + i}.
-\end{equation}
-```
-
-It maps `z` from ``\overline{\mathcal{C}^{+}}`` to ``\overline{\mathcal{D}}``.
-See `calc_mobius()`.
-
----
-
-**Inverse Mobius transformation**
-
-```math
-\begin{equation}
-z \mapsto i \frac{1 + z}{1 - z}.
-\end{equation}
-```
-
-It maps `z` from ``\overline{\mathcal{D}}`` to ``\overline{\mathcal{C}^{+}}``.
-See `calc_inv_mobius()`.
-
----
-
-**Pick matrix**
-
-```math
-\begin{equation}
-\mathcal{P} =
-\left[
-    \frac{1-\lambda_i \lambda^*_j}{1-h(Y_i)h(Y_j)^*}
-\right]_{i,j}.
-\end{equation}
-```
-
-Here, ``Y_i`` is the *i*th Matsubara frequency, ``C_i`` is the value of
-``\mathcal{NG}`` at ``Y_i``, and ``\lambda_i`` is the value of ``\theta``
-at ``Y_i``:
-
-```math
-\begin{equation}
-\lambda_i = \theta(Y_i) = \frac{C_i - i}{C_i + i},
-\end{equation}
-```
-
-```math
-\begin{equation}
-h(Y_i) = \frac{Y_i - i}{Y_i + i}.
-\end{equation}
-```
-
-See `calc_pick()`.
-
----
-
-**Φ vector**
-
-At first, we have
-
-```math
-\begin{equation}
-\phi_{\alpha} = \theta_{\alpha}(Y_{\alpha}).
-\end{equation}
-```
-
-So
-
-```math
-\begin{equation}
-\phi_1 = \theta_1 (Y_1),
-\end{equation}
-```
-
-```math
-\begin{equation}
-\phi_{\beta} =
-\frac{-d_{\beta}\theta(Y_{\beta}) + b_{\beta}}{c_{\beta}\theta(Y_{\beta}) - \alpha_{\beta}}
-\end{equation}
-```
-
-where
-
-```math
-\begin{equation}
-\begin{pmatrix}
-a_{\beta} & b_{\beta} \\
-c_{\beta} & d_{\beta}
-\end{pmatrix}
-= \prod^{\beta-1}_{\alpha=1}
-\begin{pmatrix}
-\frac{Y_{\beta}-Y_{\alpha}}{Y_{\beta}-Y^*_{\alpha}} & \phi_{\alpha} \\
-\phi^*_{\alpha}\frac{Y_{\beta} - Y_{\alpha}}{Y_{\beta} - Y^*_{\alpha}} & 1
-\end{pmatrix},
-\end{equation}
-```
-
-See `calc_phis()`.
-
----
-
-**Contractive function θ(z)**
-
-```math
-\begin{equation}
-\theta(z)[z; θ_{M+1}(z)] =
-\frac{a(z)\theta_{M+1}(z) + b(z)}{c(z)\theta_{M+1}(z) + d(z)}
-\end{equation}
-```
-
-where
-
-```math
-\begin{equation}
-\begin{pmatrix}
-a(z) & b(z) \\
-c(z) & d(z)
-\end{pmatrix}
-= \prod^{M}_{j=1}
-\begin{pmatrix}
-\frac{z - Y_j}{z - Y^*_j} & \phi_j \\
-\phi^*_j \frac{z - Y_j}{z - Y^*_j} & 1
-\end{pmatrix}
-\end{equation}
-```
-
-See `calc_abcd()` and `calc_theta()`.
-
----
-
-**Hardy basis**
-
-```math
-\begin{equation}
-f^k(z) = \frac{1}{\sqrt{\pi}(z + i)}
-    \left( \frac{z - i}{z + i} \right)^k.
-\end{equation}
-```
-
-See `calc_hbasis()` and `calc_hmatrix()`.
-
----
-
-**Expanding ``\theta_{M+1}`` using Hardy basis**
-
-```math
-\theta_{M+1} = \sum^{H}_{k=0} \left[a_k f^k(z) + b_k f^k(z)^*\right]
-```
-
-See `calc_theta()`.
-
----
-
-**Smooth norm**
-
-```math
-\begin{equation}
-F[A_{\theta_{M+1}}(\omega)] =
-    \left|
-        1 - \int A_{\theta_{M+1}}(\omega) d\omega
-    \right|^2 +
-    \alpha \int \left[A^{''}_{\theta_{M+1}}(\omega)\right]^2 d\omega,
-\end{equation}
-```
-where the first term enforces proper normalization while the second
-term promotes smoothness by minimizing second derivatives. Here α
-is a regulation parameter.
-
-See `smooth_norm()`.
-=#
-
-"""
-    precompute(
-        grid::AbstractGrid,
-        mesh::AbstractMesh,
-        Gᵥ::Vector{APC}
-    )
-
-Precompute some key quantities, such as `Φ`, `𝒜`, `ℋ`, and `𝑎𝑏`. Note
-that `Φ` and `𝒜` won't be changed any more. But `ℋ` and `𝑎𝑏` should be
-updated by the Hardy basis optimization to get a smooth spectrum. Here
-`Gᵥ` is input data, `grid` is the grid for input data, and `mesh` is
-the mesh for output spectrum.
-
-### Arguments
-See above explanations.
-
-### Returns
-* Φ -> `Φ` vector in Schur algorithm.
-* 𝒜 -> Coefficients matrix `abcd` in Schur algorithm.
-* ℋ -> Hardy matrix for Hardy basis optimization.
-* 𝑎𝑏 -> Coefficients matrix for expanding `θ` with Hardy basis.
-
-See also: [`NevanACContext`](@ref).
-"""
 function precompute(grid::AbstractGrid,
                     mesh::AbstractMesh,
                     Gᵥ::Vector{APC})
@@ -424,50 +110,14 @@ function precompute(grid::AbstractGrid,
     return Φ, 𝒜, ℋ, 𝑎𝑏
 end
 
-"""
-    calc_mobius(z::Vector{APC})
-
-A direct Mobius transformation.
-
-### Arguments
-* z -> Complex vector.
-
-### Returns
-* val -> φ(z), Mobius transformation of z.
-"""
 function calc_mobius(z::Vector{APC})
     return @. (z - im) / (z + im)
 end
 
-"""
-    calc_inv_mobius(z::Vector{APC})
-
-An inverse Mobius transformation.
-
-### Arguments
-* z -> Complex vector.
-
-### Returns
-* val -> φ⁻¹(z), inverse Mobius transformation of z.
-"""
 function calc_inv_mobius(z::Vector{APC})
     return @. im * (one(APC) + z) / (one(APC) - z)
 end
 
-"""
-    calc_pick(k::I64, ℎ::Vector{APC}, λ::Vector{APC})
-
-Try to calculate the Pick matrix, anc check whether it is a positive
-semidefinite matrix. See Eq. (5) in Fei's NAC paper.
-
-### Arguments
-* k -> Size of the Pick matrix.
-* ℎ -> Vector ℎ. It is actually 𝑧.
-* λ -> Vector λ. It is actually 𝒢(𝑧).
-
-### Returns
-* success -> Test that a factorization of the Pick matrix succeeded.
-"""
 function calc_pick(k::I64, ℎ::Vector{APC}, λ::Vector{APC})
     pick = zeros(APC, k, k)
 
@@ -485,19 +135,6 @@ function calc_pick(k::I64, ℎ::Vector{APC}, λ::Vector{APC})
     return issuccess(cholesky(pick; check=false))
 end
 
-"""
-    calc_phis(grid::AbstractGrid, Gᵥ::Vector{APC})
-
-Try to calculate the Φ vector, which is used to calculate the 𝒜 matrix.
-Note that Φ should not be changed anymore once it has been established.
-
-### Arguments
-* grid -> Grid in imaginary axis for input Green's function.
-* Gᵥ -> Input Green's function.
-
-### Returns
-* Φ -> `Φ` vector in Schur algorithm.
-"""
 function calc_phis(grid::AbstractGrid, Gᵥ::Vector{APC})
     ngrid = length(grid)
 
@@ -530,20 +167,6 @@ function calc_phis(grid::AbstractGrid, Gᵥ::Vector{APC})
     return Φ
 end
 
-"""
-    calc_abcd(grid::AbstractGrid, mesh::AbstractMesh, Φ::Vector{APC})
-
-Try to calculate the coefficients matrix abcd (here it is called 𝒜),
-which is then used to calculate θ. See Eq. (8) in Fei's NAC paper.
-
-### Arguments
-* grid -> Grid in imaginary axis for input Green's function.
-* mesh -> Real frequency mesh.
-* Φ -> Φ vector calculated by `calc_phis()`.
-
-### Returns
-* 𝒜 -> Coefficients matrix `abcd` in Schur algorithm.
-"""
 function calc_abcd(grid::AbstractGrid, mesh::AbstractMesh, Φ::Vector{APC})
     eta::APF = get_n("eta")
 
@@ -573,36 +196,11 @@ function calc_abcd(grid::AbstractGrid, mesh::AbstractMesh, Φ::Vector{APC})
     return 𝒜
 end
 
-"""
-    calc_hbasis(z::APC, k::I64)
-
-Try to calculate the Hardy basis ``f^k(z)``.
-
-### Arguments
-* z -> A complex variable.
-* k -> Current order for the Hardy basis.
-
-### Returns
-See above explanations.
-"""
 function calc_hbasis(z::APC, k::I64)
     w = (z - im) / (z + im)
     return 1.0 / (sqrt(π) * (z + im)) * w^k
 end
 
-"""
-    calc_hmatrix(mesh::AbstractMesh, H::I64)
-
-Try to calculate ``[f^k(z), f^k(z)^*]`` for 0 ≤ 𝑘 ≤ 𝐻-1, which is
-called the hardy matrix (ℋ) and is used to evaluate θₘ₊₁.
-
-### Arguments
-* mesh -> Real frequency mesh.
-* H -> Maximum order for the Hardy basis.
-
-### Returns
-* ℋ -> Hardy matrix for Hardy basis optimization.
-"""
 function calc_hmatrix(mesh::AbstractMesh, H::I64)
     # Build real axis
     eta::APF = get_n("eta")
@@ -621,21 +219,6 @@ function calc_hmatrix(mesh::AbstractMesh, H::I64)
     return ℋ
 end
 
-"""
-    calc_theta(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
-
-Try to calculate the contractive function θ(z). 𝒜 is the coefficients
-matrix abcd, ℋ is the Hardy matrix, and 𝑎𝑏 are complex coefficients
-for expanding θₘ₊₁. See Eq. (7) in Fei's NAC paper.
-
-### Arguments
-* 𝒜  -> Matrix 𝑎𝑏𝑐𝑑.
-* ℋ  -> Hardy matrix.
-* 𝑎𝑏 -> Expansion coefficients 𝑎 and 𝑏 for the contractive function θ.
-
-### Returns
-See above explanations.
-"""
 function calc_theta(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
     # Well, we should calculate θₘ₊₁ at first.
     θₘ₊₁ = ℋ * 𝑎𝑏
@@ -648,21 +231,6 @@ function calc_theta(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64}
     return θ
 end
 
-"""
-    calc_green(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
-
-Firstly we try to calculate θ. Then θ is back transformed to a Nevanlinna
-interpolant via the inverse Mobius transform. Here, `𝒜` (`abcd` matrix),
-`ℋ` (Hardy matrix), and `𝑎𝑏` are used to evaluate θ.
-
-### Arguments
-* 𝒜  -> Matrix 𝑎𝑏𝑐𝑑.
-* ℋ  -> Hardy matrix.
-* 𝑎𝑏 -> Expansion coefficients 𝑎 and 𝑏 for the contractive function θ.
-
-### Returns
-Gout -> Retarded Green's function, G(ω).
-"""
 function calc_green(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
     θ = calc_theta(𝒜, ℋ, 𝑎𝑏)
     gout = calc_inv_mobius(θ)
@@ -670,20 +238,6 @@ function calc_green(𝒜::Array{APC,3}, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64}
     return gout
 end
 
-"""
-    calc_noptim(ωₙ::Vector{APC}, Gₙ::Vector{APC})
-
-Evaluate the optimal value for the size of input data (how may frequency
-points are actually used in the analytic continuation simulations) via
-the Pick criterion.
-
-### Arguments
-* ωₙ -> Matsubara frequency points (the 𝑖 unit is not included).
-* Gₙ -> Matsubara Green's function.
-
-### Returns
-* ngrid -> Optimal number for the size of input data.
-"""
 function calc_noptim(ωₙ::Vector{APC}, Gₙ::Vector{APC})
     # Get size of input data
     ngrid = length(ωₙ)
@@ -717,23 +271,6 @@ function calc_noptim(ωₙ::Vector{APC}, Gₙ::Vector{APC})
     end
 end
 
-"""
-    calc_hmin!(nac::NevanACContext)
-
-Try to perform Hardy basis optimization. Such that the Hardy matrix ℋ
-and the corresponding coefficients 𝑎𝑏 are updated. They are used to
-calculate θ, which is then back transformed to generate smooth G (i.e.,
-the spectrum) at real axis.
-
-This function will determine the minimal value of H (hmin). Of course,
-ℋ and 𝑎𝑏 in NevanACContext struct are also changed.
-
-### Arguments
-* nac -> A NevanACContext struct.
-
-### Returns
-N/A
-"""
 function calc_hmin!(nac::NevanACContext)
     hmax = get_n("hmax")
 
@@ -759,24 +296,6 @@ function calc_hmin!(nac::NevanACContext)
     end
 end
 
-"""
-    calc_hopt!(nac::NevanACContext)
-
-Try to perform Hardy basis optimization. Such that the Hardy matrix ℋ
-and the corresponding coefficients 𝑎𝑏 are updated. They are used to
-calculate θ, which is then back transformed to generate smooth G (i.e.,
-the spectrum) at real axis.
-
-This function will determine the optimal value of H (hopt). Of course,
-ℋ and 𝑎𝑏 in NevanACContext struct are also changed. Here, H means order
-of the Hardy basis.
-
-### Arguments
-* nac -> A NevanACContext struct.
-
-### Returns
-N/A
-"""
 function calc_hopt!(nac::NevanACContext)
     hmax = get_n("hmax")
 
@@ -801,27 +320,6 @@ function calc_hopt!(nac::NevanACContext)
     end
 end
 
-"""
-    hardy_optimize!(
-        nac::NevanACContext,
-        ℋ::Array{APC,2},
-        𝑎𝑏::Vector{C64},
-        H::I64
-    )
-
-For given Hardy matrix ℋ, try to update the expanding coefficients 𝑎𝑏
-by minimizing the smooth norm.
-
-### Arguments
-* nac -> A NevanACContext struct.
-* ℋ   -> Hardy matrix, which contains the Hardy basis.
-* 𝑎𝑏  -> Expansion coefficients 𝑎 and 𝑏 for the contractive function θ.
-* H   -> Current order of the Hardy basis.
-
-### Returns
-* causality -> Test whether the solution is causal.
-* converged -> Check whether the optimization is converged.
-"""
 function hardy_optimize!(nac::NevanACContext,
                          ℋ::Array{APC,2},
                          𝑎𝑏::Vector{C64},
@@ -867,20 +365,6 @@ function hardy_optimize!(nac::NevanACContext,
     return causality, converged(res)
 end
 
-"""
-    smooth_norm(nac::NevanACContext, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
-
-Establish the smooth norm, which is used to improve the smoothness of
-the output spectrum. See Fei's paper for more details.
-
-### Arguments
-* nac -> A NevanACContext struct.
-* ℋ   -> Hardy matrix, which contains the Hardy basis.
-* 𝑎𝑏  -> Expansion coefficients 𝑎 and 𝑏 for the contractive function θ.
-
-### Returns
-* 𝐹 -> Value of smooth norm.
-"""
 function smooth_norm(nac::NevanACContext, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
     # Get regulation parameter
     α = get_n("alpha")
@@ -903,19 +387,6 @@ function smooth_norm(nac::NevanACContext, ℋ::Array{APC,2}, 𝑎𝑏::Vector{C6
     return F64(𝐹)
 end
 
-"""
-    check_pick(wn::Vector{APC}, gw::Vector{APC}, Nopt::I64)
-
-Check whether the input data are valid (the Pick criterion is satisfied).
-Here, `wn` is the Matsubara frequency, `gw` is the Matsubara function,
-and `Nopt` is the optimized number of Matsubara data points.
-
-### Arguments
-See above explanations.
-
-### Returns
-N/A
-"""
 function check_pick(wn::Vector{APC}, gw::Vector{APC}, Nopt::I64)
     freq = calc_mobius(wn[1:Nopt])
     val = calc_mobius(-gw[1:Nopt])
@@ -929,18 +400,6 @@ function check_pick(wn::Vector{APC}, gw::Vector{APC}, Nopt::I64)
     end
 end
 
-"""
-    check_causality(ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
-
-Check causality of the Hardy coefficients `𝑎𝑏`.
-
-### Arguments
-* ℋ -> Hardy matrix for Hardy basis optimization.
-* 𝑎𝑏 -> Coefficients matrix for expanding `θ` with Hardy basis.
-
-### Returns
-* causality -> Test whether the Hardy coefficients are causal.
-"""
 function check_causality(ℋ::Array{APC,2}, 𝑎𝑏::Vector{C64})
     θₘ₊₁ = ℋ * 𝑎𝑏
 

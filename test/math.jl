@@ -37,7 +37,25 @@ end
     end
 end
 
-# optim.jl
+@testset "trapz" begin
+    for T in [Float32, Float64]
+        f = x->x^2
+        a = T(0)
+        b = T(1)
+        mesh = collect(a:T(1e-4):b)
+        res = ACFlowSensitivity.trapz(mesh, f.(mesh))
+        res1 = ACFlowSensitivity.trapz(mesh, f.(mesh), true)
+        res_im = ACFlowSensitivity.trapz(mesh, (1+im)*f.(mesh))
+        @test typeof(res) == T
+        @test typeof(res1) == T
+        @test typeof(res_im) == Complex{T}
+        @test isapprox(res, 1//3, atol=tolerance(T))
+        @test isapprox(res1, 1//3, atol=tolerance(T))
+        @test isapprox(res_im, 1//3 * (1+im), atol=tolerance(T))
+    end
+end
+
+# newton.jl
 @testset "Nowton Method" begin
     for T in [Float32, Float64]
         n = 10
@@ -184,5 +202,19 @@ end
         @test isapprox(ctx.mesh[idx], μ, atol=d*sqrt(2))
         idx1 = ACFlowSensitivity.find_peaks(ctx.mesh, v, 0.1)
         @test idx == idx1
+    end
+end
+
+# bfgs.jl
+@testset "BFGS Method" begin
+    n = 10
+    for T in [Float32, Float64]
+        mini_point = rand(T, 10)
+        f(x) = sum((x-mini_point) .^ 2)/2
+        J(grad, x) = (grad.=x - mini_point; return grad)
+        res = ACFlowSensitivity.bfgs(f, J, zeros(T, n))
+        back = res.minimizer
+        @test back isa Vector{T}
+        @test isapprox(back, mini_point, atol=strict_tol(T))
     end
 end

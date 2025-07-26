@@ -229,3 +229,29 @@ end
         @test norm(rep - poles) < 0.01
     end
 end
+
+@testset "nac for cont" begin
+    for T in [Float32, Float64]
+        alg = T == Float32 ? NAC(; hardy=false) : NAC()
+        # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
+        A, ctx, GFV = dfcfg(T, Cont())
+        mesh, Aout = solve(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test Aout isa Vector{T}
+        T == Float64 && @test loss(Aout, A.(mesh), ctx.mesh_weights) < 0.05
+    end
+end
+
+@testset "nac for delta" begin
+    for T in [Float32, Float64]
+        alg = NAC(; pick=false, hardy=false)
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); mb=T(5))
+        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test Aout isa Vector{T}
+        @test rep isa Vector{T}
+        @test reγ isa Vector{T}
+        @test norm(orp - rep) < 0.01
+        @test norm(orγ - reγ) == 0
+    end
+end

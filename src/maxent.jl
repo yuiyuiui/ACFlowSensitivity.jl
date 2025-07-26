@@ -189,7 +189,7 @@ function _∂αoptDiv∂χ²vec(χ²vec::Vector{T}, pc::PreComput{T},
     p = curve_fit(fitfun, log10.(αvec), log10.(χ²vec), guess_fit).param
     adjust = T(5//2)
     αopt = 10^(p[3]-adjust/p[4])
-    ∂αoptDiv∂p = gradient((par->10^(par[3]-adjust/par[4])), p)[1]
+    ∂αoptDiv∂p = Zygote.gradient((par->10^(par[3]-adjust/par[4])), p)[1]
     arg = (p, log10.(αvec), log10.(χ²vec))
     ∂pDiv∂χ²vec = -pinv(∂²lossϕDiv∂p²(arg...)) * ∂²lossϕDiv∂p∂y(arg...) *
                   Diagonal(1 ./ (χ²vec * T(log(10))))

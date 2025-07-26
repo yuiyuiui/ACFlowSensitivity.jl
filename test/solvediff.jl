@@ -5,12 +5,12 @@
     G0 = vcat(real(GFV), imag(GFV))
     pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
     ∂χ²_expect = ACFlowSensitivity._∂χ²vecDiv∂G(pc)[1]
-    jacobian_check_v2v(G -> ACFlowSensitivity.G2χ²vec(ACFlowSensitivity.PreComput(G[1:N] +
-                                                                                  im *
-                                                                                  G[(N + 1):end],
-                                                                                  ctx,
-                                                                                  MaxEntChi2kink()))[2],
-                       ∂χ²_expect, G0)
+    @test jacobian_check_v2v(G -> ACFlowSensitivity.G2χ²vec(ACFlowSensitivity.PreComput(G[1:N] +
+                                                                                        im *
+                                                                                        G[(N + 1):end],
+                                                                                        ctx,
+                                                                                        MaxEntChi2kink()))[2],
+                             ∂χ²_expect, G0)
 end
 @testset "_∂αoptDiv∂χ²vec" begin
     T = Float64
