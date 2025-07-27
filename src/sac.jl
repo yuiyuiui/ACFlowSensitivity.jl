@@ -933,3 +933,7 @@ function try_move_x!(MC::StochACMC{I},
         MC.Sacc[j] = MC.Sacc[j] + 1
     end
 end
+
+#---------------------------------
+# solve differentiation
+solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real} = pγdiff(GFV, ctx, alg)

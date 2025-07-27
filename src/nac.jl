@@ -341,11 +341,11 @@ function calc_phis(grid::Vector{APC}, Gᵥ::Vector{APC})
             ∏[1, 2] = Φ[j]
             ∏[2, 1] = conj(Φ[j]) * ∏[1, 1]
             ∏[2, 2] = one(APC)
-            view(𝒜,:,:,k) .= view(𝒜,:,:,k) * ∏
+            view(𝒜, :, :, k) .= view(𝒜, :, :, k) * ∏
         end
-        num = 𝒜[1, 2, j+1] - 𝒜[2, 2, j+1] * Gᵥ[j+1]
-        den = 𝒜[2, 1, j+1] * Gᵥ[j+1] - 𝒜[1, 1, j+1]
-        Φ[j+1] = num / den
+        num = 𝒜[1, 2, j + 1] - 𝒜[2, 2, j + 1] * Gᵥ[j + 1]
+        den = 𝒜[2, 1, j + 1] * Gᵥ[j + 1] - 𝒜[1, 1, j + 1]
+        Φ[j + 1] = num / den
     end
 
     return Φ
@@ -431,12 +431,12 @@ function calc_hmatrix(mesh::Vector{APC}, H::Int, alg::NAC)
 
     # Allocate memory for the Hardy matrix
     nmesh = length(mesh)
-    ℋ = zeros(APC, nmesh, 2*H)
+    ℋ = zeros(APC, nmesh, 2 * H)
 
     # Build the Hardy matrix
     for k in 1:H
-        ℋ[:, 2*k-1] .= calc_hbasis.(𝑚, k-1)
-        ℋ[:, 2*k] .= conj(ℋ[:, 2*k-1])
+        ℋ[:, 2 * k - 1] .= calc_hbasis.(𝑚, k - 1)
+        ℋ[:, 2 * k] .= conj(ℋ[:, 2 * k - 1])
     end
 
     return ℋ
@@ -565,7 +565,7 @@ function calc_hmin!(nac::NevanACContext, alg::NAC)
 
         # Prepare initial ℋ and 𝑎𝑏
         ℋ = calc_hmatrix(nac.mesh, h, alg)
-        𝑎𝑏 = zeros(ComplexF64, 2*h)
+        𝑎𝑏 = zeros(ComplexF64, 2 * h)
 
         # Hardy basis optimization
         causality, optim = hardy_optimize!(nac, ℋ, 𝑎𝑏, h, alg)
@@ -783,4 +783,10 @@ function check_causality(ℋ::Array{APC,2}, 𝑎𝑏::Vector{ComplexF64})
     end
 
     return causality
+end
+
+#---------------------------------
+# solve differentiation
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
+    ctx.spt isa Delta && return pγdiff(GFV, ctx, alg)
 end

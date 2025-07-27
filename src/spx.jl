@@ -1207,3 +1207,6 @@ function try_move_x!(t::I,
         end
     end
 end
+
+# solve differentiation
+solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SPX) where {T<:Real} = pγdiff(GFV, ctx, alg)

@@ -186,3 +186,26 @@ end
         end
     end
 end
+
+#@testset "differentiation of NAC with delta spectrum" begin
+    pn = 2
+    #for T in [Float32, Float64]
+    T = Float64
+        alg = NAC(; pick = false, hardy = false)
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn)
+        Random.seed!(6)
+        mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test reA isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+        G2p = G -> solve(G, ctx, alg)[3][1]
+        G2γ = G -> solve(G, ctx, alg)[3][2]
+        @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+        @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-1, show_dy=true)
+    end
+end
+
+χ²(p, GFV, ctx.wn)

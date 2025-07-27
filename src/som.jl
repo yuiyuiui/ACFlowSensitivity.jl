@@ -1313,3 +1313,6 @@ function Pdx(xmin::T, xmax::T, rng::AbstractRNG) where {T<:Real}
 
     return copysign(log1p(-abs(𝑁)) / γ_X, 𝑁)
 end
+
+# solve differentiation
+solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Real} = pγdiff(GFV, ctx, alg)

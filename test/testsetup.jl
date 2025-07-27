@@ -63,6 +63,14 @@ function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:R
     return sqrt(sum(abs2.(G .- G₀) .* w))
 end
 
+function χ²(p, G, wn)
+    res = 0
+    for (Gⱼ, wⱼ) in zip(G, wn)
+        res += abs2(sum(1 ./ (im * wⱼ .- p)) / length(p) - Gⱼ)
+    end
+    return res
+end
+
 # default configuration
 function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                μ=[T(1 // 2), T(-5 // 2)]::Vector{T},
@@ -83,7 +91,7 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
     if spt isa Cont
         A = continous_spectral_density(μ, σ, amplitudes)
         Asum = sum(A.(ctx.mesh) .* ctx.mesh_weight)
-        orA = x -> A(x)/Asum
+        orA = x -> A(x) / Asum
         GFV = generate_GFV_cont(β, N, orA; noise=noise)
         return orA, ctx, GFV
     elseif spt isa Delta

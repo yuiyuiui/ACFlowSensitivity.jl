@@ -72,7 +72,7 @@ function BarRat(;
 end
 
 # NAC ==========================
-struct NAC
+struct NAC <: Solver
     pick::Bool
     hardy::Bool
     hmax::Int
@@ -190,10 +190,9 @@ function SPX(npole::Int;
     return SPX(method, nfine, npole, ntry, nstep, theta, eta)
 end
 
-StochSolver = Union{SSK,SAC,SOM,SPX}
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                   alg::StochSolver) where {T<:Real}
+function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
+                   alg::Solver) where {T<:Real}
     N = ctx.N
     mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)
