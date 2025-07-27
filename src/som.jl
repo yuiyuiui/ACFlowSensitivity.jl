@@ -89,7 +89,7 @@ mutable struct StochOMContext{T<:Real}
     σ¹::T
     wn::Vector{T}
     mesh::Vector{T}
-    mesh_weights::Vector{T}
+    mesh_weight::Vector{T}
     Cᵥ::Vector{Vector{Box{T}}}
     Δᵥ::Vector{T}
     𝕊ᵥ::Vector{CubicSplineInterpolation}
@@ -133,7 +133,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Rea
     # Prepare some key variables
     Cᵥ, Δᵥ, 𝕊ᵥ = init_context(alg, ctx)
     SC = StochOMContext(vcat(real(GFV), imag(GFV)), 1/ctx.σ, ctx.wn, ctx.mesh,
-                        ctx.mesh_weights, Cᵥ, Δᵥ, 𝕊ᵥ)
+                        ctx.mesh_weight, Cᵥ, Δᵥ, 𝕊ᵥ)
     println("Initialize context for the StochOM solver")
 
     Aout = run!(MC, SC, alg)

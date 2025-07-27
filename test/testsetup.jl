@@ -2,6 +2,61 @@ tolerance(T) = eps(real(T))^(1 // 2)
 strict_tol(T) = eps(real(T))^(2 // 3)
 relax_tol(T) = eps(real(T))^(1 // 4)
 
+# generate data
+# construct combanition of gauss waves
+function continous_spectral_density(μ::Vector{T},
+                                    σ::Vector{T},
+                                    amplitudes::Vector{T}) where {T<:Real}
+    @assert length(μ) == length(σ) == length(amplitudes)
+    n = length(μ)
+    function y(x::T)
+        res = T(0)
+        for i in 1:n
+            res += amplitudes[i] * exp(-(x - μ[i])^2 / (2 * σ[i]^2))
+        end
+        return res
+    end
+    return y
+end
+
+# generate values of G(iw_n)
+function generate_GFV_cont(β::T,
+                           N::Int,
+                           A::Function;
+                           int_low::T=(-T(20)),
+                           int_up::T=T(20),
+                           noise::T=T(0),) where {T<:Real}
+    grid = (collect(0:(N - 1)) .+ 1 // 2) * T(2π) / β
+    n = length(grid)
+    res = zeros(Complex{T}, n)
+    for i in 1:n
+        res[i] = ACFlowSensitivity.integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
+    end
+    for i in 1:n
+        res[i] += noise * randn(T) * res[i] * exp(T(2π) * im * rand(T))
+    end
+    return res
+end
+
+function generate_GFV_delta(β::T,
+                            N::Int,
+                            poles::Vector{T},
+                            γ_vec::Vector{T};
+                            noise::T=T(0),) where {T<:Real}
+    @assert length(poles) == length(γ_vec)
+    wn = (collect(0:(N - 1)) .+ 1 // 2) * T(2π) / β
+    res = zeros(Complex{T}, N)
+    for i in 1:N
+        for j in 1:length(poles)
+            res[i] += γ_vec[j] / (im * wn[i] - poles[j])
+        end
+    end
+    for i in 1:N
+        res[i] += noise * randn(T) * res[i] * exp(T(2π) * im * rand(T))
+    end
+    return res
+end
+
 # loss function
 function loss(G::Vector{T}, G₀::Vector{T}, w::Vector{S}) where {T<:Number,S<:Real}
     @assert S == real(T)
@@ -26,11 +81,13 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
     ctx = CtxData(spt, β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ,
                   fp_ww=fp_ww, fp_mp=fp_mp)
     if spt isa Cont
-        A=continous_spectral_density(μ, σ, amplitudes)
-        GFV = generate_GFV_cont(β, N, A; noise=noise)
-        return A, ctx, GFV
+        A = continous_spectral_density(μ, σ, amplitudes)
+        Asum = sum(A.(ctx.mesh) .* ctx.mesh_weight)
+        orA = x -> A(x)/Asum
+        GFV = generate_GFV_cont(β, N, orA; noise=noise)
+        return orA, ctx, GFV
     elseif spt isa Delta
-        poles = collect(1:npole) .+ rand(T, npole) * T(1//2)
+        poles = collect(1:npole) .+ rand(T, npole) * T(1 // 2)
         γ = ones(T, npole) ./ npole
         GFV = generate_GFV_delta(β, N, poles, γ; noise=noise)
         return (poles, γ), ctx, GFV
@@ -48,15 +105,22 @@ end
 =#
 # vector to vector
 function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
-                            atol=1e-8) where {T<:Number}
+                            atol=1e-8, show_err::Bool=true,
+                            show_dy::Bool=false) where {T<:Number}
     η = T(η)
-    dx = η * x/norm(x)
-    dy = f(x+dx) - f(x)
-    dy_expect = real(conj(J)*dx)
-    err = norm(dy-dy_expect)
-    rel_err = err/min(norm(dy), norm(dy_expect))
-    @show err
-    @show rel_err
+    dx = η * x / norm(x)
+    dy = f(x + dx) - f(x)
+    dy_expect = real(conj(J) * dx)
+    err = norm(dy - dy_expect)
+    rel_err = err / min(norm(dy), norm(dy_expect))
+    if show_err
+        @show err
+        @show rel_err
+    end
+    if show_dy
+        @show dy
+        @show dy_expect
+    end
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
 # vector to number
@@ -65,8 +129,8 @@ function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     η = real(T(η))
     #η = min(η0, findmin(abs.(x))[1])
     #atol = atol / η0 * η
-    dx = η * J/norm(J)
-    dy = f(x+dx) - f(x)
+    dx = η * J / norm(J)
+    dy = f(x + dx) - f(x)
     dy_expect = η * norm(J)
     @show dy
     @show dy_expect
@@ -78,7 +142,7 @@ function ave_grad(J::Matrix{T}; try_num::Int=1000) where {T<:Number}
     N = size(J, 2)
     for i in 1:try_num
         dx = randn(T, N)
-        res += abs.(real(conj(J)*dx))
+        res += abs.(real(conj(J) * dx))
     end
     return res / try_num
 end

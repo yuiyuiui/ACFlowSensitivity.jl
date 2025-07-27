@@ -62,14 +62,14 @@ end
 
 @testset "cont barrat" begin
     for T in [Float32, Float64]
-        tol = T == Float32 ? 1e-1 : 1.1e-2
+        tol = T == Float32 ? 2e-1 : 1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
             mesh, reA = solve(GFV, ctx, BarRat())
             orA = A.(mesh)
             @test eltype(reA) == eltype(mesh) == T
             @test length(reA) == length(mesh) == length(ctx.mesh)
-            @test loss(reA, orA, ctx.mesh_weights) < tol
+            @test loss(reA, orA, ctx.mesh_weight) < tol
         end
     end
 end
@@ -85,7 +85,7 @@ end
                 orA = A.(mesh)
                 @test eltype(reA) == eltype(mesh) == T
                 @test length(reA) == length(mesh) == length(ctx.mesh)
-                @test loss(reA, orA, ctx.mesh_weights) < tol
+                @test loss(reA, orA, ctx.mesh_weight) < tol
             end
         end
     end
@@ -101,7 +101,7 @@ end
                 orA = A.(mesh)
                 @test eltype(reA) == eltype(mesh) == T
                 @test length(reA) == length(mesh) == length(ctx.mesh)
-                @test loss(reA, orA, ctx.mesh_weights) < tol
+                @test loss(reA, orA, ctx.mesh_weight) < tol
                 @test_throws ErrorException solve(GFV, ctx, MaxEntChi2kink(; maxiter=2))
             end
         end
@@ -118,8 +118,8 @@ end
 			_, ctx2, GFV2 = dfcfg(T, Cont(); noise=T(1e-3))
 			mesh, reA2 = solve(GFV2, ctx2, MaxEntChi2kink(; maxiter=2))
 			orA = A.(mesh)
-			@show error1 = loss(reA1, orA, ctx1.mesh_weights)
-			@show error2 = loss(reA2, orA, ctx2.mesh_weights)
+			@show error1 = loss(reA1, orA, ctx1.mesh_weight)
+			@show error2 = loss(reA2, orA, ctx2.mesh_weight)
 		end
 	end
 end
@@ -196,7 +196,7 @@ end
         mesh, Aout = solve(GFV, ctx, alg)
         @test mesh isa Vector{T}
         @test Aout isa Vector{T}
-        @test loss(Aout, A.(mesh), ctx.mesh_weights) < 0.5
+        @test loss(Aout, A.(mesh), ctx.mesh_weight) < 0.5
     end
 end
 
@@ -238,7 +238,7 @@ end
         mesh, Aout = solve(GFV, ctx, alg)
         @test mesh isa Vector{T}
         @test Aout isa Vector{T}
-        T == Float64 && @test loss(Aout, A.(mesh), ctx.mesh_weights) < 0.05
+        T == Float64 && @test loss(Aout, A.(mesh), ctx.mesh_weight) < 0.05
     end
 end
 

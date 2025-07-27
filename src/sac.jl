@@ -60,7 +60,7 @@ Mutable struct. It is used within the StochAC solver only.
 * allow  -> Allowable indices.
 * grid   -> Imaginary axis grid for input data.
 * mesh   -> Real frequency mesh for output spectrum.
-* mesh_weights -> Weight of the real frequency mesh.
+* mesh_weight -> Weight of the real frequency mesh.
 * model  -> Default model function.
 * kernel -> Default kernel function.
 * Aout   -> Calculated spectral function, it is actually ⟨n(x)⟩.
@@ -76,7 +76,7 @@ mutable struct StochACContext{I<:Int,T<:Real}
     allow::Vector{I}
     grid::Vector{T}
     mesh::Vector{T}
-    mesh_weights::Vector{T}
+    mesh_weight::Vector{T}
     model::Vector{T}
     kernel::Array{T,2}
     Aout::Array{T,2}
@@ -492,7 +492,7 @@ function init_context(SE::StochACElement,
     model = make_model("flat", ctx)
 
     # Precompute δ functions
-    ϕ = cumsum(model .* ctx.mesh_weights)
+    ϕ = cumsum(model .* ctx.mesh_weight)
     Δ = calc_delta(fine_mesh, ϕ)
 
     # Build kernel matrix
@@ -511,7 +511,7 @@ function init_context(SE::StochACElement,
     αₗ = calc_alpha(alg, T)
 
     return StochACContext(Gᵥ, 1/ctx.σ, collect(1:alg.nfine), ctx.wn, ctx.mesh,
-                          ctx.mesh_weights, model,
+                          ctx.mesh_weight, model,
                           kernel, Aout, Δ, hτ, Hα, Uα, αₗ)
 end
 

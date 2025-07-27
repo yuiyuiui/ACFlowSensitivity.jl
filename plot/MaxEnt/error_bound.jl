@@ -49,7 +49,7 @@ function error_bound_cont(;
               label="permuted reA: $i",
               linewidth=0.5)
     end
-    _, _, ∂reADiv∂G, _ = solvediff(GFV, ctx, MaxEntChi2kink(; model_type="Gaussian"))
+    _, _, ∂reADiv∂G = solvediff(GFV, ctx, MaxEntChi2kink(; model_type="Gaussian"))
     ag = ave_grad(∂reADiv∂G)
     Aupper = reA .+ perm * ag
     Alower = max.(0.0, reA .- perm * ag)

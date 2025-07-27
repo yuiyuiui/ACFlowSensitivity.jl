@@ -95,7 +95,7 @@ mutable struct StochPXContext{I<:Int,T<:Real}
     allow::Vector{I}
     wn::Vector{T}
     mesh::Vector{T}
-    mesh_weights::Vector{T}
+    mesh_weight::Vector{T}
     fmesh::Vector{T}
     Λ::Array{T,2}
     Θ::T
@@ -144,7 +144,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData, alg::SPX) where {T<:Real}
     Gᵥ = vcat(real(GFV), (imag(GFV)))
     Gᵧ, Λ, Θ, χ², χ²ᵥ, Pᵥ, Aᵥ, 𝕊ᵥ = init_context(alg, SE, ctx.wn, fine_mesh, Gᵥ)
     SC = StochPXContext(Gᵥ, Gᵧ, T(1/ctx.σ), collect(1:alg.nfine), ctx.wn, ctx.mesh,
-                        ctx.mesh_weights, fine_mesh,
+                        ctx.mesh_weight, fine_mesh,
                         Λ, Θ, χ², χ²ᵥ, Pᵥ, Aᵥ, 𝕊ᵥ)
     println("Initialize context for the StochPX solver")
 

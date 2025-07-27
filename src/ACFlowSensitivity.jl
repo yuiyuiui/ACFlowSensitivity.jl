@@ -3,7 +3,6 @@ module ACFlowSensitivity
 using LinearAlgebra, Zygote, Random
 
 # export interfaces
-export continous_spectral_density, generate_GFV_cont, generate_GFV_delta
 export make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed
@@ -14,7 +13,6 @@ export bfgs, newton
 
 include("globalset.jl")
 include("math/math.jl")
-include("generaldata.jl")
 include("mesh.jl")
 include("solve.jl")
 include("barrat.jl")

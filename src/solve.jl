@@ -19,7 +19,7 @@ struct CtxData{T<:Real}
     wn::Vector{T}
     iwn::Vector{Complex{T}}
     mesh::Vector{T}
-    mesh_weights::Vector{T}
+    mesh_weight::Vector{T}
     η::T
     σ::T
     fp_ww::Real # find peaks window width
@@ -36,8 +36,8 @@ struct CtxData{T<:Real}
                      fp_mp::Real=T(0.1)) where {T<:Real}
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
-        mesh, mesh_weights = make_mesh(T(mesh_bound), mesh_length, mesh_type)
-        return new{T}(spt, β, N, wn, iwn, mesh, mesh_weights, η, σ, fp_ww, fp_mp)
+        mesh, mesh_weight = make_mesh(T(mesh_bound), mesh_length, mesh_type)
+        return new{T}(spt, β, N, wn, iwn, mesh, mesh_weight, η, σ, fp_ww, fp_mp)
     end
 end
 

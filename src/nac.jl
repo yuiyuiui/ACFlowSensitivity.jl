@@ -82,6 +82,8 @@ solution, especially when the noise is medium.
 * Gout -> Retarded Green's function, G(ω).
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
+    ctx.spt isa Delta && alg.hardy &&
+        error("Hardy basis optimization is used for Cont spectrum")
     println("[ NevanAC ]")
     nac = init(GFV, ctx, alg)
     run!(nac, alg)

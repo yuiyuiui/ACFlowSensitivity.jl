@@ -13,11 +13,11 @@
                     error("Invalid model type")
                 end
                 res = f.(ctx.mesh)
-                res .= res ./ sum(res .* ctx.mesh_weights)
+                res .= res ./ sum(res .* ctx.mesh_weight)
                 model = ACFlowSensitivity.make_model(model_type, ctx)
                 @test res == model
                 @test model isa Vector{T}
-                @test isapprox(sum(model .* ctx.mesh_weights), T(1), atol=strict_tol(T))
+                @test isapprox(sum(model .* ctx.mesh_weight), T(1), atol=strict_tol(T))
             end
         end
     end

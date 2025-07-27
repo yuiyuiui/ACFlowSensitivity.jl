@@ -46,7 +46,7 @@ mutable struct StochSKContext{I<:Int,T<:Real}
     allow::Vector{I}
     grid::Vector{T}
     mesh::Vector{T}
-    mesh_weights::Vector{T}
+    mesh_weight::Vector{T}
     kernel::Array{T,2}
     Aout::Vector{T}
     χ²::T
@@ -206,7 +206,7 @@ continuation simulations. It will generate the spectral functions.
 * Θvec -> List of Θ parameters.
 """
 function average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
-    SC.Aout = SC.Aout ./ (step * SC.mesh_weights)
+    SC.Aout = SC.Aout ./ (step * SC.mesh_weight)
     return SC.Aout, SC.χ²vec, SC.Θvec
 end
 
@@ -522,7 +522,7 @@ function init_context(SE::StochSKElement{I,T},
     χ², χ²min = 𝚾, 𝚾
 
     return StochSKContext(Gᵥ, Gᵧ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh,
-                          ctx.mesh_weights, kernel, Aout,
+                          ctx.mesh_weight, kernel, Aout,
                           χ², χ²min, χ²vec, θ, θvec)
 end
 

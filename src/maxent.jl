@@ -13,7 +13,7 @@ function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     L = alg.L
     α₁ = T(alg.α₁)
     σ = T(ctx.σ)
-    w = ctx.mesh_weights
+    w = ctx.mesh_weight
     ss = SingularSpace(GFV, ctx.iwn, ctx.mesh)
     reA = make_model(alg.model_type, ctx)
     αvec = Vector{T}(undef, L)

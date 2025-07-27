@@ -11,22 +11,22 @@ end
 
 function make_mesh(mb::T, ml::Int, mesh_type::UniformMesh) where {T<:Real}
     mesh=collect(range(-mb, mb, ml))
-    mesh_weights = (mesh[2:end] + mesh[1:(end - 1)]) * 1//2
-    pushfirst!(mesh_weights, mesh[1])
-    push!(mesh_weights, mesh[end])
-    mesh_weights = diff(mesh_weights)
-    return mesh, mesh_weights
+    mesh_weight = (mesh[2:end] + mesh[1:(end - 1)]) * 1//2
+    pushfirst!(mesh_weight, mesh[1])
+    push!(mesh_weight, mesh[end])
+    mesh_weight = diff(mesh_weight)
+    return mesh, mesh_weight
 end
 
 function make_mesh(mb::T, ml::Int, mesh_type::TangentMesh) where {T<:Real}
     p=T(mesh_type.p)
     mesh=tan.(collect(range(-T(π)/p, T(π)/p, ml)))
     mesh = mesh/mesh[end]*mb
-    mesh_weights = (mesh[2:end] + mesh[1:(end - 1)]) * 1//2
-    pushfirst!(mesh_weights, mesh[1])
-    push!(mesh_weights, mesh[end])
-    mesh_weights = diff(mesh_weights)
-    return mesh, mesh_weights
+    mesh_weight = (mesh[2:end] + mesh[1:(end - 1)]) * 1//2
+    pushfirst!(mesh_weight, mesh[1])
+    push!(mesh_weight, mesh[end])
+    mesh_weight = diff(mesh_weight)
+    return mesh, mesh_weight
 end
 
 struct SingularSpace{T<:Real}

@@ -110,11 +110,11 @@ end
 end
 
 @testset "differentiation of SSK with Delta spectrum" begin
-    Random.seed!(6)
     T = Float64
     pn = 2
     alg = SSK(pn)
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
+    Random.seed!(6)
     mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
     @test mesh isa Vector{T}
     @test reA isa Vector{T}
@@ -124,8 +124,10 @@ end
     @test ∂γDiv∂G isa Matrix{Complex{T}}
     G2p = G -> solve(G, ctx, alg)[3][1]
     G2γ = G -> solve(G, ctx, alg)[3][2]
-    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=1e-1) # extremly unstable
+    # extremly unstable because Stoch method is moving on a grid
+    # So too tiny change of input won't change the result like BarRat and MaxEnt.
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=0.1, show_dy=true)
 end
 
 @testset "differentiation of SAC with Delta spectrum" begin
