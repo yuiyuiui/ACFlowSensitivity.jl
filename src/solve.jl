@@ -72,7 +72,7 @@ function BarRat(;
 end
 
 # NAC ==========================
-struct NAC <: Solver
+mutable struct NAC <: Solver
     pick::Bool
     hardy::Bool
     hmax::Int
@@ -192,7 +192,7 @@ end
 
 # solve differentiation
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                   alg::Solver) where {T<:Real}
+                alg::Solver) where {T<:Real}
     N = ctx.N
     mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)

@@ -1315,4 +1315,6 @@ function Pdx(xmin::T, xmax::T, rng::AbstractRNG) where {T<:Real}
 end
 
 # solve differentiation
-solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Real} = pγdiff(GFV, ctx, alg)
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Real}
+    return pγdiff(GFV, ctx, alg)
+end

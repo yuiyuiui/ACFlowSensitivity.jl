@@ -983,4 +983,6 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 # solve differentiation
-solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real} = pγdiff(GFV, ctx, alg)
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+    return pγdiff(GFV, ctx, alg)
+end
