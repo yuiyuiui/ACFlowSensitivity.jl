@@ -192,22 +192,35 @@ end
 
 # solve differentiation
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                alg::Solver) where {T<:Real}
+                alg::Solver; equalγ::Bool=true) where {T<:Real}
     N = ctx.N
+    !(ctx.spt isa Delta) && error("`pγdiff` only work for delta type spectrum")
     mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)
-    function f(p, G)
+    function f(p, γ, G)
+        @assert length(p) == length(γ)
         res = 0
         for j in 1:N
-            res += abs2(sum(1 ./ (ctx.iwn[j] .- p)) / n - G[j])
+            res += abs2(sum(γ ./ (ctx.iwn[j] .- p)) - G[j])
         end
         return res
     end
-    f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, G), p)[1]
-    f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
-    f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
-    return mesh, Aout, (rep, reγ),
-           (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
+    if equalγ
+        f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, reγ, G), p)[1]
+        f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
+        f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
+        return mesh, Aout, (rep, reγ),
+               (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
+    else
+        repγ = vcat(rep, reγ)
+        g(pγ, G) = f(pγ[1:n], pγ[(n + 1):end], G)
+        g₁(pγ, G) = Zygote.gradient(pγ₁ -> g(pγ₁, G), pγ)[1]
+        g₁₁(pγ, G) = Zygote.jacobian(pγ₁ -> g₁(pγ₁, G), pγ)[1]
+        g₁₂(pγ, G) = Zygote.jacobian(G₁ -> g₁(pγ, G₁), G)[1]
+        ∂pγDiv∂G = -pinv(g₁₁(repγ, GFV)) * g₁₂(repγ, GFV)
+        return mesh, Aout, (rep, reγ),
+               (∂pγDiv∂G[1:n, :], ∂pγDiv∂G[(n + 1):end, :])
+    end
 end
 
 # ================================

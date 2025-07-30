@@ -53,3 +53,10 @@ function poles2realγ(p::Vector, GFV::Vector{T}, iwn::Vector{T}) where {T<:Compl
     γopt, _, _ = newton(x->KtK*x-KtG, x->KtK, γ₀)
     return γopt
 end
+
+function pG2γ(x, y, iwn) # x is p, y is G
+    ker = [1/(iwn[i] - x[j]) for i in 1:length(iwn), j in eachindex(x)]
+    K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
+    b = real(ker)'*real(y) + imag(ker)'*imag(y)
+    return pinv(K)*b
+end

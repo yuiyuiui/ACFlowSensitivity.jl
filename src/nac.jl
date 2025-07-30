@@ -91,7 +91,8 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
     if ctx.spt isa Cont
         return ctx.mesh, T.(Aout)
     elseif ctx.spt isa Delta
-        p = ctx.mesh[find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        idx = find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)
+        p = ctx.mesh[idx]
         function pG2γ(x, y) # x is p, y is G
             ker = [1/(ctx.iwn[i] - x[j]) for i in 1:length(ctx.iwn), j in eachindex(x)]
             K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
@@ -99,6 +100,8 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
             return pinv(K)*G
         end
         γ = pG2γ(p, GFV)
+        println("poles: ", p)
+        println("gamma: ", γ)
         return ctx.mesh, T.(Aout), (p, γ)
     else
         error("Unsupported spectral function type")
@@ -786,6 +789,27 @@ end
 
 #---------------------------------
 # solve differentiation
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
+    d = ctx.mesh_weight
+    w = ctx.mesh
+    wn = ctx.wn
+    K = [d[k]/(im*wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
+    Kʳ, Kⁱ = real(K), imag(K)
+    K⁰ = (Kʳ'*Kʳ + Kⁱ'*Kⁱ)
+    invK⁰ = pinv(K⁰)
+    ∂ADiv∂G = invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
+    if ctx.spt isa Cont
+        _, Aout = solve(GFV, ctx, alg)
+        return ctx.mesh, Aout, ∂ADiv∂G
+    elseif ctx.spt isa Delta
+        return pγdiff(GFV, ctx, alg; equalγ=false)
+    else
+        error("Unsupported spectral function type")
+    end
+end
+
+# The following code is for the process of NAC and it's too slow and extremely unstable.
+#=
 struct DiffCtx
     ngrid::Int
     Gₙ::Vector{APC}
@@ -816,9 +840,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<
     Gₙ = APC.(GFV)
     dctx = DiffCtx(length(nac.Gᵥ), Gₙ, nac.grid, nac.mesh, nac.ℋ, nac.𝑎𝑏, alg)
     Aout = T.(_solvecont(Gₙ, dctx))
-    @show "Aout done"
     ∂ADiv∂G = Complex{T}.(Zygote.jacobian(G -> _solvecont(G, dctx), Gₙ)[1])
-    @show "∂ADiv∂G done"
 
     if ctx.spt isa Cont
         return ctx.mesh, Aout, ∂ADiv∂G
@@ -839,3 +861,4 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<
         error("Unsupported spectral function type")
     end
 end
+=#

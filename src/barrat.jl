@@ -215,14 +215,8 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
             ∂pDiv∂wg[i, (3 * m + 1):(4 * m)] = real(im * ∂pDiv∂wg[i, (2 * m + 1):(3 * m)])
         end
         ∂pDiv∂G = ∂pDiv∂wg * ∂wgDiv∂G
-        function pG2γ(x, y) # x is p, y is G
-            ker = [1/(poles.iwn[i] - x[j]) for i in 1:length(poles.iwn), j in eachindex(x)]
-            K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
-            G = real(ker)'*real(y) + imag(ker)'*imag(y)
-            return pinv(K)*G
-        end
-        γ = pG2γ(p, GFV)
-        ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian(pG2γ, p, GFV)
+        γ = pG2γ(p, GFV, poles.iwn)
+        ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian((x, y) -> pG2γ(x, y, poles.iwn), p, GFV)
         return ctx.mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)
     else
         error("Now only support continuous and delta spectrum")

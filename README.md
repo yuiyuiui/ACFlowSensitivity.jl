@@ -28,9 +28,9 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |SAC|✅|✅||✅|✅||
 |SPX|❓|✅|❓|❓|✅|❓|
 |SOM|✅|✅||✅|✅||
-|NAC|✅|✅||✅❓|✅❓||
+|NAC|✅|✅||✅|✅||
 
-Example of using `ACFlowSensitivity` to plot the error bound of a specific method is shown in the file folder `error_plot`.
+Example of using `ACFlowSensitivity` to plot the error bound of a specific method is shown in the file folder `plot`.
 
 By using `ACFlowSensitivity`, you can get a error bound like this:
 

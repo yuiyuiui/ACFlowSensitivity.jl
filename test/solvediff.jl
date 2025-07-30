@@ -36,7 +36,6 @@ And of course mesh type "TangentMesh" is more suitable for Gaussian type spectru
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
         mesh, reA, ∂reADiv∂G = solvediff(GFV, ctx,
                                          MaxEntChi2kink(; model_type="Gaussian"))
-        orA = A.(mesh)
         @test mesh isa Vector{T}
         @test reA isa Vector{T}
         @test ∂reADiv∂G isa Matrix{Complex{T}}
@@ -55,7 +54,6 @@ end
                 alg = MaxEntChi2kink(; model_type=model_type)
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
                 mesh, reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-                orA = A.(mesh)
                 @test mesh isa Vector{T}
                 @test reA isa Vector{T}
                 @test ∂reADiv∂G isa Matrix{Complex{T}}
@@ -76,7 +74,6 @@ end
             alg = BarRat()
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
             mesh, reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-            orA = A.(mesh)
             @test mesh isa Vector{T}
             @test reA isa Vector{T}
             @test ∂reADiv∂G isa Matrix{Complex{T}}
@@ -103,8 +100,8 @@ end
             @test norm(orγ - γ) < strict_tol(T)
             G2p = G -> solve(G, ctx, BarRat())[3][1]
             G2γ = G -> solve(G, ctx, BarRat())[3][2]
-            jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
-            jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+            @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
+            @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
         end
     end
 end
@@ -191,7 +188,7 @@ end
     pn = 2
     for T in [Float32, Float64]
         alg = NAC(; pick=false, hardy=false)
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn)
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=2000)
         Random.seed!(6)
         mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
         @test mesh isa Vector{T}
@@ -200,25 +197,23 @@ end
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
         @test ∂γDiv∂G isa Matrix{Complex{T}}
-        # It's too unstable to test with jacobian_check_v2v
-        #=
         G2p = G -> solve(G, ctx, alg)[3][1]
         G2γ = G -> solve(G, ctx, alg)[3][2]
-        @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV; η=1e-16, show_dy=true)
-        @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-1, show_dy=true)
-        =#
+        @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV; η=1e-2, rtol=0.02)
+        @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
     end
 end
 
 @testset "differentiation of NAC with Cont spectrum" begin
     for T in [Float32, Float64]
+        rtol = T == Float32 ? 0.6 : 0.2
         alg = NAC()
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
         mesh, reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-        orA = A.(mesh)
         @test mesh isa Vector{T}
         @test reA isa Vector{T}
         @test ∂reADiv∂G isa Matrix{Complex{T}}
-        # It's too unstable to test with jacobian_check_v2v
+        G2A = G -> solve(G, ctx, alg)[2]
+        @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, rtol=rtol)
     end
 end
