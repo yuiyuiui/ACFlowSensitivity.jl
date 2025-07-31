@@ -185,6 +185,11 @@ function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T}
             step = step + T(1)
             measure!(SE, SC, alg)
         end
+
+        if iter % 200 == 0
+            prog = round(Int, iter / nstep * 100)
+            println("step = $iter, progress = $prog%", " χ² = $(SC.χ²)")
+        end
     end
 
     return average(step, SC)
@@ -252,8 +257,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 
         # Check whether the equilibrium state is reached
         δχ² = SC.χ² - SC.χ²min
-        # @printf("step : %5i ", i)
-        # @printf("χ² - χ²min -> %12.6e\n", δχ²)
+        println("step : $i, χ² - χ²min -> $δχ²")
         if δχ² < threshold
             println("Reach equilibrium state")
             break

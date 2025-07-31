@@ -132,7 +132,7 @@ end
 
 # SAC ==========================
 
-struct SAC
+struct SAC <: Solver
     nfine::Int
     npole::Int
     nwarm::Int

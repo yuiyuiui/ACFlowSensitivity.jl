@@ -140,7 +140,7 @@ end
 
 # I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
 # But in some random case I don't record it does succeed and the result is type stable.
-@testset "ssk for delta" begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for sac and we don't have accuracy need now. So ignore Cont.
+@testset "ssk for delta" begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for ssk and we don't have accuracy need now. So ignore Cont.
     Random.seed!(6)
     T = Float64
     pn = 2
@@ -191,7 +191,7 @@ end
     for T in [Float32, Float64]
         Random.seed!(6)
         alg = SOM()
-        # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
+        # It's recommended to use large mesh length for som. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
         A, ctx, GFV = dfcfg(T, Cont())
         mesh, Aout = solve(GFV, ctx, alg)
         @test mesh isa Vector{T}
@@ -200,7 +200,7 @@ end
     end
 end
 
-@testset "spx for delta with mean " begin # It's extremely slow for Cont() because there're much more polese for Cont().
+@testset "spx for delta with mean " begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for spx and we don't have accuracy need now. So ignore Cont.
     pn = 2
     for T in [Float32, Float64]
         alg = SPX(pn; method="mean")

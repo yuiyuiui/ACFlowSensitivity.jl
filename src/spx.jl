@@ -132,6 +132,10 @@ Similar to the BarRat and NevanAC solvers, this solver always returns A(ω).
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData, alg::SPX) where {T<:Real}
     println("[ StochPX ]")
+    ctx.spt isa Cont && (alg.method == "best") &&
+        error("SPX with method = \"mean\" is recommended for cont type spectrum")
+    ctx.spt isa Delta && (alg.method == "mean") &&
+        error("SPX with method = \"best\" is recommended for delta type spectrum")
     fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # spx needs high-precise linear grid
     MC = init_mc(alg)
     println("Create infrastructure for Monte Carlo sampling")

@@ -3,10 +3,10 @@ module ACFlowSensitivity
 using LinearAlgebra, Zygote, Random
 
 # export interfaces
-export make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
+export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed
-export BarRat, NAC, MaxEntChi2kink, SSK, SAC, SOM, SPX
+export Solver, BarRat, NAC, MaxEntChi2kink, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient, ∇L2loss
 export bfgs, newton

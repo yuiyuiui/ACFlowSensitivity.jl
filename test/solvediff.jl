@@ -163,7 +163,7 @@ end
     end
 end
 
-@testset "differentiation of SPX with delta spectrum, method = mean" begin
+@testset "differentiation of SPX with delta spectrum, method = mean" begin # # It can run no matter its spectrumtype is Delta or Cont
     pn = 2
     for T in [Float32, Float64]
         for method in ["mean", "best"]

@@ -26,7 +26,7 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |MaxEnt Chi2kink|✅|❌|❌|✅|❌|❌|
 |SSK|✅|✅||✅|✅||
 |SAC|✅|✅||✅|✅||
-|SPX|❓|✅|❓|❓|✅|❓|
+|SPX|✅|✅||✅|✅||
 |SOM|✅|✅||✅|✅||
 |NAC|✅|✅||✅|✅||
 
