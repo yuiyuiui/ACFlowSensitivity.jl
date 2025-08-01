@@ -165,7 +165,7 @@ function (poles::Poles{T,S})(w::Vector{T}, g::Vector{T}) where {T,S}
     # Now we know positions of these poles, and we need to figure out
     # their amplitudes. This is a typical optimization problem. We just
     # employ the BFGS algorithm to do this job.
-    γopt = poles2realγ(p, poles.GFV, poles.iwn)
+    γopt = pG2γ(p, poles.GFV, poles.iwn)
 
     # Print their weights / amplitudes.
     println("New poles:")

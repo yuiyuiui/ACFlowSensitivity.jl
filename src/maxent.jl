@@ -30,7 +30,8 @@ function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
 end
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                alg::MaxEntChi2kink) where {T<:Real}
-    alg.maxiter > 1 && error("maxiter>1 is not stable for cont spectrum solve")
+    ctx.spt isa Cont && alg.maxiter > 1 &&
+        error("maxiter>1 is not stable for cont spectrum solve")
     maxiter = alg.maxiter
     pc = PreComput(GFV, ctx, alg)
     reA = pc.model
@@ -38,7 +39,15 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         pc.model .= reA
         reA = chi2kink(pc)
     end
-    return ctx.mesh, reA
+    if ctx.spt isa Cont
+        return ctx.mesh, reA
+    elseif ctx.spt isa Delta
+        p = ctx.mesh[find_peaks(ctx.mesh, reA, ctx.fp_mp; wind=ctx.fp_ww)]
+        γ = pG2γ(p, GFV, ctx.iwn)
+        return ctx.mesh, reA, (p, γ)
+    else
+        error("Unsupported spectral function type")
+    end
 end
 
 struct MaxEnt_A{T<:Real} <: Function
@@ -129,9 +138,15 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                    alg::MaxEntChi2kink) where {T<:Real}
     alg.maxiter > 1 &&
         error("maxiter>1 is not stable for cont spectrum solve differentiation")
-    pc = PreComput(GFV, ctx, alg)
-    reA, ∂reADiv∂G = chi2kink_diff(pc)
-    return ctx.mesh, reA, ∂reADiv∂G
+    if ctx.spt isa Cont
+        pc = PreComput(GFV, ctx, alg)
+        reA, ∂reADiv∂G = chi2kink_diff(pc)
+        return ctx.mesh, reA, ∂reADiv∂G
+    elseif ctx.spt isa Delta
+        return pγdiff(GFV, ctx, alg; equalγ=false)
+    else
+        error("Unsupported spectral function type")
+    end
 end
 
 function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}

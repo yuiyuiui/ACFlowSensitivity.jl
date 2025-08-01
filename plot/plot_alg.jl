@@ -11,6 +11,9 @@ plot_alg_delta(alg)
 alg = MaxEntChi2kink()
 plot_alg_cont(alg; noise_num=5)
 
+alg = MaxEntChi2kink(; model_type="flat")
+plot_alg_delta(alg)
+
 # SSK
 alg = SSK(500)
 plot_alg_cont(alg)

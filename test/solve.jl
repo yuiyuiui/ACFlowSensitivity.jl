@@ -52,6 +52,7 @@ end
     for T in [Float32, Float64]
         (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=2)
         mesh, reA, (rep, reγ) = solve(GFV, ctx, BarRat())
+        @test mesh isa Vector{T}
         @test reA isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -104,6 +105,22 @@ end
                 @test loss(reA, orA, ctx.mesh_weight) < tol
                 @test_throws ErrorException solve(GFV, ctx, MaxEntChi2kink(; maxiter=2))
             end
+        end
+    end
+end
+
+@testset "delta MaxEntChi2kink" begin
+    for T in [Float32, Float64]
+        alg = MaxEntChi2kink(; model_type="flat")
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
+        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test Aout isa Vector{T}
+        @test rep isa Vector{T}
+        @test reγ isa Vector{T}
+        if T == Float64
+            @test norm(orp - rep) < 5e-3
+            @test norm(orγ - reγ) < 5e-3
         end
     end
 end

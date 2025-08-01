@@ -30,7 +30,7 @@ These methods and properties will be developed and tested in the future
 And of course mesh type "TangentMesh" is more suitable for Gaussian type spectrum
 =#
 
-@testset "differentiation of chi2kink with specific method" begin
+@testset "differentiation of MaxEntChi2kink with Cont spectrum, specific method" begin
     jac_rtol = 3e-4
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
@@ -45,7 +45,7 @@ And of course mesh type "TangentMesh" is more suitable for Gaussian type spectru
 end
 
 # Note: the choices of these ηs are really mystory!!!
-@testset "differentiation of chi2kink with general method" begin
+@testset "differentiation of MaxEntChi2kink with Cont spectrum, general method" begin
     jac_rtol = 1e-1
     for T in [Float32, Float64]
         solve_tol = T == Float32 ? 2e-1 : 5.1e-3
@@ -67,9 +67,30 @@ end
     end
 end
 
+@testset "differentiation of MaxEntChi2kink with Delta spectrum" begin
+    for T in [Float32, Float64] # mesh is not uesd so no test for mesh
+        alg = MaxEntChi2kink()
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
+        mesh, reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test mesh isa Vector{T}
+        @test reA isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+        if T == Float64
+            @test norm(orp - p) < 5e-3
+            @test norm(orγ - γ) < 5e-3
+            G2p = G -> solve(G, ctx, alg)[3][1]
+            G2γ = G -> solve(G, ctx, alg)[3][2]
+            @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
+            @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+        end
+    end
+end
+
 @testset "differentiation of BarRat with Cont spectrum" begin
     for T in [Float32, Float64]
-        solve_tol = T == Float32 ? 1e-1 : 1.1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             alg = BarRat()
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)

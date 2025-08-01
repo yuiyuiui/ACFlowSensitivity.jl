@@ -129,7 +129,6 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
             end
             sort!(p)
         end
-        # γ = poles2realγ(p, GFV, ctx.iwn)
         γ = ones(T, alg.npole) / alg.npole
 
         return SC.mesh, Aout, (p, γ)
