@@ -194,7 +194,6 @@ end
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                 alg::Solver; equalγ::Bool=true) where {T<:Real}
     N = ctx.N
-    !(ctx.spt isa Delta) && error("`pγdiff` only work for delta type spectrum")
     mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)
     function f(p, γ, G)

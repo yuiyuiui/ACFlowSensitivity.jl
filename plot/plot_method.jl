@@ -1,4 +1,4 @@
-using ACFlowSensitivity, Plots, Random
+using ACFlowSensitivity, Plots, Random, LinearAlgebra
 include("../test/testsetup.jl")#= BarRat for smooth type =#
 
 function plot_alg_cont(alg::Solver; noise_num::Int=3)
@@ -68,5 +68,59 @@ function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::
                  markersize=3,
                  markercolor=:blue)
     end
+    return p
+end
+
+function ave_grad(J::Matrix{T}; try_num::Int=3000) where {T<:Number}
+    res = zeros(real(T), size(J, 1))
+    N = size(J, 2)
+    for i in 1:try_num
+        dx = randn(T, N)
+        res += abs.(real(conj(J) * dx))
+    end
+    return res / try_num
+end
+
+function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
+                              perm_num::Int=4)
+    T = Float64
+    Random.seed!(6)
+    _, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), noise=noise)
+    GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
+    reA_perm = Vector{Vector{Float64}}(undef, perm_num)
+    N = ctx.N
+    for i in 1:perm_num
+        GFV_perm[i] = GFV .+ randn(N) * perm .* exp.(1im * 2π * rand(N))
+    end
+    _, reA = solve(GFV, ctx, alg)
+    for i in 1:perm_num
+        _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
+    end
+    p = plot(ctx.mesh,
+             reA;
+             label="reconstructed A(w)",
+             title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
+             xlabel="w",
+             ylabel="A(w)")
+    for i in 1:perm_num
+        plot!(p,
+              ctx.mesh,
+              reA_perm[i];
+              label="permuted reA: $i",
+              linewidth=0.5)
+    end
+    _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
+    @show norm(∂reADiv∂G)
+    ag = ave_grad(∂reADiv∂G)/2
+    @show ag
+    Aupper = reA .+ perm * ag
+    Alower = max.(0.0, reA .- perm * ag)
+    plot!(p,
+          ctx.mesh,
+          Aupper;
+          fillrange=Alower,
+          fillalpha=0.3,
+          label="Confidence region",
+          linewidth=0)
     return p
 end
