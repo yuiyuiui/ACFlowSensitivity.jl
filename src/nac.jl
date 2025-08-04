@@ -808,6 +808,33 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<
     end
 end
 
+#=
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
+    if ctx.spt isa Cont
+        println("[ NevanAC ]")
+        nac = init(GFV, ctx, alg)
+        run!(nac, alg)
+        Aout, _ = last(nac)
+
+        d = ctx.mesh_weight
+        w = ctx.mesh
+        wn = ctx.wn[1:length(nac.Gᵥ)]
+
+        K = [d[k] / (im * wₙ - w[k]) for wₙ in wn, k in 1:length(w)]
+        Kʳ, Kⁱ = real(K), imag(K)
+        K⁰ = (Kʳ' * Kʳ + Kⁱ' * Kⁱ)
+        invK⁰ = pinv(K⁰)
+        ∂ADiv∂G = zeros(Complex{T}, length(w), ctx.N)
+        ∂ADiv∂G[:, 1:length(wn)] .= invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
+        return ctx.mesh, Aout, ∂ADiv∂G
+    elseif ctx.spt isa Delta
+        return pγdiff(GFV, ctx, alg; equalγ=false)
+    else
+        error("Unsupported spectral function type")
+    end
+end
+=#
+
 # The following code is for the process of NAC and it's too slow and extremely unstable.
 #=
 struct DiffCtx
