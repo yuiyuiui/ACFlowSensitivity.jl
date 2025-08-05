@@ -1,11 +1,14 @@
 using ACFlowSensitivity, Plots, Random, LinearAlgebra
 include("../test/testsetup.jl")#= BarRat for smooth type =#
 
-function plot_alg_cont(alg::Solver; noise_num::Int=3)
+function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     T = Float64
     Random.seed!(6)
     noise_vec = [0.0, 1e-5, 1e-4, 1e-3, 1e-2][1:noise_num]
-    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+    μ = [T(1 // 2), T(-5 // 2), T(2.2)][1:nwave]
+    σ = [T(1 // 5), T(4 // 5), T(1 // 3)][1:nwave]
+    amplitudes = [T(1), T(3 // 10), T(2 // 5)][1:nwave]
+    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), μ=μ, σ=σ, amplitudes=amplitudes)
     GFV_vec = Vector{Vector{Complex{T}}}(undef, length(noise_vec))
     GFV_vec[1] = GFV
     for i in 2:length(noise_vec)
@@ -33,12 +36,13 @@ function plot_alg_cont(alg::Solver; noise_num::Int=3)
     return p
 end
 
-function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::Real=0.1)
+function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::Real=0.1,
+                        npole::Int=2)
     T = Float64
     Random.seed!(6)
     noise_vec = [0.0, 1e-5, 1e-4, 1e-3, 1e-2][1:noise_num]
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); mesh_type=TangentMesh(), fp_ww=fp_ww,
-                                 fp_mp=fp_mp)
+                                 fp_mp=fp_mp, npole=npole)
     GFV_vec = Vector{Vector{Complex{T}}}(undef, length(noise_vec))
     GFV_vec[1] = GFV
     for i in 2:length(noise_vec)
@@ -82,10 +86,14 @@ function ave_grad(J::Matrix{T}; try_num::Int=3000) where {T<:Number}
 end
 
 function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
-                              perm_num::Int=4)
+                              perm_num::Int=4, nwave::Int=2)
     T = Float64
     Random.seed!(6)
-    _, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), noise=noise)
+    μ = [T(1 // 2), T(-5 // 2), T(2.2)][1:nwave]
+    σ = [T(1 // 5), T(4 // 5), T(1 // 3)][1:nwave]
+    amplitudes = [T(1), T(3 // 10), T(2 // 5)][1:nwave]
+    _, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), noise=noise, μ=μ, σ=σ,
+                        amplitudes=amplitudes)
     GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
     reA_perm = Vector{Vector{Float64}}(undef, perm_num)
     N = ctx.N
@@ -101,7 +109,8 @@ function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
              label="reconstructed A(w)",
              title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
              xlabel="w",
-             ylabel="A(w)")
+             ylabel="A(w)",
+             legend=:topleft)
     for i in 1:perm_num
         plot!(p,
               ctx.mesh,
@@ -110,9 +119,55 @@ function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
               linewidth=0.5)
     end
     _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-    @show norm(∂reADiv∂G)
-    ag = ave_grad(∂reADiv∂G)/2
-    @show ag
+    max_error = zeros(T, length(ctx.mesh))
+    for i in 1:length(ctx.mesh)
+        max_error[i] = perm * norm(∂reADiv∂G[i, :])
+    end
+    Aupper = reA .+ max_error
+    Alower = max.(0.0, reA .- max_error)
+    plot!(p,
+          ctx.mesh,
+          Aupper;
+          fillrange=Alower,
+          fillalpha=0.3,
+          label="Confidence region",
+          linewidth=0)
+    return p
+end
+
+function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
+                               perm_num::Int=4, npole::Int=2)
+    T = Float64
+    Random.seed!(6)
+    (orp, orγ), ctx, GFV = dfcfg(T, Delta(); mesh_type=TangentMesh(), noise=noise,
+                                 fp_ww=fp_ww,
+                                 fp_mp=fp_mp, npole=npole)
+    GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
+    reA_perm = Vector{Vector{Float64}}(undef, perm_num)
+    N = ctx.N
+    for i in 1:perm_num
+        GFV_perm[i] = GFV .+ randn(N) * perm .* exp.(1im * 2π * rand(N))
+    end
+    _, reA = solve(GFV, ctx, alg)
+    for i in 1:perm_num
+        _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
+    end
+    p = plot(ctx.mesh,
+             reA;
+             label="reconstructed A(w)",
+             title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
+             xlabel="w",
+             ylabel="A(w)",
+             legend=:topleft)
+    for i in 1:perm_num
+        plot!(p,
+              ctx.mesh,
+              reA_perm[i];
+              label="permuted reA: $i",
+              linewidth=0.5)
+    end
+    _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
+    ag = ave_grad(∂reADiv∂G) / 2
     Aupper = reA .+ perm * ag
     Alower = max.(0.0, reA .- perm * ag)
     plot!(p,

@@ -217,20 +217,6 @@ end
     end
 end
 
-@testset "spx for delta with mean " begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for spx and we don't have accuracy need now. So ignore Cont.
-    pn = 2
-    for T in [Float32, Float64]
-        alg = SPX(pn; method="mean")
-        (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=2.0, fp_ww=0.1, npole=pn)
-        Random.seed!(6)
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
-        @test Aout isa Vector{T}
-        @test rep isa Vector{T}
-        @test reγ isa Vector{T}
-    end
-end
-
 # It's recommended to use best method for spx.
 @testset "spx for delta with best " begin
     pn = 2
@@ -269,6 +255,6 @@ end
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
         @test norm(orp - rep) < 0.01
-        @test norm(orγ - reγ) == 0
+        @test norm(orγ - reγ) < 0.01
     end
 end

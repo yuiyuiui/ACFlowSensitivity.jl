@@ -2,14 +2,18 @@ include("plot_method.jl")
 
 # BarRat
 alg = BarRat()
-plot_alg_cont(alg)
+plot_alg_cont(alg; nwave=1)
+plot_alg_cont(alg; nwave=2)
+plot_alg_cont(alg; nwave=3, noise_num=2)
 
 alg = BarRat()
 plot_alg_delta(alg)
 
 # MaxEntChi2kink
 alg = MaxEntChi2kink()
-plot_alg_cont(alg; noise_num=5)
+plot_alg_cont(alg; nwave=1, noise_num=5)
+plot_alg_cont(alg; nwave=2, noise_num=5)
+plot_alg_cont(alg; nwave=3, noise_num=5)
 
 alg = MaxEntChi2kink(; model_type="flat")
 plot_alg_delta(alg)

@@ -39,6 +39,7 @@ And of course mesh type "TangentMesh" is more suitable for Gaussian type spectru
         @test mesh isa Vector{T}
         @test reA isa Vector{T}
         @test ∂reADiv∂G isa Matrix{Complex{T}}
+        @show svd(∂reADiv∂G).S[1:5]
         G2A = G -> solve(G, ctx, MaxEntChi2kink())[2]
         @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; atol=tolerance(T), rtol=jac_rtol)
     end
