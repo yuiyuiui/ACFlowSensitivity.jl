@@ -51,9 +51,8 @@ end
 @testset "delta barrat" begin
     for T in [Float32, Float64]
         (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-        mesh, reA, (rep, reγ) = solve(GFV, ctx, BarRat())
-        @test mesh isa Vector{T}
-        @test reA isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, BarRat())
+        @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
         T == Float64 && @test norm(poles - rep) < strict_tol(T)
@@ -66,11 +65,10 @@ end
         tol = T == Float32 ? 2e-1 : 1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-            mesh, reA = solve(GFV, ctx, BarRat())
-            orA = A.(mesh)
-            @test eltype(reA) == eltype(mesh) == T
-            @test length(reA) == length(mesh) == length(ctx.mesh)
-            @test loss(reA, orA, ctx.mesh_weight) < tol
+            Aout = solve(GFV, ctx, BarRat())
+            @test eltype(Aout) == T
+            @test length(Aout) == length(ctx.mesh.mesh)
+            @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
         end
     end
 end
@@ -81,12 +79,11 @@ end
         for mesh_type in [UniformMesh(), TangentMesh()]
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
             for prony_tol in [0, (T == Float32 ? 1e-4 : 1e-8)]
-                mesh, reA = solve(GFV, ctx,
-                                  BarRat(; denoisy=true, prony_tol=prony_tol))
-                orA = A.(mesh)
-                @test eltype(reA) == eltype(mesh) == T
-                @test length(reA) == length(mesh) == length(ctx.mesh)
-                @test loss(reA, orA, ctx.mesh_weight) < tol
+                Aout = solve(GFV, ctx,
+                             BarRat(; denoisy=true, prony_tol=prony_tol))
+                @test eltype(Aout) == T
+                @test length(Aout) == length(ctx.mesh.mesh)
+                @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
             end
         end
     end
@@ -98,11 +95,10 @@ end
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-                mesh, reA = solve(GFV, ctx, MaxEntChi2kink(; model_type=model_type))
-                orA = A.(mesh)
-                @test eltype(reA) == eltype(mesh) == T
-                @test length(reA) == length(mesh) == length(ctx.mesh)
-                @test loss(reA, orA, ctx.mesh_weight) < tol
+                Aout = solve(GFV, ctx, MaxEntChi2kink(; model_type=model_type))
+                @test eltype(Aout) == T
+                @test length(Aout) == length(ctx.mesh.mesh)
+                @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
                 @test_throws ErrorException solve(GFV, ctx, MaxEntChi2kink(; maxiter=2))
             end
         end
@@ -113,8 +109,7 @@ end
     for T in [Float32, Float64]
         alg = MaxEntChi2kink(; model_type="flat")
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -125,30 +120,13 @@ end
     end
 end
 
-#=
-@testset "MaxEntChi2kink with iterative model" begin
-	T = Float64
-	for mesh_type in [UniformMesh(), TangentMesh()]
-		for model_type in ["Gaussian", "flat"]
-			A, ctx1, GFV1 = dfcfg(T, Cont(); noise=T(1e-3))
-			mesh, reA1 = solve(GFV1, ctx1, MaxEntChi2kink())
-			_, ctx2, GFV2 = dfcfg(T, Cont(); noise=T(1e-3))
-			mesh, reA2 = solve(GFV2, ctx2, MaxEntChi2kink(; maxiter=2))
-			orA = A.(mesh)
-			@show error1 = loss(reA1, orA, ctx1.mesh_weight)
-			@show error2 = loss(reA2, orA, ctx2.mesh_weight)
-		end
-	end
-end
-=#
-
 @testset "serve functions in ssk" begin
     pn = 2
     T = Float64
     Random.seed!(1234)
     (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=pn)
     alg = SSK(pn)
-    fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    fine_mesh = collect(range(ctx.mesh.mesh[1], ctx.mesh.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
     MC = @constinferred ACFlowSensitivity.init_mc(alg)
     SE = @constinferred ACFlowSensitivity.init_element(alg, MC.rng, ctx)
     SC = @constinferred ACFlowSensitivity.init_context(SE, GFV, fine_mesh, ctx, alg)
@@ -164,8 +142,7 @@ end
     alg = SSK(pn)
     # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
     (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
-    mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-    @test mesh isa Vector{T}
+    Aout, (rep, reγ) = solve(GFV, ctx, alg)
     @test Aout isa Vector{T}
     @test rep isa Vector{T}
     @test reγ isa Vector{T}
@@ -180,8 +157,7 @@ end
         alg = SAC(pn)
         (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine, fp_ww=0.2,
                                      fp_mp=2.0)
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -196,8 +172,7 @@ end
         Random.seed!(6)
         alg = SOM()
         _, ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5, npole=pn)
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -210,10 +185,9 @@ end
         alg = SOM()
         # It's recommended to use large mesh length for som. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
         A, ctx, GFV = dfcfg(T, Cont())
-        mesh, Aout = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
-        @test loss(Aout, A.(mesh), ctx.mesh_weight) < 0.5
+        @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.5
     end
 end
 
@@ -224,8 +198,7 @@ end
         alg = SPX(pn; method="best")
         (poles, γ), ctx, GFV = dfcfg(T, Delta(); fp_mp=0.1, npole=pn, ml=alg.nfine)
         Random.seed!(6)
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
@@ -238,10 +211,9 @@ end
         alg = T == Float32 ? NAC(; hardy=false) : NAC()
         # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
         A, ctx, GFV = dfcfg(T, Cont())
-        mesh, Aout = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
-        T == Float64 && @test loss(Aout, A.(mesh), ctx.mesh_weight) < 0.05
+        T == Float64 && @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.05
     end
 end
 
@@ -249,8 +221,7 @@ end
     for T in [Float32, Float64]
         alg = NAC(; pick=false, hardy=false)
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); mb=T(5))
-        mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
-        @test mesh isa Vector{T}
+        Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}

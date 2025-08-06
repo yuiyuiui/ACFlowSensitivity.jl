@@ -18,8 +18,7 @@ struct CtxData{T<:Real}
     N::Int
     wn::Vector{T}
     iwn::Vector{Complex{T}}
-    mesh::Vector{T}
-    mesh_weight::Vector{T}
+    mesh::Mesh{T}
     η::T
     σ::T
     fp_ww::Real # find peaks window width
@@ -29,15 +28,15 @@ struct CtxData{T<:Real}
                      N::Int;
                      mesh_bound=ACFSDefults.mesh_bound[]::Real,
                      mesh_length=ACFSDefults.mesh_length[]::Int,
-                     mesh_type::Mesh=ACFSDefults.mesh_type[]::Mesh,
+                     mesh_type::MeshMethod=ACFSDefults.mesh_type[]::MeshMethod,
                      η::T=T(1e-4),
                      σ::T=T(1e-4),
                      fp_ww::Real=T(0.01),
                      fp_mp::Real=T(0.1)) where {T<:Real}
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
-        mesh, mesh_weight = make_mesh(T(mesh_bound), mesh_length, mesh_type)
-        return new{T}(spt, β, N, wn, iwn, mesh, mesh_weight, η, σ, fp_ww, fp_mp)
+        mesh = make_mesh(T(mesh_bound), mesh_length, mesh_type)
+        return new{T}(spt, β, N, wn, iwn, mesh, η, σ, fp_ww, fp_mp)
     end
 end
 
@@ -98,13 +97,21 @@ struct MaxEntChi2kink <: MaxEnt
     L::Int
     α₁::Real
     model_type::String
+    offdiag::Bool
+    blur::Real
 end
+# what does `offdiag` in fact means?
 function MaxEntChi2kink(;
                         maxiter::Int=1,
                         L::Int=16,
                         α₁::Real=1e12,
-                        model_type::String="Gaussian",)
-    return MaxEntChi2kink(maxiter, L, α₁, model_type)
+                        model_type::String="Gaussian",
+                        offdiag::Bool=false,
+                        blur::Real=-1)
+    return MaxEntChi2kink(maxiter, L, α₁, model_type, offdiag, blur)
+end
+
+struct Bryans <: MaxEnt
 end
 
 # SSK ==========================
@@ -194,7 +201,7 @@ end
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                 alg::Solver; equalγ::Bool=true) where {T<:Real}
     N = ctx.N
-    mesh, Aout, (rep, reγ) = solve(GFV, ctx, alg)
+    Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)
     function f(p, γ, G)
         @assert length(p) == length(γ)
@@ -208,7 +215,7 @@ function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, reγ, G), p)[1]
         f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
         f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
-        return mesh, Aout, (rep, reγ),
+        return Aout, (rep, reγ),
                (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
     else
         repγ = vcat(rep, reγ)
@@ -217,7 +224,7 @@ function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         g₁₁(pγ, G) = Zygote.jacobian(pγ₁ -> g₁(pγ₁, G), pγ)[1]
         g₁₂(pγ, G) = Zygote.jacobian(G₁ -> g₁(pγ, G₁), G)[1]
         ∂pγDiv∂G = -pinv(g₁₁(repγ, GFV)) * g₁₂(repγ, GFV)
-        return mesh, Aout, (rep, reγ),
+        return Aout, (rep, reγ),
                (∂pγDiv∂G[1:n, :], ∂pγDiv∂G[(n + 1):end, :])
     end
 end

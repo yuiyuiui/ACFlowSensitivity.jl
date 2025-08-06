@@ -45,8 +45,7 @@ mutable struct StochSKContext{I<:Int,T<:Real}
     σinv::T
     allow::Vector{I}
     grid::Vector{T}
-    mesh::Vector{T}
-    mesh_weight::Vector{T}
+    mesh::Mesh{T}
     kernel::Array{T,2}
     Aout::Vector{T}
     χ²::T
@@ -103,7 +102,8 @@ Main driver function for the StochSK solver.
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     println("[ StochSK ]")
-    fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    mesh = ctx.mesh.mesh
+    fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # ssk needs high-precise linear grid
 
     # Initialize counters for Monte Carlo engine
     MC = init_mc(alg)
@@ -119,21 +119,21 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
 
     Aout, _, _ = run!(MC, SE, SC, alg)
     if ctx.spt isa Delta
-        p = ctx.mesh[find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
         # If length(p) != npole, then we just use SE.P
         if length(p) != alg.npole
             p = T[]
             for p_fine in SE.P
-                idx = nearest(SC.mesh, p_fine / alg.nfine)
-                push!(p, SC.mesh[idx])
+                idx = nearest(SC.mesh.mesh, p_fine / alg.nfine)
+                push!(p, SC.mesh.mesh[idx])
             end
             sort!(p)
         end
         γ = ones(T, alg.npole) / alg.npole
 
-        return SC.mesh, Aout, (p, γ)
+        return Aout, (p, γ)
     elseif ctx.spt isa Cont
-        return SC.mesh, Aout
+        return Aout
     else
         error("Unsupported spectral function type")
     end
@@ -210,7 +210,7 @@ continuation simulations. It will generate the spectral functions.
 * Θvec -> List of Θ parameters.
 """
 function average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
-    SC.Aout = SC.Aout ./ (step * SC.mesh_weight)
+    SC.Aout = SC.Aout ./ (step * SC.mesh.weight)
     return SC.Aout, SC.χ²vec, SC.Θvec
 end
 
@@ -346,7 +346,7 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
         # mesh, which could be linear or non-linear.
         #
         # Note that nearest() is defined in mesh.jl.
-        s_pos = nearest(SC.mesh, d_pos / nfine)
+        s_pos = nearest(SC.mesh.mesh, d_pos / nfine)
         SC.Aout[s_pos] = SC.Aout[s_pos] + SE.A
     end
 end
@@ -474,8 +474,8 @@ function init_element(alg::SSK,
                       rng::AbstractRNG,
                       ctx::CtxData{T}) where {T<:Real}
     β = ctx.β
-    wmax = ctx.mesh[end]
-    wmin = ctx.mesh[1]
+    wmax = ctx.mesh.mesh[end]
+    wmin = ctx.mesh.mesh[1]
     nfine = alg.nfine
     pn = alg.npole
 
@@ -497,7 +497,7 @@ function init_context(SE::StochSKElement{I,T},
                       alg::SSK) where {I<:Int,T<:Real}
 
     # Get parameters
-    nmesh = length(ctx.mesh)
+    nmesh = length(ctx.mesh.mesh)
     nwarm = alg.nwarm
     θ = T(alg.θ)
 
@@ -525,7 +525,7 @@ function init_context(SE::StochSKElement{I,T},
     χ², χ²min = 𝚾, 𝚾
 
     return StochSKContext(Gᵥ, Gᵧ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh,
-                          ctx.mesh_weight, kernel, Aout,
+                          kernel, Aout,
                           χ², χ²min, χ²vec, θ, θvec)
 end
 

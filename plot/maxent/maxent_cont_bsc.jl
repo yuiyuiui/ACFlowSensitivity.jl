@@ -21,4 +21,4 @@ alg = MaxEntChi2kink()
 
 p = plot_errorbound_cont(GFV, ctx, alg; perm=5e-5)
 
-plot(p, ctx.mesh, A.(ctx.mesh); label="origin A(w)", ylim=(0.0, 0.8))
+plot(p, ctx.mesh.mesh, A.(ctx.mesh.mesh); label="origin A(w)", ylim=(0.0, 0.8))

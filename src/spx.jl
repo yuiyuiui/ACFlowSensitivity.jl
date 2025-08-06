@@ -94,8 +94,7 @@ mutable struct StochPXContext{I<:Int,T<:Real}
     σ¹::T
     allow::Vector{I}
     wn::Vector{T}
-    mesh::Vector{T}
-    mesh_weight::Vector{T}
+    mesh::Mesh{T}
     fmesh::Vector{T}
     Λ::Array{T,2}
     Θ::T
@@ -136,7 +135,8 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData, alg::SPX) where {T<:Real}
         error("SPX with method = \"mean\" is recommended for cont type spectrum")
     ctx.spt isa Delta && (alg.method == "mean") &&
         error("SPX with method = \"best\" is recommended for delta type spectrum")
-    fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # spx needs high-precise linear grid
+    mesh = ctx.mesh.mesh
+    fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # spx needs high-precise linear grid
     MC = init_mc(alg)
     println("Create infrastructure for Monte Carlo sampling")
 
@@ -148,17 +148,17 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData, alg::SPX) where {T<:Real}
     Gᵥ = vcat(real(GFV), (imag(GFV)))
     Gᵧ, Λ, Θ, χ², χ²ᵥ, Pᵥ, Aᵥ, 𝕊ᵥ = init_context(alg, SE, ctx.wn, fine_mesh, Gᵥ)
     SC = StochPXContext(Gᵥ, Gᵧ, T(1/ctx.σ), collect(1:alg.nfine), ctx.wn, ctx.mesh,
-                        ctx.mesh_weight, fine_mesh,
+                        fine_mesh,
                         Λ, Θ, χ², χ²ᵥ, Pᵥ, Aᵥ, 𝕊ᵥ)
     println("Initialize context for the StochPX solver")
 
     Aout, _, _ = run!(MC, SE, SC, alg)
     if ctx.spt isa Cont
-        return SC.mesh, Aout
+        return Aout
     elseif ctx.spt isa Delta
-        p = ctx.mesh[find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
         γ = ones(T, length(p)) ./ length(p)
-        return SC.mesh, Aout, (p, γ)
+        return Aout, (p, γ)
     else
         error("Unsupported spectral function type")
     end
@@ -236,7 +236,7 @@ Green's function, and imaginary frequency Green's function.
 """
 function average!(SC::StochPXContext{I,T}, alg::SPX) where {I<:Int,T<:Real}
     # Setup essential parameters
-    nmesh = length(SC.mesh)
+    nmesh = length(SC.mesh.mesh)
     method = alg.method
     ntry = alg.ntry
 
@@ -690,7 +690,7 @@ function calc_green(t::I, SC::StochPXContext{I,T}, real_axis::Bool,
     if real_axis == false
         return calc_green(SC.Pᵥ[t], SC.Aᵥ[t], SC.𝕊ᵥ[t], SC.Λ)
     end
-    return calc_green(SC.Pᵥ[t], SC.Aᵥ[t], SC.𝕊ᵥ[t], SC.mesh, SC.fmesh, T(alg.eta))
+    return calc_green(SC.Pᵥ[t], SC.Aᵥ[t], SC.𝕊ᵥ[t], SC.mesh.mesh, SC.fmesh, T(alg.eta))
 end
 
 """

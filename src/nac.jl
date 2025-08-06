@@ -89,10 +89,10 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
     run!(nac, alg)
     Aout, _ = last(nac)
     if ctx.spt isa Cont
-        return ctx.mesh, T.(Aout)
+        return T.(Aout)
     elseif ctx.spt isa Delta
-        idx = find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)
-        p = ctx.mesh[idx]
+        idx = find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)
+        p = ctx.mesh.mesh[idx]
         function pG2γ(x, y) # x is p, y is G
             ker = [1/(ctx.iwn[i] - x[j]) for i in 1:length(ctx.iwn), j in eachindex(x)]
             K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
@@ -102,7 +102,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
         γ = pG2γ(p, GFV)
         println("poles: ", p)
         println("gamma: ", γ)
-        return ctx.mesh, T.(Aout), (p, γ)
+        return T.(Aout), (p, γ)
     else
         error("Unsupported spectral function type")
     end
@@ -146,7 +146,7 @@ function init(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real
     println("Build grid for input data: ", length(grid), " points")
 
     # Prepare mesh for output spectrum
-    mesh = APC.(ctx.mesh)
+    mesh = APC.(ctx.mesh.mesh)
     println("Build mesh for spectrum: ", length(mesh), " points")
 
     # Precompute key quantities to accelerate the computation
@@ -790,8 +790,8 @@ end
 #---------------------------------
 # solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
-    d = ctx.mesh_weight
-    w = ctx.mesh
+    d = ctx.mesh.weight
+    w = ctx.mesh.mesh
     wn = ctx.wn
     K = [d[k]/(im*wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
     Kʳ, Kⁱ = real(K), imag(K)
@@ -799,93 +799,11 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<
     invK⁰ = pinv(K⁰)
     ∂ADiv∂G = invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
     if ctx.spt isa Cont
-        _, Aout = solve(GFV, ctx, alg)
-        return ctx.mesh, Aout, ∂ADiv∂G
+        Aout = solve(GFV, ctx, alg)
+        return Aout, ∂ADiv∂G
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg; equalγ=false)
     else
         error("Unsupported spectral function type")
     end
 end
-
-#=
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
-    if ctx.spt isa Cont
-        println("[ NevanAC ]")
-        nac = init(GFV, ctx, alg)
-        run!(nac, alg)
-        Aout, _ = last(nac)
-
-        d = ctx.mesh_weight
-        w = ctx.mesh
-        wn = ctx.wn[1:length(nac.Gᵥ)]
-
-        K = [d[k] / (im * wₙ - w[k]) for wₙ in wn, k in 1:length(w)]
-        Kʳ, Kⁱ = real(K), imag(K)
-        K⁰ = (Kʳ' * Kʳ + Kⁱ' * Kⁱ)
-        invK⁰ = pinv(K⁰)
-        ∂ADiv∂G = zeros(Complex{T}, length(w), ctx.N)
-        ∂ADiv∂G[:, 1:length(wn)] .= invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
-        return ctx.mesh, Aout, ∂ADiv∂G
-    elseif ctx.spt isa Delta
-        return pγdiff(GFV, ctx, alg; equalγ=false)
-    else
-        error("Unsupported spectral function type")
-    end
-end
-=#
-
-# The following code is for the process of NAC and it's too slow and extremely unstable.
-#=
-struct DiffCtx
-    ngrid::Int
-    Gₙ::Vector{APC}
-    grid::Vector{APC}
-    mesh::Vector{APC}
-    ℋ::Array{APC,2}
-    𝑎𝑏::Vector{ComplexF64}
-    alg::NAC
-end
-
-function _solvecont(G, dctx::DiffCtx)
-    Gᵥ = calc_mobius(-G[1:dctx.ngrid])
-    Gᵥ = reverse(Gᵥ)
-    Φ = calc_phis(dctx.grid, Gᵥ)
-    𝒜 = calc_abcd(dctx.grid, dctx.mesh, Φ, dctx.alg)
-    _G = calc_green(𝒜, dctx.ℋ, dctx.𝑎𝑏)
-    Aout = imag.(_G) ./ π
-    return Aout
-end
-
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
-    ctx.spt isa Delta && alg.hardy &&
-        error("Hardy basis optimization is used for Cont spectrum")
-    println("[ NevanAC ]")
-    nac = init(GFV, ctx, alg)
-    run!(nac, alg)
-
-    Gₙ = APC.(GFV)
-    dctx = DiffCtx(length(nac.Gᵥ), Gₙ, nac.grid, nac.mesh, nac.ℋ, nac.𝑎𝑏, alg)
-    Aout = T.(_solvecont(Gₙ, dctx))
-    ∂ADiv∂G = Complex{T}.(Zygote.jacobian(G -> _solvecont(G, dctx), Gₙ)[1])
-
-    if ctx.spt isa Cont
-        return ctx.mesh, Aout, ∂ADiv∂G
-    elseif ctx.spt isa Delta
-        idx = find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)
-        p = ctx.mesh[idx]
-        ∂pDiv∂G = ∂ADiv∂G[idx, :]
-        function pG2γ(x, y) # x is p, y is G
-            ker = [1/(ctx.iwn[i] - x[j]) for i in 1:length(ctx.iwn), j in eachindex(x)]
-            K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
-            G = real(ker)'*real(y) + imag(ker)'*imag(y)
-            return pinv(K)*G
-        end
-        γ = pG2γ(p, GFV)
-        ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian(pG2γ, p, GFV)
-        return ctx.mesh, Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)
-    else
-        error("Unsupported spectral function type")
-    end
-end
-=#

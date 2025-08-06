@@ -195,12 +195,13 @@ end
         σ = [T(0.01), T(0.01)]
         sort!(μ)
         A, ctx, _ = dfcfg(T, Cont(); μ=μ, σ=σ)
-        v = A.(ctx.mesh)
-        d = findmax(ctx.mesh[2:end] - ctx.mesh[1:(end - 1)])[1] # max grid width
+        mesh = ctx.mesh.mesh
+        v = A.(mesh)
+        d = findmax(mesh[2:end] - mesh[1:(end - 1)])[1] # max grid width
         idx = ACFlowSensitivity.find_peaks(v, 0.1)
         @test length(idx) == n
-        @test isapprox(ctx.mesh[idx], μ, atol=d*sqrt(2))
-        idx1 = ACFlowSensitivity.find_peaks(ctx.mesh, v, 0.1)
+        @test isapprox(mesh[idx], μ, atol=d*sqrt(2))
+        idx1 = ACFlowSensitivity.find_peaks(mesh, v, 0.1)
         @test idx == idx1
     end
 end

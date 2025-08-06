@@ -2,13 +2,13 @@
     ml = 100
     for T in [Float32, Float64]
         mb = T(5)
-        mesh, mesh_weight = make_mesh(mb, ml, UniformMesh())
-        @test typeof(mesh) === Vector{T}
-        @test typeof(mesh_weight) === Vector{T}
-        @test length(mesh) == ml
-        @test length(mesh_weight) == ml
-        @test mesh == collect(range(-mb, mb, ml))
-        @test isapprox(sum(mesh_weight), mb*2, atol=tolerance(T))
+        mesh = make_mesh(mb, ml, UniformMesh())
+        @test typeof(mesh.mesh) === Vector{T}
+        @test typeof(mesh.weight) === Vector{T}
+        @test length(mesh.mesh) == ml
+        @test length(mesh.weight) == ml
+        @test mesh.mesh == collect(range(-mb, mb, ml))
+        @test isapprox(sum(mesh.weight), mb*2, atol=tolerance(T))
     end
 end
 
@@ -16,14 +16,14 @@ end
     ml = 100
     for T in [Float32, Float64]
         mb = T(5)
-        mesh, mesh_weight = make_mesh(mb, ml, TangentMesh())
-        @test typeof(mesh) === Vector{T}
-        @test typeof(mesh_weight) === Vector{T}
-        @test length(mesh) == ml
-        @test length(mesh_weight) == ml
-        @test mesh ==
+        mesh = make_mesh(mb, ml, TangentMesh())
+        @test typeof(mesh.mesh) === Vector{T}
+        @test typeof(mesh.weight) === Vector{T}
+        @test length(mesh.mesh) == ml
+        @test length(mesh.weight) == ml
+        @test mesh.mesh ==
               tan.(collect(range(-T(π)/T(2.1), T(π)/T(2.1), ml)))/tan(T(π)/T(2.1))*mb
-        @test isapprox(sum(mesh_weight), mb*2, atol=tolerance(T))
+        @test isapprox(sum(mesh.weight), mb*2, atol=tolerance(T))
     end
 end
 
@@ -33,13 +33,14 @@ end
         v1 = Vector{T}(1:n)
         v2 = Vector{Complex{T}}(1:n)
         _, ctx, GFV = dfcfg(T, Cont())
-        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.iwn, ctx.mesh)
+        mesh = ctx.mesh.mesh
+        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.iwn, mesh)
         G, K, n, U, S, V = ss
         @test typeof(ss) <: ACFlowSensitivity.SingularSpace{T}
-        kernel = Matrix{Complex{T}}(undef, length(GFV), length(ctx.mesh))
+        kernel = Matrix{Complex{T}}(undef, length(GFV), length(mesh))
         for i in 1:length(GFV)
-            for j in 1:length(ctx.mesh)
-                kernel[i, j] = 1 / (ctx.iwn[i] - ctx.mesh[j])
+            for j in 1:length(mesh)
+                kernel[i, j] = 1 / (ctx.iwn[i] - mesh[j])
             end
         end
         G0 = vcat(real(GFV), imag(GFV))

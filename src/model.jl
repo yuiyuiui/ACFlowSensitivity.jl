@@ -6,7 +6,7 @@ function make_model(model_type::String, ctx::CtxData{T}) where {T<:Real}
     else
         error("Model $model_type not supported")
     end
-    model = f.(ctx.mesh)
-    model ./= sum(model .* ctx.mesh_weight)
+    model = f.(ctx.mesh.mesh)
+    model ./= sum(model .* ctx.mesh.weight)
     return model
 end

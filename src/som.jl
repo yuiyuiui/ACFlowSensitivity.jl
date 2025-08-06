@@ -88,8 +88,7 @@ mutable struct StochOMContext{T<:Real}
     Gᵥ::Vector{T}
     σ¹::T
     wn::Vector{T}
-    mesh::Vector{T}
-    mesh_weight::Vector{T}
+    mesh::Mesh{T}
     Cᵥ::Vector{Vector{Box{T}}}
     Δᵥ::Vector{T}
     𝕊ᵥ::Vector{CubicSplineInterpolation}
@@ -133,17 +132,17 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Rea
     # Prepare some key variables
     Cᵥ, Δᵥ, 𝕊ᵥ = init_context(alg, ctx)
     SC = StochOMContext(vcat(real(GFV), imag(GFV)), 1/ctx.σ, ctx.wn, ctx.mesh,
-                        ctx.mesh_weight, Cᵥ, Δᵥ, 𝕊ᵥ)
+                        Cᵥ, Δᵥ, 𝕊ᵥ)
     println("Initialize context for the StochOM solver")
 
     Aout = run!(MC, SC, alg)
 
     if ctx.spt isa Cont
-        return SC.mesh, Aout
+        return Aout
     elseif ctx.spt isa Delta
-        p = ctx.mesh[find_peaks(ctx.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        p = ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
         γ = ones(T, length(p)) ./ length(p)
-        return SC.mesh, Aout, (p, γ)
+        return Aout, (p, γ)
     else
         error("Unsupported spectral function type")
     end
@@ -187,7 +186,7 @@ function run!(MC::StochOMMC{I}, SC::StochOMContext{T}, alg::SOM) where {T<:Real,
     end
 
     # Generate spectral density from Monte Carlo field configuration
-    return average(SC, length(SC.mesh), alg)
+    return average(SC, length(SC.mesh.mesh), alg)
 end
 
 """
@@ -223,7 +222,7 @@ function average(SC::StochOMContext{T}, nmesh::Int, alg::SOM) where {T<:Real}
         if SC.Δᵥ[l] < dev_ave / αgood
             # Generate the spectrum, and add it to Aom.
             for w in 1:nmesh
-                _omega = SC.mesh[w]
+                _omega = SC.mesh.mesh[w]
                 # Scan all boxes
                 for r in 1:length(SC.Cᵥ[l])
                     R = SC.Cᵥ[l][r]
@@ -430,8 +429,8 @@ See also: [`StochOMElement`](@ref).
 """
 function init_element(MC::StochOMMC{I}, SC::StochOMContext{T},
                       alg::SOM) where {T<:Real,I<:Int}
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     nbox = alg.nbox
     sbox = T(alg.sbox)
     wbox = T(alg.wbox)
@@ -678,8 +677,8 @@ function try_insert(MC::StochOMMC{I},
                     alg::SOM) where {T<:Real,I<:Int}
     sbox = T(alg.sbox)
     wbox = T(alg.wbox)
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     csize = length(SE.C)
 
     # Choose a box randomly
@@ -861,8 +860,8 @@ function try_shift(MC::StochOMMC{I},
                    SC::StochOMContext{T},
                    dacc::T,
                    alg::SOM) where {T<:Real,I<:Int}
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     csize = length(SE.C)
 
     # Choose a box randomly
@@ -938,8 +937,8 @@ function try_width(MC::StochOMMC{I},
                    dacc::T,
                    alg::SOM) where {T<:Real,I<:Int}
     wbox = T(alg.wbox)
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     csize = length(SE.C)
 
     # Choose a box randomly
@@ -1105,8 +1104,8 @@ function try_split(MC::StochOMMC{I},
                    alg::SOM) where {T<:Real,I<:Int}
     wbox = T(alg.wbox)
     sbox = T(alg.sbox)
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     csize = length(SE.C)
 
     # Choose a box randomly
@@ -1207,8 +1206,8 @@ function try_merge(MC::StochOMMC{I},
                    SC::StochOMContext{T},
                    dacc::T,
                    alg::SOM) where {T<:Real,I<:Int}
-    wmin = SC.mesh[1]
-    wmax = SC.mesh[end]
+    wmin = SC.mesh.mesh[1]
+    wmax = SC.mesh.mesh[end]
     csize = length(SE.C)
 
     # Choose two boxes randomly

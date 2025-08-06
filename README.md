@@ -23,7 +23,10 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |Method|RI cont|RI delta|RI mixed|SA cont|SA delta|SA mixed|
 |:---|:---|:---|:---|:---|:---|:---|
 |BarRat|✅|✅||✅|✅|
-|MaxEnt Chi2kink|✅|✅||✅|||
+|MaxEnt Chi2kink|✅|✅||✅|✅||
+|MaxEnt Bryan|||||||
+|MaxEnt Classic|||||||
+|MaxEnt Historic|||||||
 |SSK|✅|✅||✅|✅||
 |SAC|✅|✅||✅|✅||
 |SPX|✅|✅||✅|✅||
@@ -34,5 +37,6 @@ Example of using `ACFlowSensitivity` to plot the error bound of a specific metho
 
 By using `ACFlowSensitivity`, you can get a error bound like this:
 
-![Error Bound Example](./plot/MaxEnt/maxent_cont_eb.svg)
+![Error Bound Example 1](./plot/maxent/chi2kink/maxent_cont_eb_2.svg)
+![Error Bound Example 2](./plot/maxent/chi2kink/maxent_cont_bsc_eb.svg)
 

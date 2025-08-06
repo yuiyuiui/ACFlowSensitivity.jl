@@ -93,7 +93,7 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                   fp_ww=fp_ww, fp_mp=fp_mp)
     if spt isa Cont
         A = continous_spectral_density(μ, σ, amplitudes)
-        Asum = sum(A.(ctx.mesh) .* ctx.mesh_weight)
+        Asum = sum(A.(ctx.mesh.mesh) .* ctx.mesh.weight)
         orA = x -> A(x) / Asum
         GFV = generate_GFV_cont(β, N, orA; noise=noise)
         return orA, ctx, GFV

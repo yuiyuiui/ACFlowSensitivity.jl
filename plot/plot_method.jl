@@ -18,9 +18,10 @@ function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     for i in 1:length(noise_vec)
         _, reA_vec[i] = solve(GFV_vec[i], ctx, alg)
     end
+    mesh = ctx.mesh.mesh
 
-    p = plot(ctx.mesh,
-             A.(ctx.mesh);
+    p = plot(mesh,
+             A.(mesh);
              label="origin A(w)",
              title="$(typeof(alg)) for cont type",
              xlabel="w",
@@ -28,7 +29,7 @@ function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
              legend=:topleft)
     for i in 1:length(noise_vec)
         plot!(p,
-              ctx.mesh,
+              mesh,
               reA_vec[i];
               label="reconstruct A$i(w), noise: $(noise_vec[i])",
               linewidth=0.5)
@@ -114,7 +115,8 @@ function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
     for i in 1:perm_num
         _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
     end
-    p = plot(ctx.mesh,
+    mesh = ctx.mesh.mesh
+    p = plot(mesh,
              reA;
              label="reconstructed A(w)",
              title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
@@ -123,7 +125,7 @@ function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
              legend=:topleft)
     for i in 1:perm_num
         plot!(p,
-              ctx.mesh,
+              mesh,
               reA_perm[i];
               label="permuted reA: $i",
               linewidth=0.5)
@@ -133,7 +135,7 @@ function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
     Aupper = reA .+ perm * ag
     Alower = max.(0.0, reA .- perm * ag)
     plot!(p,
-          ctx.mesh,
+          mesh,
           Aupper;
           fillrange=Alower,
           fillalpha=0.3,
@@ -155,7 +157,8 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     for i in 1:perm_num
         _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
     end
-    p = plot(ctx.mesh,
+    mesh = ctx.mesh.mesh
+    p = plot(mesh,
              reA;
              label="reconstructed A(w)",
              title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
@@ -164,20 +167,20 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
              legend=:topleft)
     for i in 1:perm_num
         plot!(p,
-              ctx.mesh,
+              mesh,
               reA_perm[i];
               label="permuted reA: $i",
               linewidth=0.5)
     end
     _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-    max_error = zeros(T, length(ctx.mesh))
-    for i in 1:length(ctx.mesh)
+    max_error = zeros(T, length(mesh))
+    for i in 1:length(mesh)
         max_error[i] = perm * norm(∂reADiv∂G[i, :])
     end
     Aupper = reA .+ max_error
     Alower = max.(0.0, reA .- max_error)
     plot!(p,
-          ctx.mesh,
+          mesh,
           Aupper;
           fillrange=Alower,
           fillalpha=0.3,

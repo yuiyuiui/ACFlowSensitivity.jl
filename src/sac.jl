@@ -60,7 +60,6 @@ Mutable struct. It is used within the StochAC solver only.
 * allow  -> Allowable indices.
 * grid   -> Imaginary axis grid for input data.
 * mesh   -> Real frequency mesh for output spectrum.
-* mesh_weight -> Weight of the real frequency mesh.
 * model  -> Default model function.
 * kernel -> Default kernel function.
 * Aout   -> Calculated spectral function, it is actually ⟨n(x)⟩.
@@ -75,8 +74,7 @@ mutable struct StochACContext{I<:Int,T<:Real}
     σ¹::T
     allow::Vector{I}
     grid::Vector{T}
-    mesh::Vector{T}
-    mesh_weight::Vector{T}
+    mesh::Mesh{T}
     model::Vector{T}
     kernel::Array{T,2}
     Aout::Array{T,2}
@@ -116,7 +114,8 @@ Now the StochAC solver supports both continuous and δ-like spectra.
 * Gout -> Retarded Green's function, G(ω).
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
-    fine_mesh = collect(range(ctx.mesh[1], ctx.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    mesh = ctx.mesh.mesh
+    fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # ssk needs high-precise linear grid
 
     # Initialize counters for Monte Carlo engine
     MC = init_mc(alg)
@@ -134,12 +133,12 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Rea
     Asum = last!(SC, Aout, Uα)   # Average on α
 
     if ctx.spt isa Delta
-        p = ctx.mesh[find_peaks(ctx.mesh, Asum, ctx.fp_mp; wind=ctx.fp_ww)]
+        p = mesh[find_peaks(mesh, Asum, ctx.fp_mp; wind=ctx.fp_ww)]
         length(p) != alg.npole && @warn("Number of poles is not correct")
         γ = ones(T, alg.npole) / alg.npole
-        return SC.mesh, Asum, (p, γ)
+        return Asum, (p, γ)
     elseif ctx.spt isa Cont
-        return SC.mesh, Asum
+        return Asum
     else
         error("Unsupported spectral function type")
     end
@@ -211,7 +210,7 @@ continuation simulations. It will calculate the spectral functions, and
 """
 function average(step::T, SC::StochACContext{I,T}) where {I<:Int,T<:Real}
     # Get key parameters
-    nmesh = length(SC.mesh)
+    nmesh = length(SC.mesh.mesh)
     nalph = length(SC.αₗ)
 
     # Renormalize the spectral functions
@@ -481,7 +480,7 @@ function init_context(SE::StochACElement,
                       ctx::CtxData{T},
                       alg::SAC) where {T<:Real}
     # Get parameters
-    nmesh = length(ctx.mesh)
+    nmesh = length(ctx.mesh.mesh)
     nalph = alg.nalph
 
     # Allocate memory for spectral function, A(ω,α)
@@ -492,7 +491,7 @@ function init_context(SE::StochACElement,
     model = make_model("flat", ctx)
 
     # Precompute δ functions
-    ϕ = cumsum(model .* ctx.mesh_weight)
+    ϕ = cumsum(model .* ctx.mesh.weight)
     Δ = calc_delta(fine_mesh, ϕ)
 
     # Build kernel matrix
@@ -510,8 +509,7 @@ function init_context(SE::StochACElement,
     # Precompute α parameters
     αₗ = calc_alpha(alg, T)
 
-    return StochACContext(Gᵥ, 1/ctx.σ, collect(1:alg.nfine), ctx.wn, ctx.mesh,
-                          ctx.mesh_weight, model,
+    return StochACContext(Gᵥ, 1/ctx.σ, collect(1:alg.nfine), ctx.wn, ctx.mesh, model,
                           kernel, Aout, Δ, hτ, Hα, Uα, αₗ)
 end
 
