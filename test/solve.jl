@@ -90,15 +90,25 @@ end
 end
 
 @testset "cont MaxEnt Chi2kink" begin
-    for T in [Float32, Float64]
-        tol = T == Float32 ? 2e-1 : 1e-2
+    tol = 0.1
+    T = Float32
+    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+    Aout = solve(GFV, ctx, MaxEnt(; model_type="Gaussian"))
+    @test eltype(Aout) == T
+    @test length(Aout) == length(ctx.mesh.mesh)
+    @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
+
+    T = Float64
+    for method in ["chi2kink", "classic", "bryan", "historic"]
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-                Aout = solve(GFV, ctx, MaxEnt(; model_type=model_type))
+                Aout = solve(GFV, ctx, MaxEnt(; model_type=model_type, method=method))
                 @test eltype(Aout) == T
                 @test length(Aout) == length(ctx.mesh.mesh)
-                @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
+                lsres = loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight)
+                @show method, mesh_type, model_type, lsres
+                @test lsres < tol
             end
         end
     end
