@@ -91,7 +91,6 @@ end
 # MaxEnt ==========================
 
 struct MaxEnt <: Solver
-    maxiter::Int
     method::String
     stype::String
     nalph::Int
@@ -103,8 +102,7 @@ struct MaxEnt <: Solver
 end
 # what does `offdiag` in fact means?
 function MaxEnt(;
-                maxiter::Int=1,
-                method::String="chi2min",
+                method::String="chi2kink",
                 stype::String="sj",
                 nalph::Int=16,
                 alpha::Real=1e12,
@@ -112,10 +110,7 @@ function MaxEnt(;
                 model_type::String="Gaussian",
                 offdiag::Bool=false,
                 blur::Real=-1)
-    return MaxEnt(maxiter, method, stype, nalph, alpha, ratio, model_type, offdiag, blur)
-end
-
-struct Bryans <: MaxEnt
+    return MaxEnt(method, stype, nalph, alpha, ratio, model_type, offdiag, blur)
 end
 
 # SSK ==========================

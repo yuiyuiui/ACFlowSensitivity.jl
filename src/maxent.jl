@@ -73,11 +73,18 @@ It seems that the MaxEnt solver is hard to create δ-like spectra.
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                alg::MaxEnt) where {T<:Real}
     println("[ MaxEnt ]")
-    #
     mec = init(GFV, ctx, alg)
-    darr, sol = run!(mec, alg)
-    #
-    return mec.mesh.mesh, sol[:A]
+    _, sol = run!(mec, alg)
+    Aout = sol[:A]
+    if ctx.spt isa Cont
+        return Aout
+    elseif ctx.spt isa Delta
+        p = ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        γ = pG2γ(p, GFV, ctx.iwn)
+        return Aout, (p, γ)
+    else
+        error("Unsupported spectral function type")
+    end
 end
 
 """
@@ -98,18 +105,18 @@ function init(GFV::Vector{Complex{T}}, ctx::CtxData{T},
               alg::MaxEnt) where {T<:Real}
     # Prepera input data
     Gᵥ = vcat(real(GFV), imag(GFV))
-    σ² = (1 ./ T(ctx.covar))^2 * ones(T, length(Gᵥ))
+    σ² = (1 ./ T(ctx.σ))^2 * ones(T, length(Gᵥ))
     model = make_model(alg.model_type, ctx)
 
     # Prepare kernel function
-    kernel = make_kernel(ctx.mesh.mesh, ctx.grid)
+    kernel = make_kernel(ctx.mesh.mesh, ctx.wn)
     kernel = [real(kernel); imag(kernel)]
 
     # Prepare some essential intermediate variables
-    Vₛ, W₂, W₃, Bₘ, hess = precompute(GFV, σ², ctx.mesh, grid, model)
+    Vₛ, W₂, W₃, Bₘ, hess = precompute(GFV, σ², ctx.mesh, ctx.wn, model)
     println("Precompute key coefficients")
 
-    return MaxEntContext(Gᵥ, σ², grid, mesh, model,
+    return MaxEntContext(Gᵥ, σ², ctx.wn, ctx.mesh, model,
                          kernel, hess, Vₛ, W₂, W₃, Bₘ)
 end
 
@@ -469,19 +476,19 @@ function optimizer(mec::MaxEntContext{T},
     stype = alg.stype
 
     if offdiag
-        solution, call = newton(f_and_J_od..., us, mec, α, stype)
+        solution, call = newton(f_and_J_od, us, mec, α, stype)
         u = copy(solution)
         A = svd_to_real_od(mec, solution, stype)
         S = calc_entropy_od(mec, A, stype)
     else
-        solution, call = newton(f_and_J..., us, mec, α, stype)
+        solution, call = newton(f_and_J, us, mec, α, stype)
         u = copy(solution)
         A = svd_to_real(mec, solution, stype)
         S = calc_entropy(mec, A, u, stype)
     end
 
     χ² = calc_chi2(mec, A)
-    norm = trapz(mec.mesh, A)
+    norm = trapz(mec.mesh.mesh, A)
 
     dict = Dict{Symbol,Any}(:u => u,
                             :α => α,
@@ -504,16 +511,9 @@ function optimizer(mec::MaxEntContext{T},
     end
 
     if blur > T(0)
-        make_blur(mec.mesh, A, blur)
+        make_blur(mec.mesh.mesh, A, blur)
     end
     dict[:A] = A
-
-    println("log10(α) = $(log10(α))")
-    println("χ² = $(χ²)")
-    println("S = $(S)")
-    println("call = $(call)")
-    println("norm = $(norm)")
-
     return dict
 end
 
@@ -1046,7 +1046,7 @@ function calc_entropy(mec::MaxEntContext{T}, A::Vector{T}, u::Vector{T},
         end
     end
     #
-    return trapz(mec.mesh, f)
+    return trapz(mec.mesh.mesh, f)
 end
 
 """
@@ -1076,7 +1076,7 @@ function calc_entropy_od(mec::MaxEntContext{T}, A::Vector{T}, stype::String) whe
         f = 2 .- (root ./ mec.model) + log.(root ./ (2 .* mec.model))
     end
     #
-    return trapz(mec.mesh, f)
+    return trapz(mec.mesh.mesh, f)
 end
 
 #=
@@ -1366,7 +1366,7 @@ It computes the χ²-deviation of the spectral function `A`.
 * χ² -> Goodness-of-fit functional.
 """
 function calc_chi2(mec::MaxEntContext{T}, A::Vector{T}) where {T<:Real}
-    Gₙ = reprod(mec.mesh, mec.kernel, A)
+    Gₙ = reprod(mec.mesh.mesh, mec.kernel, A)
     χ² = sum(mec.σ² .* ((mec.Gᵥ - Gₙ) .^ 2))
     return χ²
 end

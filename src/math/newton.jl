@@ -21,22 +21,21 @@ function _apply(feed::Vector{T}, f::Vector{T}, J::Matrix{T}) where {T}
     end
     return feed + step .* resid
 end
-function newton(fun::Function, grad::Function, guess::Vector{T}, kwargs...;
+
+function newton(f_and_J::Function, guess::Vector{T}, kwargs...;
                 maxiter::Int=20000,
                 tol::T=T(1e-4)) where {T<:Real}
     counter = 0
     feed = copy(guess)
-    f = fun(feed, kwargs...)
-    J = grad(feed, kwargs...)
+    f, J = f_and_J(feed, kwargs...)
     back = _apply(feed, f, J)
     reach_tol = false
 
     while true
         counter = counter + 1
-        feed += T(1//2) * (back - feed)
+        feed += T(1 // 2) * (back - feed)
 
-        f = fun(feed, kwargs...)
-        J = grad(feed, kwargs...)
+        f, J = f_and_J(feed, kwargs...)
         back = _apply(feed, f, J)
 
         any(isnan.(back)) && error("Got NaN!")
@@ -47,7 +46,7 @@ function newton(fun::Function, grad::Function, guess::Vector{T}, kwargs...;
 
     if counter > maxiter
         println("Tolerance is reached in newton()!")
-        @show norm(grad(back, kwargs...))
+        @show norm(f_and_J(back, kwargs...)[2])
         reach_tol = true
     end
 

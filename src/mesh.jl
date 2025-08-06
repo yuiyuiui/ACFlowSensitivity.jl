@@ -13,6 +13,7 @@ struct Mesh{T<:Real}
     mesh::Vector{T}
     weight::Vector{T}
 end
+Base.length(m::Mesh) = length(m.mesh)
 
 function make_mesh(mb::T, ml::Int, mesh_type::UniformMesh) where {T<:Real}
     mesh=collect(range(-mb, mb, ml))

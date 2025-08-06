@@ -22,30 +22,30 @@ function make_kernel(mesh::Vector{T}, grid::Vector{T};
 end
 
 """
-    make_blur(am::Mesh{T}, A::Vector{T}, blur::T) where {T<:Real}
+    make_blur(mesh::Vector{T}, A::Vector{T}, blur::T) where {T<:Real}
 
-Try to blur the given spectrum `A`, which is defined in `am`. And `blur`
+Try to blur the given spectrum `A`, which is defined in `mesh`. And `blur`
 is the blur parameter.
 
 ### Arguments
-* am   -> Real frequency mesh.
+* mesh -> Real frequency mesh.
 * A    -> Spectral function.
 * blur -> Blur parameter. It must be larger than 0.0.
 
 ### Returns
 * A    -> It is updated in this function.
 """
-function make_blur(am::Mesh{T}, A::Vector{T}, blur::T) where {T<:Real}
-    spl = CubicSplineInterpolation(A, am.mesh)
+function make_blur(mesh::Vector{T}, A::Vector{T}, blur::T) where {T<:Real}
+    spl = CubicSplineInterpolation(A, mesh)
 
     bmesh, gaussian = make_gauss_peaks(blur)
 
     nsize = length(bmesh)
-    nmesh = length(am.mesh)
+    nmesh = length(mesh)
 
     Mb = reshape(bmesh, (nsize, 1))
     Mx = reshape(gaussian, (nsize, 1))
-    Mm = reshape(am.mesh, (1, nmesh))
+    Mm = reshape(mesh, (1, nmesh))
     I = Mx .* spl.(Mm .+ Mb)
 
     for j in 1:nmesh

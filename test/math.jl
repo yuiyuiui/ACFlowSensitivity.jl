@@ -63,7 +63,7 @@ end
         # f(x) = sum((x-mini_point).^2)/2
         J(x) = x - mini_point
         H = diagm(ones(T, n))
-        back, _, _ = @constinferred ACFlowSensitivity.newton(x->J(x), x->H, zeros(T, n))
+        back, _, _ = @constinferred ACFlowSensitivity.newton(x->(J(x), H), zeros(T, n))
         @test back isa Vector{T}
         @test isapprox(back, mini_point, atol=strict_tol(T))
     end

@@ -6,7 +6,7 @@ using LinearAlgebra, Zygote, Random, Einsum
 export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed
-export Solver, BarRat, NAC, MaxEntChi2kink, SSK, SAC, SOM, SPX
+export Solver, BarRat, NAC, MaxEnt, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient, ∇L2loss
 export bfgs, newton

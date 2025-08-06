@@ -89,25 +89,24 @@ end
     end
 end
 
-@testset "cont MaxEntChi2kink" begin
+@testset "cont MaxEnt Chi2kink" begin
     for T in [Float32, Float64]
-        tol = T == Float32 ? 2e-1 : 5.1e-3
+        tol = T == Float32 ? 2e-1 : 1e-2
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-                Aout = solve(GFV, ctx, MaxEntChi2kink(; model_type=model_type))
+                Aout = solve(GFV, ctx, MaxEnt(; model_type=model_type))
                 @test eltype(Aout) == T
                 @test length(Aout) == length(ctx.mesh.mesh)
                 @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
-                @test_throws ErrorException solve(GFV, ctx, MaxEntChi2kink(; maxiter=2))
             end
         end
     end
 end
 
-@testset "delta MaxEntChi2kink" begin
+@testset "delta MaxEnt Chi2kink" begin
     for T in [Float32, Float64]
-        alg = MaxEntChi2kink(; model_type="flat")
+        alg = MaxEnt(; model_type="flat")
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
         Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}

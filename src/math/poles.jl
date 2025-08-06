@@ -43,19 +43,6 @@ function find_peaks(mesh, v, minipeak; wind=0.01)
     return res
 end
 
-#=
-function poles2realγ(p::Vector, GFV::Vector{T}, iwn::Vector{T}) where {T<:Complex}
-    ker = [1/(iwn[i] - p[j]) for i in 1:length(iwn), j in eachindex(p)]
-    K = [real(ker); imag(ker)]
-    G = vcat(real(GFV), imag(GFV))
-    KtK = K'*K
-    KtG = K'*G
-    γ₀ = ones(real(T), length(p)) ./ length(p)
-    γopt, _, _ = newton(x->KtK*x-KtG, x->KtK, γ₀)
-    return γopt
-end
-=#
-
 function pG2γ(x, y, iwn) # x is p, y is G
     ker = [1/(iwn[i] - x[j]) for i in 1:length(iwn), j in eachindex(x)]
     K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
