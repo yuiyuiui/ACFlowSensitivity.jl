@@ -19,6 +19,13 @@ function continous_spectral_density(μ::Vector{T},
     return y
 end
 
+function addnoise!(GFV::Vector{Complex{T}}, noise::T) where {T<:Real}
+    for i in 1:length(GFV)
+        GFV[i] += noise * randn(T) * GFV[i] * exp(T(2π) * im * rand(T))
+    end
+    return GFV
+end
+
 # generate values of G(iw_n)
 function generate_GFV_cont(β::T,
                            N::Int,
@@ -32,9 +39,7 @@ function generate_GFV_cont(β::T,
     for i in 1:n
         res[i] = ACFlowSensitivity.integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
     end
-    for i in 1:n
-        res[i] += noise * randn(T) * res[i] * exp(T(2π) * im * rand(T))
-    end
+    addnoise!(res, noise)
     return res
 end
 
@@ -51,9 +56,7 @@ function generate_GFV_delta(β::T,
             res[i] += γ_vec[j] / (im * wn[i] - poles[j])
         end
     end
-    for i in 1:N
-        res[i] += noise * randn(T) * res[i] * exp(T(2π) * im * rand(T))
-    end
+    addnoise!(res, noise)
     return res
 end
 

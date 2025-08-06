@@ -94,45 +94,7 @@ function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
     amplitudes = [T(1), T(3 // 10), T(2 // 5)][1:nwave]
     _, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), noise=noise, μ=μ, σ=σ,
                         amplitudes=amplitudes)
-    GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
-    reA_perm = Vector{Vector{Float64}}(undef, perm_num)
-    N = ctx.N
-    for i in 1:perm_num
-        GFV_perm[i] = GFV .+ randn(N) * perm .* exp.(1im * 2π * rand(N))
-    end
-    _, reA = solve(GFV, ctx, alg)
-    for i in 1:perm_num
-        _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
-    end
-    p = plot(ctx.mesh,
-             reA;
-             label="reconstructed A(w)",
-             title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
-             xlabel="w",
-             ylabel="A(w)",
-             legend=:topleft)
-    for i in 1:perm_num
-        plot!(p,
-              ctx.mesh,
-              reA_perm[i];
-              label="permuted reA: $i",
-              linewidth=0.5)
-    end
-    _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-    max_error = zeros(T, length(ctx.mesh))
-    for i in 1:length(ctx.mesh)
-        max_error[i] = perm * norm(∂reADiv∂G[i, :])
-    end
-    Aupper = reA .+ max_error
-    Alower = max.(0.0, reA .- max_error)
-    plot!(p,
-          ctx.mesh,
-          Aupper;
-          fillrange=Alower,
-          fillalpha=0.3,
-          label="Confidence region",
-          linewidth=0)
-    return p
+    return plot_errorbound_cont(GFV, ctx, alg; perm=perm, perm_num=perm_num)
 end
 
 function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
@@ -170,6 +132,50 @@ function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
     ag = ave_grad(∂reADiv∂G) / 2
     Aupper = reA .+ perm * ag
     Alower = max.(0.0, reA .- perm * ag)
+    plot!(p,
+          ctx.mesh,
+          Aupper;
+          fillrange=Alower,
+          fillalpha=0.3,
+          label="Confidence region",
+          linewidth=0)
+    return p
+end
+
+function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
+                              alg::Solver; perm::Real=1e-4, perm_num::Int=4) where {T<:Real}
+    Random.seed!(6)
+    GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
+    reA_perm = Vector{Vector{Float64}}(undef, perm_num)
+    N = ctx.N
+    for i in 1:perm_num
+        GFV_perm[i] = GFV .+ randn(N) * perm .* exp.(1im * 2π * rand(N))
+    end
+    _, reA = solve(GFV, ctx, alg)
+    for i in 1:perm_num
+        _, reA_perm[i] = solve(GFV_perm[i], ctx, alg)
+    end
+    p = plot(ctx.mesh,
+             reA;
+             label="reconstructed A(w)",
+             title="error bound, $(typeof(alg)), Cont, perm: $(perm)",
+             xlabel="w",
+             ylabel="A(w)",
+             legend=:topleft)
+    for i in 1:perm_num
+        plot!(p,
+              ctx.mesh,
+              reA_perm[i];
+              label="permuted reA: $i",
+              linewidth=0.5)
+    end
+    _, _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
+    max_error = zeros(T, length(ctx.mesh))
+    for i in 1:length(ctx.mesh)
+        max_error[i] = perm * norm(∂reADiv∂G[i, :])
+    end
+    Aupper = reA .+ max_error
+    Alower = max.(0.0, reA .- max_error)
     plot!(p,
           ctx.mesh,
           Aupper;

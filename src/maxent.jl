@@ -30,14 +30,16 @@ function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
 end
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                alg::MaxEntChi2kink) where {T<:Real}
-    ctx.spt isa Cont && alg.maxiter > 1 &&
-        error("maxiter>1 is not stable for cont spectrum solve")
+    # ctx.spt isa Cont && alg.maxiter > 1 &&
+    # error("maxiter>1 is not stable for cont spectrum solve")
     maxiter = alg.maxiter
     pc = PreComput(GFV, ctx, alg)
     reA = pc.model
     for i in 1:maxiter
         pc.model .= reA
+        println("iter $i")
         reA = chi2kink(pc)
+        @show norm(reA - pc.model)
     end
     if ctx.spt isa Cont
         return ctx.mesh, reA
