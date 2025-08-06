@@ -621,53 +621,6 @@ function calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T
     return c
 end
 
-#=
-"""
-	constraints(S::StochSKSolver, fmesh::AbstractMesh)
-
-Try to implement the constrained stochastic analytic continuation
-method. This function will return a collection. It contains all the
-allowable indices. Be careful, `fmesh` should be a fine linear mesh.
-
-### Arguments
-* S     -> A StochSKSolver struct.
-* fmesh -> Very dense mesh for the δ peaks.
-
-### Returns
-* allow -> Allowable indices.
-
-See also: [`StochSKSolver`](@ref).
-"""
-function constraints(S::StochSKSolver, fmesh::AbstractMesh)
-	exclude = get_b("exclude")
-	nfine = get_k("nfine")
-	@assert nfine == length(fmesh)
-
-	allow = Int[]
-
-	# Go through the fine mesh and check every mesh point.
-	# Is is excluded?
-	for i in eachindex(fmesh)
-		is_excluded = false
-		#
-		if !isa(exclude, Missing)
-			for j in eachindex(exclude)
-				if exclude[j][1] ≤ fmesh[i] ≤ exclude[j][2]
-					is_excluded = true
-					break
-				end
-			end
-		end
-		#
-		if !is_excluded
-			push!(allow, i)
-		end
-	end
-
-	return allow
-end
-=#
-
 """
 	try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 

@@ -1,46 +1,13 @@
-@testset "_∂χ²vecDiv∂G" begin
-    T = Float64
-    N = 20
-    A, ctx, GFV = dfcfg(T, Cont())
-    G0 = vcat(real(GFV), imag(GFV))
-    pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
-    ∂χ²_expect = ACFlowSensitivity._∂χ²vecDiv∂G(pc)[1]
-    @test jacobian_check_v2v(G -> ACFlowSensitivity.G2χ²vec(ACFlowSensitivity.PreComput(G[1:N] +
-                                                                                        im *
-                                                                                        G[(N + 1):end],
-                                                                                        ctx,
-                                                                                        MaxEntChi2kink()))[2],
-                             ∂χ²_expect, G0)
-end
-@testset "_∂αoptDiv∂χ²vec" begin
-    T = Float64
-    N = 20
-    A, ctx, GFV = dfcfg(T, Cont())
-    G0 = vcat(real(GFV), imag(GFV))
-    pc = ACFlowSensitivity.PreComput(GFV, ctx, MaxEntChi2kink())
-    _, _, χ²vec, idx = ACFlowSensitivity._∂χ²vecDiv∂G(pc)
-    ∂αoptDiv∂χ²vec, _ = ACFlowSensitivity._∂αoptDiv∂χ²vec(χ²vec, pc, idx)
-    gradient_check(logχ² -> ACFlowSensitivity.χ²vec2αopt(10 .^ logχ², pc.αvec[idx]),
-                   vec(∂αoptDiv∂χ²vec) .* χ²vec * log(10), log10.(χ²vec))
-end
-
-#= Note: "flat" type model is not suitable for Gaussian type spectrum
-"flat" may be good when iteration of MaxEntChi2kink >1 and may be more suitable for delta type spectrum
-These methods and properties will be developed and tested in the future
-And of course mesh type "TangentMesh" is more suitable for Gaussian type spectrum
-=#
-
 @testset "differentiation of MaxEntChi2kink with Cont spectrum, specific method" begin
     jac_rtol = 3e-4
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-        reA, ∂reADiv∂G = solvediff(GFV, ctx,
-                                   MaxEntChi2kink(; model_type="Gaussian"))
-        @test reA isa Vector{T}
-        @test ∂reADiv∂G isa Matrix{Complex{T}}
-        @show svd(∂reADiv∂G).S[1:5]
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx,
+                                  MaxEntChi2kink(; model_type="Gaussian"))
+        @test Aout isa Vector{T}
+        @test ∂ADiv∂G isa Matrix{Complex{T}}
         G2A = G -> solve(G, ctx, MaxEntChi2kink())
-        @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; atol=tolerance(T), rtol=jac_rtol)
+        @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV; atol=tolerance(T), rtol=jac_rtol)
     end
 end
 

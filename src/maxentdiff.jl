@@ -1,3 +1,7 @@
+# ================================
+# diff chi2kink
+# ================================
+
 struct PreComput{T<:Real}
     ss::SingularSpace{T}
     model::Vector{T}
@@ -9,17 +13,18 @@ struct PreComput{T<:Real}
     S²VadDwDivσ²::Matrix{T}
 end
 function PreComput(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                   alg::MaxEntChi2kink) where {T<:Real}
-    L = alg.L
-    α₁ = T(alg.α₁)
+                   alg::MaxEnt) where {T<:Real}
+    nalph = alg.nalph
+    α₁ = T(alg.alpha)
+    ratio = T(alg.ratio)
     σ = T(ctx.σ)
     w = ctx.mesh.weight
     ss = SingularSpace(GFV, ctx.iwn, ctx.mesh.mesh)
     reA = make_model(alg.model_type, ctx)
-    αvec = Vector{T}(undef, L)
+    αvec = Vector{T}(undef, nalph)
     αvec[1] = α₁
-    for i in 2:L
-        αvec[i] = αvec[i-1] / 10
+    for i in 2:nalph
+        αvec[i] = αvec[i-1] / ratio
     end
     _, K, _, U, S, V = ss
     KDw = K * Diagonal(w)
@@ -66,16 +71,13 @@ function (f::MaxEnt_H{T})(u::Vector{T}) where {T<:Real}
     return f.α * I(size(f.V, 2)) + f.S²VadDwDivσ² * Diagonal(f.model .* exp.(f.V * u)) * f.V
 end
 
-#---------------------------------
-# solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                   alg::MaxEntChi2kink) where {T<:Real}
+                   alg::MaxEnt) where {T<:Real}
     alg.maxiter > 1 &&
         error("maxiter>1 is not stable for cont spectrum solve differentiation")
     if ctx.spt isa Cont
-        pc = PreComput(GFV, ctx, alg)
-        reA, ∂reADiv∂G = chi2kink_diff(pc)
-        return ctx.mesh.mesh, reA, ∂reADiv∂G
+        alg.method == "chi2kink" && (reA, ∂reADiv∂G=chi2kink_diff(GFV, ctx, alg))
+        return reA, ∂reADiv∂G
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg; equalγ=false)
     else
@@ -83,7 +85,9 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     end
 end
 
-function chi2kink_diff(pc::PreComput{T}) where {T<:Real}
+function chi2kink_diff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
+                       alg::MaxEnt) where {T<:Real}
+    pc = PreComput(GFV, ctx, alg)
     ss = pc.ss
     model = pc.model
     G, _, _, U, _, V = pc.ss
@@ -112,8 +116,8 @@ function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}
     σ = pc.σ
     model = pc.model
     N = size(K, 1) ÷ 2
-    L = length(αvec)
-    χ²vec = Vector{T}(undef, L) #χ²vec is χ²opt_vec
+    nalph = length(αvec)
+    χ²vec = Vector{T}(undef, nalph) #χ²vec is χ²opt_vec
     _A = MaxEnt_A(model, V)
     _χ² = MaxEnt_χ²(G, pc.KDw, model, V, σ)
     # ∂A/∂u 
@@ -128,21 +132,21 @@ function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}
     # ∂χ²/∂G, get a row matrix
     _∂χ²Div∂G(u::Vector{T}) = Matrix(2 / (σ^2) * (G' - _A(u)' * pc.KDw'))
 
-    ∂χ²vecDiv∂G = Matrix{T}(undef, L, 2 * N)
+    ∂χ²vecDiv∂G = Matrix{T}(undef, nalph, 2 * N)
 
     # then use Newton method to find the minimum point
     u_guess = zeros(T, n)
-    u_opt_vec = Vector{Vector{T}}(undef, L)
-    for i in 1:L
+    u_opt_vec = Vector{Vector{T}}(undef, nalph)
+    for i in 1:nalph
         α = αvec[i]
         _Hᵢ = MaxEnt_H(α, pc.S²VadDwDivσ², model, V)
         uᵢ, = newton(MaxEnt_J(α, pc.DSUadDivσ², pc.KDw, model, V, G), _Hᵢ, u_guess)
         u_guess = copy(uᵢ)
         u_opt_vec[i] = copy(uᵢ)
         χ²vec[i] = _χ²(uᵢ)
-        if i == L && !all(isfinite, _A(uᵢ))
+        if i == nalph && !all(isfinite, _A(uᵢ))
             χ²vec[i] = NaN
-            ∂χ²vecDiv∂G = ∂χ²vecDiv∂G[1:(L - 1), :]
+            ∂χ²vecDiv∂G = ∂χ²vecDiv∂G[1:(nalph - 1), :]
             break
         end
         ∂χ²vecDiv∂G[i, :] = -_∂χ²Div∂u(uᵢ) * pinv(_Hᵢ(uᵢ)) * ∂JDiv∂G + _∂χ²Div∂G(uᵢ) # ∂χ²opt/∂G

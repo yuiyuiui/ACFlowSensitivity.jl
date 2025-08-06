@@ -72,7 +72,6 @@ end
 
 # === Simpson ===
 
-
 """
     simpson(
         x::AbstractVector{S},
@@ -92,15 +91,13 @@ uniform mesh.
 
 See also: [`trapz`](@ref).
 """
-function simpson(
-    x::AbstractVector{S},
-    y::AbstractVector{T}
-    ) where {S<:Number, T<:Number}
+function simpson(x::AbstractVector{S},
+                 y::AbstractVector{T}) where {S<:Number,T<:Number}
     h = (x[2] - x[1]) / 3
 
     even_sum = 0
     odd_sum = 0
-    for i = 2:length(x)-1
+    for i in 2:(length(x) - 1)
         if iseven(i)
             even_sum = even_sum + y[i]
         else

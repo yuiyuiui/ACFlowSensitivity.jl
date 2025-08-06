@@ -90,25 +90,29 @@ end
 
 # MaxEnt ==========================
 
-abstract type MaxEnt <: Solver end
-
-struct MaxEntChi2kink <: MaxEnt
+struct MaxEnt <: Solver
     maxiter::Int
-    L::Int
-    α₁::Real
+    method::String
+    stype::String
+    nalph::Int
+    alpha::Real
+    ratio::Real
     model_type::String
     offdiag::Bool
     blur::Real
 end
 # what does `offdiag` in fact means?
-function MaxEntChi2kink(;
-                        maxiter::Int=1,
-                        L::Int=16,
-                        α₁::Real=1e12,
-                        model_type::String="Gaussian",
-                        offdiag::Bool=false,
-                        blur::Real=-1)
-    return MaxEntChi2kink(maxiter, L, α₁, model_type, offdiag, blur)
+function MaxEnt(;
+                maxiter::Int=1,
+                method::String="chi2min",
+                stype::String="sj",
+                nalph::Int=16,
+                alpha::Real=1e12,
+                ratio::Real=10,
+                model_type::String="Gaussian",
+                offdiag::Bool=false,
+                blur::Real=-1)
+    return MaxEnt(maxiter, method, stype, nalph, alpha, ratio, model_type, offdiag, blur)
 end
 
 struct Bryans <: MaxEnt

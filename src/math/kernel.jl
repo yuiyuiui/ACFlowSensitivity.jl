@@ -21,9 +21,8 @@ function make_kernel(mesh::Vector{T}, grid::Vector{T};
     return kernel
 end
 
-
 """
-    make_blur(am::AbstractMesh, A::Vector{T}, blur::T) where {T<:Real}
+    make_blur(am::Mesh{T}, A::Vector{T}, blur::T) where {T<:Real}
 
 Try to blur the given spectrum `A`, which is defined in `am`. And `blur`
 is the blur parameter.
@@ -36,8 +35,7 @@ is the blur parameter.
 ### Returns
 * A    -> It is updated in this function.
 """
-function make_blur(am::AbstractMesh, A::Vector{T}, blur::T) where {T<:Real}
-
+function make_blur(am::Mesh{T}, A::Vector{T}, blur::T) where {T<:Real}
     spl = CubicSplineInterpolation(A, am.mesh)
 
     bmesh, gaussian = make_gauss_peaks(blur)
@@ -50,7 +48,7 @@ function make_blur(am::AbstractMesh, A::Vector{T}, blur::T) where {T<:Real}
     Mm = reshape(am.mesh, (1, nmesh))
     I = Mx .* spl.(Mm .+ Mb)
 
-    for j = 1:nmesh
+    for j in 1:nmesh
         A[j] = simpson(bmesh, view(I, :, j))
     end
 end

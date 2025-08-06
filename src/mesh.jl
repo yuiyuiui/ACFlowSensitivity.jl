@@ -90,8 +90,6 @@ am = LinearMesh(1001, -10.0, 10.0)
 pos = nearest(am, 0.2) # pos = 201
 println(am[pos]) # -6.0
 ```
-
-See also: [`AbstractMesh`](@ref).
 """
 function nearest(mesh::Vector{T}, r::Real) where {T<:Real}
     # Check r and evaluate the corresponding value

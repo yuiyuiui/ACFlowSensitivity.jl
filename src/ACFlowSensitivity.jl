@@ -1,6 +1,6 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra, Zygote, Random
+using LinearAlgebra, Zygote, Random, Einsum
 
 # export interfaces
 export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
@@ -17,7 +17,8 @@ include("mesh.jl")
 include("solve.jl")
 include("barrat.jl")
 include("model.jl")
-# include("maxent/maxent.jl")
+include("maxent.jl")
+include("maxentdiff.jl")
 include("ssk.jl")
 include("sac.jl")
 include("som.jl")

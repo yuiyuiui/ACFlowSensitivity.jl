@@ -30,7 +30,7 @@ Mutable struct. It is used within the MaxEnt solver only.
 """
 mutable struct MaxEntContext{T<:Real}
     Gᵥ::Vector{T}
-    σ²::T
+    σ²::Vector{T}
     grid::Vector{T}
     mesh::Mesh{T}
     model::Vector{T}
@@ -98,7 +98,7 @@ function init(GFV::Vector{Complex{T}}, ctx::CtxData{T},
               alg::MaxEnt) where {T<:Real}
     # Prepera input data
     Gᵥ = vcat(real(GFV), imag(GFV))
-    σ² = (1 ./ T(ctx.covar))^2
+    σ² = (1 ./ T(ctx.covar))^2 * ones(T, length(Gᵥ))
     model = make_model(alg.model_type, ctx)
 
     # Prepare kernel function
@@ -139,23 +139,10 @@ function run!(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         println("Shannon–Jaynes entropy is used!")
     end
 
-    @cswitch method begin
-        @case "historic"
-        return historic(mec, alg)
-        break
-
-        @case "classic"
-        return classic(mec, alg)
-        break
-
-        @case "bryan"
-        return bryan(mec, alg)
-        break
-
-        @case "chi2kink"
-        return chi2kink(mec, alg)
-        break
-    end
+    method == "historic" && return historic(mec, alg)
+    method == "classic" && return classic(mec, alg)
+    method == "bryan" && return bryan(mec, alg)
+    method == "chi2kink" && return chi2kink(mec, alg)
 end
 
 #=
@@ -183,7 +170,7 @@ See also: [`MaxEntContext`](@ref).
 """
 function historic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     function root_fun(_α, _u)
-        res = optimizer(mec, _α, _u, use_bayes)
+        res = optimizer(mec, _α, _u, use_bayes, alg)
         @. _u = res[:u]
         return length(mec.σ²) / res[:χ²] - T(1)
     end
@@ -200,7 +187,7 @@ function historic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
 
     conv = T(0)
     while conv < T(1)
-        sol = optimizer(mec, alpha, u_vec, use_bayes)
+        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
         push!(s_vec, sol)
         alpha = alpha / ratio
         conv = length(mec.σ²) / sol[:χ²]
@@ -210,7 +197,7 @@ function historic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     alpha = s_vec[end][:α]
     α_opt = secant(root_fun, alpha, u_vec)
 
-    sol = optimizer(mec, α_opt, u_vec, use_bayes)
+    sol = optimizer(mec, α_opt, u_vec, use_bayes, alg)
     println("Optimized α : $α_opt log10(α) : $(log10(α_opt))")
 
     return s_vec, sol
@@ -244,7 +231,7 @@ See also: [`MaxEntContext`](@ref).
 """
 function classic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     function root_fun(_α, _u)
-        res = optimizer(mec, _α, _u, use_bayes)
+        res = optimizer(mec, _α, _u, use_bayes, alg)
         @. _u = res[:u]
         return res[:conv] - T(1)
     end
@@ -261,7 +248,7 @@ function classic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
 
     conv = T(0)
     while conv < T(1)
-        sol = optimizer(mec, alpha, u_vec, use_bayes)
+        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
         push!(s_vec, sol)
         alpha = alpha / ratio
         @. u_vec = sol[:u]
@@ -281,7 +268,7 @@ function classic(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     alpha = T(10) ^ exp_opt
     α_opt = secant(root_fun, alpha, u_vec)
 
-    sol = optimizer(mec, α_opt, u_vec, use_bayes)
+    sol = optimizer(mec, α_opt, u_vec, use_bayes, alg)
     println("Optimized α : $α_opt log10(α) : $(log10(α_opt))")
 
     return s_vec, sol
@@ -322,7 +309,7 @@ function bryan(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
 
     maxprob = T(0)
     while true
-        sol = optimizer(mec, alpha, u_vec, use_bayes)
+        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
         push!(s_vec, sol)
         alpha = alpha / ratio
         @. u_vec = sol[:u]
@@ -407,7 +394,7 @@ function chi2kink(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     α_vec = []
 
     while true
-        sol = optimizer(mec, alpha, u_vec, use_bayes)
+        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
         push!(s_vec, sol)
         push!(α_vec, alpha)
         push!(χ_vec, sol[:χ²])
@@ -433,7 +420,7 @@ function chi2kink(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     u_vec = s_vec[close][:u]
     α_opt = T(10) ^ α_opt
 
-    sol = optimizer(mec, α_opt, u_vec, use_bayes)
+    sol = optimizer(mec, α_opt, u_vec, use_bayes, alg)
     println("Optimized α : $α_opt log10(α) : $(log10(α_opt))")
 
     return s_vec, sol
@@ -446,7 +433,7 @@ end
         us::Vector{T},
         use_bayes::Bool,
         alg::MaxEnt
-    )
+    ) where {T<:Real}
 
 Optimization of maxent functional for a given value of `α`. Since a priori
 the best value of `α` is unknown, this function has to be called several
@@ -479,15 +466,15 @@ function optimizer(mec::MaxEntContext{T},
                    alg::MaxEnt) where {T<:Real}
     blur = T(alg.blur)
     offdiag = alg.offdiag
-    stype = alg.model_type
+    stype = alg.stype
 
     if offdiag
-        solution, call = newton(f_and_J_od, us, mec, α, stype)
+        solution, call = newton(f_and_J_od..., us, mec, α, stype)
         u = copy(solution)
         A = svd_to_real_od(mec, solution, stype)
         S = calc_entropy_od(mec, A, stype)
     else
-        solution, call = newton(f_and_J, us, mec, α, stype)
+        solution, call = newton(f_and_J..., us, mec, α, stype)
         u = copy(solution)
         A = svd_to_real(mec, solution, stype)
         S = calc_entropy(mec, A, u, stype)
@@ -584,7 +571,7 @@ L = \frac{1}{2} \chi^2,
     precompute(
         GFV::Vector{Complex{T}},
         σ²::Vector{T},
-        am::AbstractMesh,
+        am::Mesh{T},
         grid::Vector{T},
         D::Vector{T},
     ) where {T<:Real}
@@ -608,8 +595,8 @@ default model.
 * hess -> The Hessian matrix.
 """
 function precompute(GFV::Vector{Complex{T}},
-                    σ²::T,
-                    am::AbstractMesh,
+                    σ²::Vector{T},
+                    am::Mesh{T},
                     grid::Vector{T},
                     D::Vector{T}) where {T<:Real}
     # Create singular value space
@@ -706,8 +693,7 @@ See above explanations.
 
 See also: [`f_and_J_od`](@ref).
 """
-function f_and_J(u::Vector{T}, mec::MaxEntContext, α::T, stype::String) where {T<:Real}
-
+function f_and_J(u::Vector{T}, mec::MaxEntContext{T}, α::T, stype::String) where {T<:Real}
     n_svd = length(mec.Bₘ)
     J = diagm([α for i in 1:n_svd])
 
@@ -814,7 +800,8 @@ See above explanations.
 
 See also: [`f_and_J`](@ref).
 """
-function f_and_J_od(u::Vector{T}, mec::MaxEntContext, α::T, stype::String) where {T<:Real}
+function f_and_J_od(u::Vector{T}, mec::MaxEntContext{T}, α::T,
+                    stype::String) where {T<:Real}
     n_svd = length(mec.Bₘ)
     J = diagm([α for i in 1:n_svd])
 
@@ -894,7 +881,7 @@ See above explanations.
 
 See also: [`svd_to_real_od`](@ref).
 """
-function svd_to_real(mec::MaxEntContext, u::Vector{T}, stype::String) where {T<:Real}
+function svd_to_real(mec::MaxEntContext{T}, u::Vector{T}, stype::String) where {T<:Real}
     #
     # For Shannon–Jaynes entropy
     if stype == "sj"
@@ -958,7 +945,7 @@ See above explanations.
 
 See also: [`svd_to_real`](@ref).
 """
-function svd_to_real_od(mec::MaxEntContext, u::Vector{T}, stype::String) where {T<:Real}
+function svd_to_real_od(mec::MaxEntContext{T}, u::Vector{T}, stype::String) where {T<:Real}
     #
     # For Shannon–Jaynes entropy
     if stype == "sj"
@@ -1039,7 +1026,8 @@ See above explanations.
 
 See also: [`calc_entropy_od`](@ref).
 """
-function calc_entropy(mec::MaxEntContext, A::Vector{T}, u::Vector{T}, stype::String) where {T<:Real}
+function calc_entropy(mec::MaxEntContext{T}, A::Vector{T}, u::Vector{T},
+                      stype::String) where {T<:Real}
     #
     # For Shannon–Jaynes entropy
     if stype == "sj"
@@ -1075,7 +1063,7 @@ See above explanations.
 
 See also: [`calc_entropy`](@ref).
 """
-function calc_entropy_od(mec::MaxEntContext, A::Vector{T}, stype::String) where {T<:Real}
+function calc_entropy_od(mec::MaxEntContext{T}, A::Vector{T}, stype::String) where {T<:Real}
     #
     # For Shannon–Jaynes entropy
     if stype == "sj"
@@ -1253,13 +1241,13 @@ Z_j = \frac{\left(\sqrt{A^2_j + m^2_j} + m_j + A_j\right)}{\sqrt{2\Delta_j}}
 
 """
     calc_bayes(
-        mec::MaxEntContext,
-        A::Vector{T},
-        S::T,
-        χ²::T,
-        α::T,
+        mec::MaxEntContext{R},
+        A::Vector{R},
+        S::R,
+        χ²::R,
+        α::R,
         stype::String
-    ) where {T<:Real}
+    ) where {R<:Real}
 
 It calculates Bayesian convergence criterion (`ng`, `tr`, and `conv`) for
 classic maxent (maximum of probablility distribution) and then Bayesian
@@ -1279,12 +1267,12 @@ See above explanations.
 
 See also: [`calc_bayes_od`](@ref).
 """
-function calc_bayes(mec::MaxEntContext{T},
-                    A::Vector{T},
-                    S::T,
-                    χ²::T,
-                    α::T,
-                    stype::String) where {T<:Real}
+function calc_bayes(mec::MaxEntContext{R},
+                    A::Vector{R},
+                    S::R,
+                    χ²::R,
+                    α::R,
+                    stype::String) where {R<:Real}
     mesh = mec.mesh
 
     if stype == "sj"
@@ -1295,25 +1283,25 @@ function calc_bayes(mec::MaxEntContext{T},
     Λ = (T * T') .* mec.hess
 
     λ = eigvals(Hermitian(Λ))
-    ng = -T(2) * α * S
+    ng = -R(2) * α * S
     tr = sum(λ ./ (α .+ λ))
     conv = tr / ng
 
     eig_sum = sum(log.(α ./ (α .+ λ)))
-    log_prob = α * S - T(1//2) * χ² + log(α) + T(1//2) * eig_sum
+    log_prob = α * S - R(1//2) * χ² + log(α) + R(1//2) * eig_sum
 
     return ng, tr, conv, exp(log_prob)
 end
 
 """
     calc_bayes_od(
-        mec::MaxEntContext,
-        A::Vector{T},
-        S::T,
-        χ²::T,
-        α::T,
+        mec::MaxEntContext{Q},
+        A::Vector{Q},
+        S::Q,
+        χ²::Q,
+        α::Q,
         stype::String
-    ) where {T<:Real}
+    ) where {Q<:Real}
 
 It calculates Bayesian convergence criterion (`ng`, `tr`, and `conv`) for
 classic maxent (maximum of probablility distribution) and then Bayesian
@@ -1335,17 +1323,17 @@ See above explanations.
 
 See also: [`calc_bayes`](@ref).
 """
-function calc_bayes_od(mec::MaxEntContext,
-                       A::Vector{T},
-                       S::T,
-                       χ²::T,
-                       α::T,
-                       stype::String) where {T<:Real}
+function calc_bayes_od(mec::MaxEntContext{Q},
+                       A::Vector{Q},
+                       S::Q,
+                       χ²::Q,
+                       α::Q,
+                       stype::String) where {Q<:Real}
     mesh = mec.mesh
 
     if stype == "sj"
         R = (A .^ 2 + 4 * mec.model .^ 2) ./ (mesh.weight .^ 2)
-        T = R .^ T(0.25)
+        T = R .^ Q(0.25)
     else
         R = sqrt.(A .^ 2 + mec.model .^ 2)
         X = (R .+ mec.model .+ A) ./ sqrt.(2 * mesh.weight)
@@ -1360,13 +1348,13 @@ function calc_bayes_od(mec::MaxEntContext,
     conv = tr / ng
 
     eig_sum = sum(log.(α ./ (α .+ λ)))
-    log_prob = α * S - T(1//2) * χ² + log(α) + T(1//2) * eig_sum
+    log_prob = α * S - Q(1//2) * χ² + log(α) + Q(1//2) * eig_sum
 
     return ng, tr, conv, exp(log_prob)
 end
 
 """
-    calc_chi2(mec::MaxEntContext, A::Vector{T}) where {T<:Real}
+    calc_chi2(mec::MaxEntContext{T}, A::Vector{T}) where {T<:Real}
 
 It computes the χ²-deviation of the spectral function `A`.
 
@@ -1377,7 +1365,7 @@ It computes the χ²-deviation of the spectral function `A`.
 ### Returns
 * χ² -> Goodness-of-fit functional.
 """
-function calc_chi2(mec::MaxEntContext, A::Vector{T}) where {T<:Real}
+function calc_chi2(mec::MaxEntContext{T}, A::Vector{T}) where {T<:Real}
     Gₙ = reprod(mec.mesh, mec.kernel, A)
     χ² = sum(mec.σ² .* ((mec.Gᵥ - Gₙ) .^ 2))
     return χ²
