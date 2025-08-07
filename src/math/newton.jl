@@ -46,7 +46,39 @@ function newton(f_and_J::Function, guess::Vector{T}, kwargs...;
 
     if counter > maxiter
         println("Tolerance is reached in newton()!")
-        @show norm(f_and_J(back, kwargs...)[2])
+        println("The norm of the Jacobian is: ", norm(J))
+        reach_tol = true
+    end
+
+    return back, counter, reach_tol
+end
+
+function mynewton(fun::Function, grad::Function, guess::Vector{T}; maxiter::Int=20000,
+                  tol::T=T(1e-4)) where {T<:Real}
+    counter = 0
+    feed = copy(guess)
+    f = fun(feed)
+    J = grad(feed)
+    back = _apply(feed, f, J)
+    reach_tol = false
+
+    while true
+        counter = counter + 1
+        feed += T(1 // 2) * (back - feed)
+
+        f = fun(feed)
+        J = grad(feed)
+        back = _apply(feed, f, J)
+
+        any(isnan.(back)) && error("Got NaN!")
+        if counter > maxiter || maximum(abs.(back - feed)) < tol
+            break
+        end
+    end
+
+    if counter > maxiter
+        println("Tolerance is reached in newton()!")
+        @show norm(grad(back))
         reach_tol = true
     end
 

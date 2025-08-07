@@ -115,9 +115,10 @@ end
 end
 
 @testset "delta MaxEnt Chi2kink" begin
-    for T in [Float32, Float64]
-        alg = MaxEnt(; model_type="flat")
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
+    for T in [Float64, Float32]
+        alg = MaxEnt(; model_type="Gaussian")
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
+        @show orp, orγ
         Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}

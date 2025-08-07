@@ -88,7 +88,9 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                ml=801::Int,
                npole::Int=2,
                fp_ww::Real=T(0.01),
-               fp_mp::Real=T(0.1))
+               fp_mp::Real=T(0.1),
+               seed::Int=6)
+    Random.seed!(seed)
     ctx = CtxData(spt, β, N; mesh_bound=mb, mesh_length=ml, mesh_type=mesh_type, σ=GFVσ,
                   fp_ww=fp_ww, fp_mp=fp_mp)
     if spt isa Cont

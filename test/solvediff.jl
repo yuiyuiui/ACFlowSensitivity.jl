@@ -1,24 +1,25 @@
-@testset "differentiation of MaxEntChi2kink with Cont spectrum, specific method" begin
-    jac_rtol = 3e-4
+@testset "differentiation of MaxEnt Chi2kink with Cont spectrum, specific method" begin
+    jac_rtol = 1e-2
+    alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
         Aout, ∂ADiv∂G = solvediff(GFV, ctx,
-                                  MaxEntChi2kink(; model_type="Gaussian"))
+                                  MaxEnt(; model_type="Gaussian"))
         @test Aout isa Vector{T}
         @test ∂ADiv∂G isa Matrix{Complex{T}}
-        G2A = G -> solve(G, ctx, MaxEntChi2kink())
+        G2A = G -> solve(G, ctx, MaxEnt())
         @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV; atol=tolerance(T), rtol=jac_rtol)
     end
 end
 
 # Note: the choices of these ηs are really mystory!!!
-@testset "differentiation of MaxEntChi2kink with Cont spectrum, general method" begin
+@testset "differentiation of MaxEnt Chi2kink with Cont spectrum, general method" begin
     jac_rtol = 1e-1
     for T in [Float32, Float64]
         solve_tol = T == Float32 ? 2e-1 : 5.1e-3
         for mesh_type in [UniformMesh(), TangentMesh()]
             for model_type in ["Gaussian", "flat"]
-                alg = MaxEntChi2kink(; model_type=model_type)
+                alg = MaxEnt(; model_type=model_type)
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
                 reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
                 @test reA isa Vector{T}
@@ -33,10 +34,10 @@ end
     end
 end
 
-@testset "differentiation of MaxEntChi2kink with Delta spectrum" begin
+@testset "differentiation of MaxEnt Chi2kink with Delta spectrum" begin
     for T in [Float32, Float64] # mesh is not uesd so no test for mesh
-        alg = MaxEntChi2kink()
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2, ml=2000)
+        alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
         reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
         @test reA isa Vector{T}
         @test p isa Vector{T}

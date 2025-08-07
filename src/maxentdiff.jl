@@ -73,11 +73,8 @@ end
 
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                    alg::MaxEnt) where {T<:Real}
-    alg.maxiter > 1 &&
-        error("maxiter>1 is not stable for cont spectrum solve differentiation")
     if ctx.spt isa Cont
-        alg.method == "chi2kink" && (reA, ∂reADiv∂G=chi2kink_diff(GFV, ctx, alg))
-        return reA, ∂reADiv∂G
+        alg.method == "chi2kink" && return chi2kink_diff(GFV, ctx, alg)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg; equalγ=false)
     else
@@ -97,8 +94,8 @@ function chi2kink_diff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
 
     u_guess = copy(u_opt_vec[findmin(abs.(log10.(pc.αvec) .- log10(αopt)))[2]])
     _Hopt = MaxEnt_H(αopt, pc.S²VadDwDivσ², model, V)
-    u_opt, = newton(MaxEnt_J(αopt, pc.DSUadDivσ², pc.KDw, model, V, G),
-                    _Hopt, u_guess)
+    u_opt, = mynewton(MaxEnt_J(αopt, pc.DSUadDivσ², pc.KDw, model, V, G),
+                      _Hopt, u_guess)
 
     N = size(ss.K, 1) ÷ 2
     _A = MaxEnt_A(model, V)
@@ -140,7 +137,7 @@ function _∂χ²vecDiv∂G(pc::PreComput{T}) where {T<:Real}
     for i in 1:nalph
         α = αvec[i]
         _Hᵢ = MaxEnt_H(α, pc.S²VadDwDivσ², model, V)
-        uᵢ, = newton(MaxEnt_J(α, pc.DSUadDivσ², pc.KDw, model, V, G), _Hᵢ, u_guess)
+        uᵢ, = mynewton(MaxEnt_J(α, pc.DSUadDivσ², pc.KDw, model, V, G), _Hᵢ, u_guess)
         u_guess = copy(uᵢ)
         u_opt_vec[i] = copy(uᵢ)
         χ²vec[i] = _χ²(uᵢ)

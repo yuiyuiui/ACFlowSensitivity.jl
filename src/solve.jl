@@ -104,8 +104,8 @@ end
 function MaxEnt(;
                 method::String="chi2kink",
                 stype::String="sj",
-                nalph::Int=16,
-                alpha::Real=1e12,
+                nalph::Int=12,
+                alpha::Real=1e9,
                 ratio::Real=10,
                 model_type::String="Gaussian",
                 offdiag::Bool=false,
