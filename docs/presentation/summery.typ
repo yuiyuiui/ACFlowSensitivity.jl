@@ -129,7 +129,7 @@ Why choose `ssk` in stochastic methods: It's the most accuracy method in stochas
 Finally I choose `barrat`, `maxent(chi2kink)` and `ssk` to do sensitivity analysis.
 == Analysis Results Show
 (Show Tests)
- #image("../../plot/MaxEnt/maxent_cont_eb.svg")
+ #image("../../plot/maxent/chi2kink/maxent_cont_eb_2.svg")
 
 
 #table(

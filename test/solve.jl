@@ -118,7 +118,6 @@ end
     for T in [Float64, Float32]
         alg = MaxEnt(; model_type="Gaussian")
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-        @show orp, orγ
         Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}

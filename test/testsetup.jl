@@ -26,6 +26,8 @@ function addnoise!(GFV::Vector{Complex{T}}, noise::T) where {T<:Real}
     return GFV
 end
 
+addnoise(G::Vector{Complex{T}}, noise::T) where {T<:Real} = addnoise!(deepcopy(G), noise)
+
 # generate values of G(iw_n)
 function generate_GFV_cont(β::T,
                            N::Int,
@@ -148,14 +150,4 @@ function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     @show dy
     @show dy_expect
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
-end
-
-function ave_grad(J::Matrix{T}; try_num::Int=1000) where {T<:Number}
-    res = zeros(real(T), size(J, 1))
-    N = size(J, 2)
-    for i in 1:try_num
-        dx = randn(T, N)
-        res += abs.(real(conj(J) * dx))
-    end
-    return res / try_num
 end
