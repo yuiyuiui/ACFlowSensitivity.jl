@@ -89,7 +89,7 @@ end
     end
 end
 
-@testset "cont MaxEnt Chi2kink" begin
+@testset "cont MaxEnt" begin
     tol = 0.1
     T = Float32
     A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())

@@ -44,9 +44,10 @@ struct SingularSpace{T<:Real}
     V::Matrix{T}
 end
 function SingularSpace(GFV::Vector{Complex{T}},
-                       iwn::Vector{Complex{T}},
+                       grid::Vector{T},
                        mesh::Vector{T}) where {T<:Real}
     kernel = Matrix{Complex{T}}(undef, length(GFV), length(mesh))
+    iwn = im * grid
     for i in 1:length(GFV)
         for j in 1:length(mesh)
             kernel[i, j] = 1 / (iwn[i] - mesh[j])

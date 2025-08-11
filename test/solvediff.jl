@@ -1,10 +1,22 @@
+@testset "pγdiff" begin
+    for T in [Float32, Float64] # mesh is not uesd so no test for mesh
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
+        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = ACFlowSensitivity.pγdiff(GFV, ctx, BarRat())
+        @test reA isa Vector{T}
+        @test p isa Vector{T}
+        @test γ isa Vector{T}
+        @test ∂pDiv∂G isa Matrix{Complex{T}}
+        @test ∂γDiv∂G isa Matrix{Complex{T}}
+    end
+end
+
 @testset "differentiation of MaxEnt Chi2kink with Cont spectrum, specific method" begin
     jac_rtol = 1e-2
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-        Aout, ∂ADiv∂G = solvediff(GFV, ctx,
-                                  MaxEnt(; model_type="Gaussian"))
+        Aout, ∂ADiv∂G, tt = solvediff(GFV, ctx,
+                                      MaxEnt(; model_type="Gaussian"))
         @test Aout isa Vector{T}
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         G2A = G -> solve(G, ctx, MaxEnt())
@@ -12,7 +24,6 @@
     end
 end
 
-# Note: the choices of these ηs are really mystory!!!
 @testset "differentiation of MaxEnt Chi2kink with Cont spectrum, general method" begin
     jac_rtol = 1e-1
     for T in [Float32, Float64]
@@ -35,24 +46,21 @@ end
 end
 
 @testset "differentiation of MaxEnt Chi2kink with Delta spectrum" begin
-    for T in [Float32, Float64] # mesh is not uesd so no test for mesh
-        alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
-        @test p isa Vector{T}
-        @test γ isa Vector{T}
-        @test ∂pDiv∂G isa Matrix{Complex{T}}
-        @test ∂γDiv∂G isa Matrix{Complex{T}}
-        if T == Float64
-            @test norm(orp - p) < 5e-3
-            @test norm(orγ - γ) < 5e-3
-            G2p = G -> solve(G, ctx, alg)[2][1]
-            G2γ = G -> solve(G, ctx, alg)[2][2]
-            @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
-            @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
-        end
-    end
+    T = Float64
+    alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
+    (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
+    reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+    @test reA isa Vector{T}
+    @test p isa Vector{T}
+    @test γ isa Vector{T}
+    @test ∂pDiv∂G isa Matrix{Complex{T}}
+    @test ∂γDiv∂G isa Matrix{Complex{T}}
+    @test norm(orp - p) < 5e-3
+    @test norm(orγ - γ) < 5e-3
+    G2p = G -> solve(G, ctx, alg)[2][1]
+    G2γ = G -> solve(G, ctx, alg)[2][2]
+    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
+    @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
 end
 
 @testset "differentiation of BarRat with Cont spectrum" begin

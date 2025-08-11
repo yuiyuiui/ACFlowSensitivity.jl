@@ -15,7 +15,7 @@ Our purpose is to find a real vector $A$ on mesh. It's related reconstructed Gre
 $$\widetilde{G} = K\Delta A$$
 
 Then
-$$\chi^2(G,A) = \|\frac{G-K\Delta A}{\sigma}\|^2_2$$
+$$\chi^2(A, G) = \|\frac{G-K\Delta A}{\sigma}\|^2_2$$
 
 $$\nabla_A\chi^2 = \frac{2}{\sigma^2}\Delta K'(K\Delta A-G)$$
 
@@ -42,31 +42,31 @@ Besides, if the Green's function is the offdiag element, the spectrum can be non
 $$A(u) \to A^{od}(u) = A(u) - A(-u)$$
 
 About the optimization:
-$$Q(A, G,\alpha) = -\frac{1}{2}\chi^2(G,A) + \alpha S(A)$$
+$$Q(A,\alpha,G) = -\frac{1}{2}\chi^2(A,G) + \alpha S(A)$$
 
 Our purpose is to find the $A$ that minimize the $Q$. We make it by
 $$\nabla_A Q = 0$$
 
 Denote
-$$f(u,G,\alpha) = -V'\Delta^{-1}\nabla_A Q(A(u),G,\alpha), ~ u_{\alpha}(\alpha, G): f(u_{\alpha},G,\alpha) = 0$$
+$$f(u,\alpha, G) = -V'\Delta^{-1}\nabla_A Q(A(u),G,\alpha), ~ u_{\alpha}(\alpha, G): f(u_{\alpha},G,\alpha) = 0$$
 
 It's easy to prove that: 
-$$f(u,G,\alpha) = 0 \Longleftrightarrow \nabla_A Q(A(u),G,\alpha) = 0$$
+$$f(u,\alpha, G) = 0 \Longleftrightarrow \nabla_A Q(A(u),G,\alpha) = 0$$
 
 Easy to get:
 $$S_{sj}',~S_{br}' = -\Delta Vu$$
 
 Then we can get that:
-$$f(u,G,\alpha) = \alpha u + \frac{1}{\sigma^2}\Sigma U'(K\Delta A-G)$$
+$$f(u,\alpha, G) = \alpha u + \frac{1}{\sigma^2}\Sigma U'(K\Delta A-G)$$
 
 And
-$$J(u,G,\alpha) = \frac{\partial f}{\partial u}(u,G,\alpha) = \alpha I + \frac{1}{\sigma^2}\Sigma^2V'\Delta \frac{\partial A}{\partial u}$$
+$$J(u,\alpha, G) = \frac{\partial f}{\partial u}(u,\alpha, G) = \alpha I + \frac{1}{\sigma^2}\Sigma^2V'\Delta \frac{\partial A}{\partial u}$$
 
 $$\frac{\partial f}{\partial \alpha} = u$$
 
 $$\frac{\partial f}{\partial G} = -\frac{1}{\sigma^2}\Sigma U'$$
 
-Do differentiation of $f(u_{\alpha},G,\alpha)=0$ with respect to $G$, we get:
+Do differentiation of $f(u_{\alpha},\alpha, G)=0$ with respect to $G$, we get:
 $$J\frac{\partial u_{\alpha}}{\partial G} + \frac{\partial f}{\partial G} = 0$$
 
 $$\Longrightarrow \frac{\partial u_{\alpha}}{\partial G} = -J^{-1}\frac{\partial f}{\partial G}$$
@@ -75,7 +75,7 @@ $$\Longrightarrow \frac{\partial u_{\alpha}}{\partial G} = -J^{-1}\frac{\partial
 ![alt text](chi2kink.png)
 
 Here $p$ satisfies:
-$$\frac{\partial \text{sgmls}(\alpha_{vec}, \chi^2_{vec}, p)}{\partial p} = 0$$
+$$\frac{\partial \text{sgmls}(\log_{10}(\alpha_{vec}), \log_{10}(\chi^2_{vec}), p)}{\partial p} = 0$$
 
 ($\text{sgmls}$ means "loss function of the sigmod function", $p = [a,b,c,d]$)
 
@@ -86,9 +86,21 @@ $$\nabla_p \text{sgmls},~ \frac{\partial^2 \text{sgmls}}{\partial p^2}, ~\frac{\
 $$f(u_{opt}(G), \alpha_{opt}(G),G) = 0$$
 
 Do differentiation of both sides of the formula:
-$$J\frac{\partial u_{opt}}{\partial G} + \frac{\partial f}{\partial \alpha}(\frac{\partial \alpha_{opt}}{\partial G})^T +(\frac{\partial f}{\partial G}) = 0$$
+$$J\frac{\partial u_{opt}}{\partial G} + \frac{\partial f}{\partial \alpha}\frac{\partial \alpha_{opt}}{\partial G} +\frac{\partial f}{\partial G} = 0$$
 
-$$\frac{\partial u_{opt}}{\partial G} =  J^{-1}\left(\frac{1}{\sigma^2}\Sigma U' - u(\frac{\partial \alpha_{opt}}{\partial G})^T\right)$$
+$$\frac{\partial u_{opt}}{\partial G} =  -J^{-1}\left(\frac{\partial f}{\partial G} + u\frac{\partial \alpha_{opt}}{\partial G}\right)$$
+
+For $\frac{\partial \alpha_{opt}}{\partial G}$:
+
+$$\frac{\partial \chi^2_{vec}[j]}{\partial G} = \frac{\partial \chi^2}{\partial A}\frac{\partial A}{\partial u}\frac{\partial u_{\alpha j}}{\partial G} + \frac{\partial \chi^2}{\partial G}$$
+
+$$\frac{\partial p}{\partial \chi^2} = -\left(\frac{\partial^2 \text{sgmls}}{\partial p^2}\right)^{-1}\left(\frac{\partial^2 \text{sgmls}}{\partial p\partial y}\text{diag}\left(\log_{10}(\chi^2_{vec})\right)\right)$$
+
+$$\frac{\partial   \alpha_{opt}}{\partial p} = [0, 0, \alpha_{opt} \ln(10), \alpha_{opt} \ln(10) \frac{\text{fit\_pos}}{d^2}]$$
+
+`fit_pos` is a control parameter for avoiding under/overfitting. And finally:
+
+$$\frac{\partial \alpha_{opt}}{\partial G} = \frac{\partial \alpha_{opt}}{\partial p}\frac{\partial p}{\partial \chi^2}\frac{\partial \chi^2_{vec}}{\partial G}$$
 
 # 2. Bryan
 ![alt text](bryan.png)
@@ -110,7 +122,10 @@ $$\Longrightarrow \nabla_GP = P\nabla_G Q$$
 
 $$\nabla_A P = P\left(\frac{\partial Q}{\partial A} -\frac{1}{2}\frac{1}{\det(\alpha I + \text{diag}(T)H \text{diag}(T))}(\frac{\partial T}{\partial A})^T \nabla_T \det(\alpha I + \text{diag}(T)H \text{diag}(T))\right)$$
 
-$$ = P\left(\frac{\partial Q}{\partial A} -\frac{1}{2}\frac{1}{\det(..)}\frac{\partial T}{\partial A}2\det(..)\left((...)^{-1}\circ H\right)T\right)$$
+$$ = P\left(\frac{\partial Q}{\partial A} -\frac{1}{2}\frac{1}{\det(..)}\frac{\partial T}{\partial A}2\det(..)\text{diag}\left(..^{-1}\text{diag}(T)H\right)\right)$$
+
+$$ = P\left(\frac{\partial Q}{\partial A} -\frac{\partial T}{\partial A}\text{diag}\left(..^{-1}\text{diag}(T)H\right)\right)$$
+
 
 resize $P_{vec}$:
 

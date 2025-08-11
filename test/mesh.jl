@@ -34,7 +34,7 @@ end
         v2 = Vector{Complex{T}}(1:n)
         _, ctx, GFV = dfcfg(T, Cont())
         mesh = ctx.mesh.mesh
-        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.iwn, mesh)
+        ss = ACFlowSensitivity.SingularSpace(GFV, ctx.wn, mesh)
         G, K, n, U, S, V = ss
         @test typeof(ss) <: ACFlowSensitivity.SingularSpace{T}
         kernel = Matrix{Complex{T}}(undef, length(GFV), length(mesh))

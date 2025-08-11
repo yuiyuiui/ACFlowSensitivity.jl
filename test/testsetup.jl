@@ -121,9 +121,15 @@ end
 # vector to vector
 function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
                             atol=1e-8, show_err::Bool=true,
-                            show_dy::Bool=false) where {T<:Number}
+                            show_dy::Bool=false, randdx::Bool=false) where {T<:Number}
     η = T(η)
-    dx = η * x / norm(x)
+    if randdx
+        Random.seed!(1234)
+        dx = rand(T, length(x))
+        dx = dx / norm(dx) * η
+    else
+        dx = η * x / norm(x)
+    end
     dy = f(x + dx) - f(x)
     dy_expect = real(conj(J) * dx)
     err = norm(dy - dy_expect)

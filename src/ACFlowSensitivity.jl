@@ -5,7 +5,7 @@ using LinearAlgebra, Zygote, Random, Einsum
 # export interfaces
 export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
-export SpectrumType, Cont, Delta, Mixed
+export SpectrumType, Cont, Delta, Mixed, SJ, BR
 export Solver, BarRat, NAC, MaxEnt, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient, ∇L2loss
@@ -19,6 +19,7 @@ include("barrat.jl")
 include("model.jl")
 include("maxent.jl")
 include("maxentdiff.jl")
+include("maxent_old.jl")
 include("ssk.jl")
 include("sac.jl")
 include("som.jl")

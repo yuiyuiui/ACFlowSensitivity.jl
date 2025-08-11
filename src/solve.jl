@@ -89,28 +89,34 @@ function NAC(; pick=true,
 end
 
 # MaxEnt ==========================
+abstract type Stype end
 
-struct MaxEnt <: Solver
+struct SJ <: Stype end
+struct BR <: Stype end
+
+mutable struct MaxEnt <: Solver
     method::String
-    stype::String
+    stype::Stype
     nalph::Int
     alpha::Real
     ratio::Real
     model_type::String
     offdiag::Bool
     blur::Real
+    test::Any
 end
 # what does `offdiag` in fact means?
 function MaxEnt(;
                 method::String="chi2kink",
-                stype::String="sj",
-                nalph::Int=12,
+                stype::Stype=SJ(),
+                nalph::Int=13,
                 alpha::Real=1e9,
                 ratio::Real=10,
                 model_type::String="Gaussian",
                 offdiag::Bool=false,
-                blur::Real=-1)
-    return MaxEnt(method, stype, nalph, alpha, ratio, model_type, offdiag, blur)
+                blur::Real=-1,
+                test=missing)
+    return MaxEnt(method, stype, nalph, alpha, ratio, model_type, offdiag, blur, test)
 end
 
 # SSK ==========================
