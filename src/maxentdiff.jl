@@ -322,10 +322,11 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     _∂uαDiv∂G = func∂uαDiv∂G(mec)
     nsvd = length(solvec[1][:u])
     ∂uαvecDiv∂G = zeros(T, nalph * nsvd, length(G))
-    ∇AQ = [- _∇Aχ²(solvec[i][:A], G) / 2 + _∇AS(solvec[i][:u]) * solvec[i][:α] for i in 1:nalph]
+    ∇AQ = [- _∇Aχ²(solvec[i][:A], G) / 2 + _∇AS(solvec[i][:u]) * solvec[i][:α]
+           for i in 1:nalph]
     if mec.stype isa SJ
         _T = v -> sqrt.(v ./ mec.δ)
-        _∂TDiv∂A = v -> Diagonal(1 ./ sqrt.(v .* mec.δ)) 
+        _∂TDiv∂A = v -> Diagonal(1 ./ sqrt.(v .* mec.δ))
     elseif mec.stype isa BR
         _T = v -> v ./ sqrt.(mec.δ)
         _∂TDiv∂A = v -> Diagonal(1 ./ sqrt.(mec.δ))
@@ -337,7 +338,7 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     Pvec = T[]
     Aαvec = Vector{T}[]
 
-    for i in 1: nalph
+    for i in 1:nalph
         uᵢ = solvec[i][:u]
         Aᵢ = solvec[i][:A]
         push!(Aαvec, Aᵢ)
@@ -346,24 +347,24 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         push!(Pvec, Pᵢ)
         αᵢ = solvec[i][:α]
         Λᵢ⁻¹ = invΛ(αᵢ, Diagonal(Tᵢ) * H * Diagonal(Tᵢ))
-        ∇APᵢ= Pᵢ * (∇AQ[i] - _∂TDiv∂A(Aᵢ)*diag(Λᵢ⁻¹ * Diagonal(Tᵢ) * H))
+        ∇APᵢ = Pᵢ * (∇AQ[i] - _∂TDiv∂A(Aᵢ)*diag(Λᵢ⁻¹ * Diagonal(Tᵢ) * H))
         ∇GPᵢ = Pᵢ * _∇Gχ²(Aᵢ, G)
         ∂uαDiv∂Gᵢ = _∂uαDiv∂G(uᵢ, αᵢ)
         if alg.stype isa SJ
             ∂ADiv∂uᵢ = Diagonal(Aᵢ) * mec.V
         elseif alg.stype isa BR
-            ∂ADiv∂uᵢ = Diagonal(Aᵢ.^2) * mec.V
+            ∂ADiv∂uᵢ = Diagonal(Aᵢ .^ 2) * mec.V
         else
             error("Unsupported entropy type")
         end
-        ∂PαvecDiv∂G[i,:] .= (∇GPᵢ)' + (∇APᵢ)' * ∂ADiv∂uᵢ * ∂uαDiv∂Gᵢ
-        ∂uαvecDiv∂G[(i-1)*nsvd+1:i*nsvd,:] .= ∂uαDiv∂Gᵢ
+        ∂PαvecDiv∂G[i, :] .= (∇GPᵢ)' + (∇APᵢ)' * ∂ADiv∂uᵢ * ∂uαDiv∂Gᵢ
+        ∂uαvecDiv∂G[((i - 1) * nsvd + 1):(i * nsvd), :] .= ∂uαDiv∂Gᵢ
     end
 
     function last(Avec, Pᵥ)
         Pᵥnorm = -Pᵥ ./ trapz(αvec, Pᵥ)
-        spectra = hcat([Avec[(i-1)*m+1:i*m] * Pᵥnorm[i] for i in 1:nalph]...)
-        Aopt = [-trapz(αvec, spectra[j,:]) for j in 1:m]
+        spectra = hcat([Avec[((i - 1) * m + 1):(i * m)] * Pᵥnorm[i] for i in 1:nalph]...)
+        Aopt = [-trapz(αvec, spectra[j, :]) for j in 1:m]
         return Aopt
     end
 
@@ -372,9 +373,14 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     ∂AsumDiv∂uvec = zeros(T, m, nsvd * nalph)
     for i in 1:length
         if alg.stype isa SJ
-            ∂AsumDiv∂uvec[:, (i-1)*nsvd+1:i*nsvd] .= ∂AsumDiv∂Avec[:, (i-1)*m+1:i*m] * Diagonal(Aαvec[i]) * mec.V
+            ∂AsumDiv∂uvec[:, ((i - 1) * nsvd + 1):(i * nsvd)] .= ∂AsumDiv∂Avec[:,
+                                                                               ((i - 1) * m + 1):(i * m)] *
+                                                                 Diagonal(Aαvec[i]) * mec.V
         elseif alg.stype isa BR
-            ∂AsumDiv∂uvec[:, (i-1)*nsvd+1:i*nsvd] .= ∂AsumDiv∂Avec[:, (i-1)*m+1:i*m] * Diagonal(Aαvec[i].^2) * mec.V
+            ∂AsumDiv∂uvec[:, ((i - 1) * nsvd + 1):(i * nsvd)] .= ∂AsumDiv∂Avec[:,
+                                                                               ((i - 1) * m + 1):(i * m)] *
+                                                                 Diagonal(Aαvec[i] .^ 2) *
+                                                                 mec.V
         else
             error("Unsupported entropy type")
         end
@@ -387,31 +393,30 @@ end
 
 # Λ⁻¹ =  (αI + UΣU')⁻¹ = I/α - U(α²Σ⁻¹ + αI)⁻¹ U'
 function invΛ(α::T, H::Matrix{T}) where {T<:Real}
-    S,U = eigen(Hermitian(H))
+    S, U = eigen(Hermitian(H))
     idx = findall(S .> strict_tol(T))
     S = S[idx]
-    U = U[:,idx]
+    U = U[:, idx]
     n = length(S)
-    return I(n)/α - U * Diagonal( (α^2 ./ S + α * ones(n)).^(-1) ) * U'
+    return I(n)/α - U * Diagonal((α^2 ./ S + α * ones(n)) .^ (-1)) * U'
 end
-
 
 # ============= historic ===================
 function historicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     _, sol = historic(mec, alg)
     ∇Aχ² = func∇Aχ²(mec)(sol[:A], mec.Gᵥ)
     if mec.stype isa SJ
-            ∂ADiv∂u = Diagonal(sol[:A]) * mec.V
+        ∂ADiv∂u = Diagonal(sol[:A]) * mec.V
     elseif alg.stype isa BR
-            ∂ADiv∂u = Diagonal(sol[:A].^2) * mec.V
+        ∂ADiv∂u = Diagonal(sol[:A] .^ 2) * mec.V
     else
-            error("Unsupported entropy type")
+        error("Unsupported entropy type")
     end
     ∂uαDiv∂α = func∂uαDiv∂α(mec)(sol[:u], sol[:α])
     ∇Gχ² = func∇Gχ²(mec)(sol[:A], mec.Gᵥ)
     ∂uαDiv∂G = func∂uαDiv∂G(mec)(sol[:u], sol[:α])
     tmp = ∇Aχ²' * ∂ADiv∂u
-    ∂αoptDiv∂G = -(∇Gχ²' + tmp * ∂uαDiv∂G) /(tmp * ∂uαDiv∂α)
+    ∂αoptDiv∂G = -(∇Gχ²' + tmp * ∂uαDiv∂G) / (tmp * ∂uαDiv∂α)
     ∂uoptDiv∂G = ∂uαDiv∂G + ∂uαDiv∂α * ∂αoptDiv∂G
     ∂AoptDiv∂G = ∂ADiv∂u * ∂uoptDiv∂G
     N = length(mec.Gᵥ) ÷ 2
@@ -431,19 +436,19 @@ function classicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     elseif mec.stype isa BR
         T = A ./ sqrt.(mec.δ)
         ∂TDiv∂A = Diagonal(1 ./ sqrt.(mec.δ))
-        ∂ADiv∂u = Diagonal(A.^2) * mec.V
+        ∂ADiv∂u = Diagonal(A .^ 2) * mec.V
     else
         error("Unsupported entropy type")
     end
     ∂SDiv∂A = -Diagonal(mec.δ)*mec.V*u
     # construct Λ
     H = Diagonal(mec.δ) * mec.kernel' * mec.kernel * Diagonal(mec.δ)
-    Λ = H *Diagonal(T) * invΛ(α, Diagonal(T) * H * Diagonal(T))^2
+    Λ = H * Diagonal(T) * invΛ(α, Diagonal(T) * H * Diagonal(T))^2
 
     ∂uαDiv∂α = func∂uαDiv∂α(mec)(u, α)
     ∂uαDiv∂G = func∂uαDiv∂G(mec)(u, α)
     tmp = (diag(Λ)' * ∂TDiv∂A + ∂SDiv∂A) * ∂ADiv∂u
-    ∂αoptDiv∂G = -α/(S + α*tmp * ∂uαDiv∂α) * tmp * ∂uαDiv∂G
+    ∂αoptDiv∂G = -α/(S + α * tmp * ∂uαDiv∂α) * tmp * ∂uαDiv∂G
     ∂uoptDiv∂G = ∂uαDiv∂G + ∂uαDiv∂α * ∂αoptDiv∂G
     ∂AoptDiv∂G = ∂ADiv∂u * ∂uoptDiv∂G
     N = length(mec.Gᵥ) ÷ 2
