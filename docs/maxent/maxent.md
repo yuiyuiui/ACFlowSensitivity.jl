@@ -71,6 +71,9 @@ $$J\frac{\partial u_{\alpha}}{\partial G} + \frac{\partial f}{\partial G} = 0$$
 
 $$\Longrightarrow \frac{\partial u_{\alpha}}{\partial G} = -J^{-1}\frac{\partial f}{\partial G}$$
 
+And
+$$\frac{\partial \alpha_{opt}}{\partial \alpha} = -J^{-1}\frac{\partial f}{\partial \alpha}$$
+
 # 1. Chi2kink
 ![alt text](chi2kink.png)
 
@@ -110,21 +113,30 @@ $$T_{sj}(A) = \left[\sqrt{\frac{A_j}{\delta_j}}\right]_j, ~~T_{br}(A) = \left[\f
 Denote:
 $$H = \Delta K'K\Delta$$
 
+$$\Lambda(\alpha, T) = \alpha I + \text{diag}(T)H\text{diag}(T)$$
+
 $$[\lambda_1, .., \lambda_M] = \sigma(\text{diag}(T)H\text{diag}(T))$$
 
 $$P(A,G) = \exp\left(\alpha S-\frac{1}{2}\chi^2+\ln\alpha +\frac{1}{2}\sum_{j=1}^M\ln\frac{\alpha}{\alpha +\lambda_j}\right)$$
 
 $$= \alpha^{M/2+1}\exp(Q)\frac{1}{\sqrt{(\alpha+\lambda_1)...(\alpha+\lambda_M)}}$$
 
-$$ = \alpha^{M/2+1}\exp(Q)\frac{1}{\sqrt{\det(\alpha I + \text{diag}(T)H \text{diag}(T))}}$$
+$$ = \alpha^{M/2+1}\exp(Q)\frac{1}{\sqrt{\det(\Lambda(\alpha, T))}}$$
 
 $$\Longrightarrow \nabla_GP = P\nabla_G Q$$
 
-$$\nabla_A P = P\left(\frac{\partial Q}{\partial A} -\frac{1}{2}\frac{1}{\det(\alpha I + \text{diag}(T)H \text{diag}(T))}(\frac{\partial T}{\partial A})^T \nabla_T \det(\alpha I + \text{diag}(T)H \text{diag}(T))\right)$$
+$$\nabla_A P = P\left(\nabla_A Q-\frac{1}{2}\frac{1}{\det(\Lambda)}(\frac{\partial T}{\partial A})^T \nabla_T \det(\Lambda)\right)$$
 
-$$ = P\left(\frac{\partial Q}{\partial A} -\frac{1}{2}\frac{1}{\det(..)}\frac{\partial T}{\partial A}2\det(..)\text{diag}\left(..^{-1}\text{diag}(T)H\right)\right)$$
+$$ = P\left(\nabla_A Q -\frac{1}{2}\frac{1}{\det(\Lambda)}\frac{\partial T}{\partial A}2\det(\Lambda)\text{diag}\left(\Lambda^{-1}\text{diag}(T)H\right)\right)$$
 
-$$ = P\left(\frac{\partial Q}{\partial A} -\frac{\partial T}{\partial A}\text{diag}\left(..^{-1}\text{diag}(T)H\right)\right)$$
+$$ = P\left(\nabla_A Q -\frac{\partial T}{\partial A}\text{diag}\left(\Lambda^{-1}\text{diag}(T)H\right)\right)$$
+
+Denote:
+$$P_{\alpha}(G) = P(A_{\alpha}(G), G)$$
+
+And $\Lambda^{-1}$ can be calculated by:
+
+$$(\alpha I + USU')^{-1} = I/α - U(\alpha^2S^{-1} + αI)^{-1}U'$$
 
 
 resize $P_{vec}$:
@@ -139,9 +151,14 @@ $$A_{opt} = \text{trapz}(A\circ(u_{\alpha vec}), \alpha_{vec})$$
 
 The jacobian of the function:
 
-$$u_{\alpha vec},P_{vec} \to A_{opt}$$
+$$[u_j]_j, [P_j]_j \to A_{sum}$$
 
 can be easily solved by AD program with low cost.
+
+$$A_{opt}(G) = A_{sum}(u_{\alpha vec}(G), P_{\alpha vec}(G))$$
+
+Finally:
+$$\frac{\partial A_{opt}}{\partial G} = \frac{\partial A_{sum}}{\partial u_{\alpha vec}}\frac{\partial u_{\alpha vec}}{\partial G} + \frac{\partial A_{sum}}{\partial P_{vec}}\left(\frac{\partial P_{vec}}{\partial G} +\frac{\partial P_{vec}}{\partial A_{\alpha vec}}\frac{\partial A}{\partial u}\frac{\partial u_{\alpha vec}}{\partial G}\right)$$
 
 # 3. Historic
 $$\chi^2(A(u_{\alpha vec}),G) = N$$
@@ -160,6 +177,10 @@ $$-2\alpha_{opt}S = \text{Tr}[\frac{\text{diag}(T)H\text{diag}(T)}{\alpha_{opt} 
 
 $$\Longrightarrow -2\left(\frac{\partial \alpha_{opt}}{\partial G}S+\alpha_{opt}\frac{\partial S}{\partial A}\left[\frac{\partial u_{\alpha}}{\partial \alpha}\frac{\partial \alpha_{opt}}{\partial G} + \frac{\partial u_{\alpha}}{\partial G}\right]\right)$$
 
-$$= 2\alpha_{opt}\left[ \text{diag}(H\text{diag}(T)(\alpha_{opt} I +\text{diag}(T)H\text{diag}(T))^{-2} \right]^{T}\frac{\partial T}{\partial A}\frac{\partial A}{\partial u}\left[\frac{\partial u_{\alpha}}{\partial \alpha}\frac{\partial \alpha_{opt}}{\partial G} + \frac{\partial u_{\alpha}}{\partial G}\right]$$
+$$= 2\alpha_{opt}\left[ \text{diag}\left(H\text{diag}(T)\left(\alpha_{opt} I +\text{diag}(T)H\text{diag}\left(T\right)\right)^{-2} \right) \right]^{T}\frac{\partial T}{\partial A}\frac{\partial A}{\partial u}\left[\frac{\partial u_{\alpha}}{\partial \alpha}\frac{\partial \alpha_{opt}}{\partial G} + \frac{\partial u_{\alpha}}{\partial G}\right]$$
 
-$$\Longrightarrow \frac{\partial \alpha_{opt}}{\partial G} = -\alpha_{opt}\left[S + \alpha_{opt}\left[\text{diag}(...)^T\frac{\partial T}{\partial A}+\frac{\partial S}{\partial A}\right]\frac{\partial A}{\partial u}\frac{\partial u_{\alpha}}{\partial \alpha}\right]^{-1}   \left[\text{diag}(...)^T\frac{\partial T}{\partial A}+\frac{\partial S}{\partial A}\right]\frac{\partial A}{\partial u}\frac{\partial u_{\alpha}}{\partial G}$$
+Denote:
+
+$$\Lambda = H\text{diag}(T)\left(\alpha_{opt} I +\text{diag}(T)H\text{diag}\left(T\right)\right)^{-2}$$
+
+$$\Longrightarrow \frac{\partial \alpha_{opt}}{\partial G} = -\alpha_{opt}\left[S + \alpha_{opt}\left[\text{diag}(\Lambda)^T\frac{\partial T}{\partial A}+\frac{\partial S}{\partial A}\right]\frac{\partial A}{\partial u}\frac{\partial u_{\alpha}}{\partial \alpha}\right]^{-1}   \left[\text{diag}(\Lambda)^T\frac{\partial T}{\partial A}+\frac{\partial S}{\partial A}\right]\frac{\partial A}{\partial u}\frac{\partial u_{\alpha}}{\partial G}$$

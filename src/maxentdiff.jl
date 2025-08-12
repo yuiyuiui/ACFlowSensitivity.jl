@@ -201,6 +201,16 @@ function (f::func∂uαDiv∂G{T})(u::Vector{T}, α::T) where {T<:Real}
     return - pinv(f.J(u, α)) * f.∂ƒDiv∂G()
 end
 
+struct func∂uαDiv∂α{T<:Real}<:Function
+    J::funcJ{T}
+end
+function func∂uαDiv∂α(mec::MaxEntContext{T}) where {T<:Real}
+    return func∂uαDiv∂α(funcJ(mec))
+end
+function (f::func∂uαDiv∂α{T})(u::Vector{T}, α::T) where {T<:Real}
+    return - pinv(f.J(u, α)) * u
+end
+
 # ============ solvediff ===================
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::MaxEnt) where {T<:Real}
     alg.offdiag && error("offdiag is not supported for maxent diff now")
@@ -237,6 +247,7 @@ function chi2kinkdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     n_svd = length(mec.Bₘ)
     G = mec.Gᵥ
     uαvec = Vector{T}[]
+    Avec = Vector{T}[]
     u₀ = zeros(T, n_svd)
     χ²vec = T[]
     αvec = T[]
@@ -247,6 +258,7 @@ function chi2kinkdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         push!(χ²vec, sol[:χ²])
         @. u₀ = sol[:u]
         push!(uαvec, sol[:u])
+        push!(Avec, sol[:A])
     end
 
     good = isfinite.(χ²vec)
@@ -267,20 +279,20 @@ function chi2kinkdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
 
     sol = optimizer(mec, αopt, u₀, use_bayes, alg)
     uopt = sol[:u]
+    Aopt = sol[:A]
     println("Optimized α : $αopt log10(α) : $(log10(αopt))")
 
-    _A = funcA(mec)
     _∇Aχ² = func∇Aχ²(mec)
     _∇Gχ² = func∇Gχ²(mec)
     _∂ADiv∂u = func∂ADiv∂u(mec)
-    _∂uαDiv∂G = func∂uαDiv∂G(mec)
+    _∂uαDiv∂G = func∂uαDiv∂G(mec) # u,α ->
     _J = funcJ(mec)
     _∂ƒDiv∂G = func∂ƒDiv∂G(mec)
     ∂χ²vecDiv∂G = zeros(T, nalph, length(G))
     for i in 1:nalph
         if good[i]
-            ∂χ²vecDiv∂G[i, :] = _∇Aχ²(_A(uαvec[i]), G)' * _∂ADiv∂u(uαvec[i]) *
-                                _∂uαDiv∂G(uαvec[i], αvec[i]) + _∇Gχ²(_A(uαvec[i]), G)'
+            ∂χ²vecDiv∂G[i, :] = _∇Aχ²(Avec[i], G)' * _∂ADiv∂u(uαvec[i]) *
+                                _∂uαDiv∂G(uαvec[i], αvec[i]) + _∇Gχ²(Avec[i], G)'
         end
     end
 
@@ -294,5 +306,146 @@ function chi2kinkdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     ∂AoptDiv∂G = _∂ADiv∂u(uopt) * ∂uoptDiv∂G
 
     N = size(mec.kernel, 1) ÷ 2
-    return _A(uopt), ∂AoptDiv∂G[:, 1:N] + im * ∂AoptDiv∂G[:, (N + 1):(2 * N)], alg.test
+    return Aopt, ∂AoptDiv∂G[:, 1:N] + im * ∂AoptDiv∂G[:, (N + 1):(2 * N)]
+end
+
+# ============= bryan ===================
+function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
+    G = mec.Gᵥ
+    m = length(mec.δ)
+    nalph = alg.nalph
+    solvec, sol = bryan(mec, alg)
+    ∂PαvecDiv∂G = zeros(T, nalph, length(G))
+    _∇Aχ² = func∇Aχ²(mec) # A,G ->
+    _∇AS = func∇AS(mec) # u ->
+    _∇Gχ² = func∇Gχ²(mec) # A,G ->
+    _∂uαDiv∂G = func∂uαDiv∂G(mec)
+    nsvd = length(solvec[1][:u])
+    ∂uαvecDiv∂G = zeros(T, nalph * nsvd, length(G))
+    ∇AQ = [- _∇Aχ²(solvec[i][:A], G) / 2 + _∇AS(solvec[i][:u]) * solvec[i][:α] for i in 1:nalph]
+    if mec.stype isa SJ
+        _T = v -> sqrt.(v ./ mec.δ)
+        _∂TDiv∂A = v -> Diagonal(1 ./ sqrt.(v .* mec.δ)) 
+    elseif mec.stype isa BR
+        _T = v -> v ./ sqrt.(mec.δ)
+        _∂TDiv∂A = v -> Diagonal(1 ./ sqrt.(mec.δ))
+    else
+        error("Unsupported entropy type")
+    end
+    H = Diagonal(mec.δ) * mec.kernel' * mec.kernel * Diagonal(mec.δ)
+    @show norm(H - mec.hess)
+    Pvec = T[]
+    Aαvec = Vector{T}[]
+
+    for i in 1: nalph
+        uᵢ = solvec[i][:u]
+        Aᵢ = solvec[i][:A]
+        push!(Aαvec, Aᵢ)
+        Tᵢ = _T(Aᵢ)
+        Pᵢ = solvec[i][:prob]
+        push!(Pvec, Pᵢ)
+        αᵢ = solvec[i][:α]
+        Λᵢ⁻¹ = invΛ(αᵢ, Diagonal(Tᵢ) * H * Diagonal(Tᵢ))
+        ∇APᵢ= Pᵢ * (∇AQ[i] - _∂TDiv∂A(Aᵢ)*diag(Λᵢ⁻¹ * Diagonal(Tᵢ) * H))
+        ∇GPᵢ = Pᵢ * _∇Gχ²(Aᵢ, G)
+        ∂uαDiv∂Gᵢ = _∂uαDiv∂G(uᵢ, αᵢ)
+        if alg.stype isa SJ
+            ∂ADiv∂uᵢ = Diagonal(Aᵢ) * mec.V
+        elseif alg.stype isa BR
+            ∂ADiv∂uᵢ = Diagonal(Aᵢ.^2) * mec.V
+        else
+            error("Unsupported entropy type")
+        end
+        ∂PαvecDiv∂G[i,:] .= (∇GPᵢ)' + (∇APᵢ)' * ∂ADiv∂uᵢ * ∂uαDiv∂Gᵢ
+        ∂uαvecDiv∂G[(i-1)*nsvd+1:i*nsvd,:] .= ∂uαDiv∂Gᵢ
+    end
+
+    function last(Avec, Pᵥ)
+        Pᵥnorm = -Pᵥ ./ trapz(αvec, Pᵥ)
+        spectra = hcat([Avec[(i-1)*m+1:i*m] * Pᵥnorm[i] for i in 1:nalph]...)
+        Aopt = [-trapz(αvec, spectra[j,:]) for j in 1:m]
+        return Aopt
+    end
+
+    Aout = last(Aαvec..., Pvec)
+    ∂AsumDiv∂Avec, ∂AsumDiv∂Pᵥ = Zygote.jacobian(last, Aαvec..., Pvec)
+    ∂AsumDiv∂uvec = zeros(T, m, nsvd * nalph)
+    for i in 1:length
+        if alg.stype isa SJ
+            ∂AsumDiv∂uvec[:, (i-1)*nsvd+1:i*nsvd] .= ∂AsumDiv∂Avec[:, (i-1)*m+1:i*m] * Diagonal(Aαvec[i]) * mec.V
+        elseif alg.stype isa BR
+            ∂AsumDiv∂uvec[:, (i-1)*nsvd+1:i*nsvd] .= ∂AsumDiv∂Avec[:, (i-1)*m+1:i*m] * Diagonal(Aαvec[i].^2) * mec.V
+        else
+            error("Unsupported entropy type")
+        end
+    end
+
+    ∂AoptDiv∂G = ∂AsumDiv∂uvec * ∂uαvecDiv∂G + ∂AsumDiv∂Pᵥ * ∂PαvecDiv∂G
+    N = length(G) ÷ 2
+    return Aout, ∂AoptDiv∂G[:, 1:N] + im * ∂AoptDiv∂G[:, (N + 1):(2 * N)]
+end
+
+# Λ⁻¹ =  (αI + UΣU')⁻¹ = I/α - U(α²Σ⁻¹ + αI)⁻¹ U'
+function invΛ(α::T, H::Matrix{T}) where {T<:Real}
+    S,U = eigen(Hermitian(H))
+    idx = findall(S .> strict_tol(T))
+    S = S[idx]
+    U = U[:,idx]
+    n = length(S)
+    return I(n)/α - U * Diagonal( (α^2 ./ S + α * ones(n)).^(-1) ) * U'
+end
+
+
+# ============= historic ===================
+function historicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
+    _, sol = historic(mec, alg)
+    ∇Aχ² = func∇Aχ²(mec)(sol[:A], mec.Gᵥ)
+    if mec.stype isa SJ
+            ∂ADiv∂u = Diagonal(sol[:A]) * mec.V
+    elseif alg.stype isa BR
+            ∂ADiv∂u = Diagonal(sol[:A].^2) * mec.V
+    else
+            error("Unsupported entropy type")
+    end
+    ∂uαDiv∂α = func∂uαDiv∂α(mec)(sol[:u], sol[:α])
+    ∇Gχ² = func∇Gχ²(mec)(sol[:A], mec.Gᵥ)
+    ∂uαDiv∂G = func∂uαDiv∂G(mec)(sol[:u], sol[:α])
+    tmp = ∇Aχ²' * ∂ADiv∂u
+    ∂αoptDiv∂G = -(∇Gχ²' + tmp * ∂uαDiv∂G) /(tmp * ∂uαDiv∂α)
+    ∂uoptDiv∂G = ∂uαDiv∂G + ∂uαDiv∂α * ∂αoptDiv∂G
+    ∂AoptDiv∂G = ∂ADiv∂u * ∂uoptDiv∂G
+    N = length(mec.Gᵥ) ÷ 2
+    return sol[:A], ∂AoptDiv∂G[:, 1:N] + im * ∂AoptDiv∂G[:, (N + 1):(2 * N)]
+end
+
+# ============= classic ===================
+function classicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
+    _, sol = classic(mec, alg)
+    α = sol[:α]
+    A = sol[:A]
+    u = sol[:u]
+    if mec.stype isa SJ
+        T = sqrt.(A ./ mec.δ)
+        ∂TDiv∂A = Diagonal(1 ./ (2 * sqrt.(A ./ mec.δ)))
+        ∂ADiv∂u = Diagonal(A) * mec.V
+    elseif mec.stype isa BR
+        T = A ./ sqrt.(mec.δ)
+        ∂TDiv∂A = Diagonal(1 ./ sqrt.(mec.δ))
+        ∂ADiv∂u = Diagonal(A.^2) * mec.V
+    else
+        error("Unsupported entropy type")
+    end
+    ∂SDiv∂A = -Diagonal(mec.δ)*mec.V*u
+    # construct Λ
+    H = Diagonal(mec.δ) * mec.kernel' * mec.kernel * Diagonal(mec.δ)
+    Λ = H *Diagonal(T) * invΛ(α, Diagonal(T) * H * Diagonal(T))^2
+
+    ∂uαDiv∂α = func∂uαDiv∂α(mec)(u, α)
+    ∂uαDiv∂G = func∂uαDiv∂G(mec)(u, α)
+    tmp = (diag(Λ)' * ∂TDiv∂A + ∂SDiv∂A) * ∂ADiv∂u
+    ∂αoptDiv∂G = -α/(S + α*tmp * ∂uαDiv∂α) * tmp * ∂uαDiv∂G
+    ∂uoptDiv∂G = ∂uαDiv∂G + ∂uαDiv∂α * ∂αoptDiv∂G
+    ∂AoptDiv∂G = ∂ADiv∂u * ∂uoptDiv∂G
+    N = length(mec.Gᵥ) ÷ 2
+    return A, ∂AoptDiv∂G[:, 1:N] + im * ∂AoptDiv∂G[:, (N + 1):(2 * N)]
 end
