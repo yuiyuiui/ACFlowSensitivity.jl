@@ -41,7 +41,7 @@ function secant(func, x0::T, args...; maxiter::Int=50, tol::Real=1.48e-8) where 
     for _ in 1:maxiter
         if q1 == q0
             if p1 != p0
-                error("Tolerance is reached in secant()!")
+                @warn "Tolerance is not reached in secant()!"
             end
             p = (p1 + p0) / T(2)
             return p
@@ -62,4 +62,6 @@ function secant(func, x0::T, args...; maxiter::Int=50, tol::Real=1.48e-8) where 
         q1 = func(p1, args...)
         funcalls = funcalls + 1
     end
+    @warn "Maximum iterations is reached in secant()!"
+    return p1
 end

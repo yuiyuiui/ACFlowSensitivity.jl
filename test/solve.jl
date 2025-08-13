@@ -129,6 +129,18 @@ end
     end
 end
 
+# Test BR entropy
+# T = Float32 would cause too much numerical instability, so we don't test it here.
+@testset "maxent br entropy" begin
+    T = Float64
+    for method in ["chi2kink", "classic", "bryan", "historic"]
+        alg = MaxEnt(; model_type="Gaussian", stype=BR(), method=method)
+        _, ctx, GFV = dfcfg(T, Cont(); μ=[T(0)], σ=[T(1)], amplitudes=[T(1)])
+        Aout = solve(GFV, ctx, alg)
+        @test Aout isa Vector{T}
+    end
+end
+
 @testset "serve functions in ssk" begin
     pn = 2
     T = Float64

@@ -324,6 +324,7 @@ function bryan(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
         push!(s_vec, sol)
         alpha = alpha / ratio
+        alpha == 0 && break
         @. u_vec = sol[:u]
         prob = sol[:prob]
         if prob > maxprob
@@ -630,6 +631,7 @@ function precompute(GFV::Vector{Complex{T}},
 
     # Compute the Hessian matrix
     @einsum hess[i, j] = Δ[i] * Δ[j] * K[k, i] * K[k, j] * σ⁻²[k]
+    hess = (hess + hess') / 2
 
     return V, W₂, W₃, Bₘ, hess
 end
@@ -1285,7 +1287,9 @@ function calc_bayes(mec::MaxEntContext{R},
     end
     Λ = (T * T') .* mec.hess
 
-    λ = eigvals(Hermitian(Λ))
+    nsvd = size(mec.Vₛ, 2)
+    λ = eigvals(Hermitian(Λ))[(end - nsvd + 1):end]
+    filter!(x -> x > 0, λ)
     ng = -R(2) * α * S
     tr = sum(λ ./ (α .+ λ))
     conv = tr / ng
@@ -1343,7 +1347,9 @@ function calc_bayes_od(mec::MaxEntContext{Q},
     end
     Λ = (T * T') .* mec.hess
 
-    λ = eigvals(Hermitian(Λ))
+    nsvd = size(mec.Vₛ, 2)
+    λ = eigvals(Hermitian(Λ))[(end - nsvd + 1):end]
+    filter!(x -> x > 0, λ)
     ng = -2 * α * S
     tr = sum(λ ./ (α .+ λ))
     conv = tr / ng
