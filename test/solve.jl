@@ -89,7 +89,7 @@ end
     end
 end
 
-@testset "cont MaxEnt" begin
+@testset "cont MaxEnt SJ entropy" begin
     tol = 0.1
     T = Float32
     A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
@@ -114,7 +114,7 @@ end
     end
 end
 
-@testset "delta MaxEnt Chi2kink" begin
+@testset "delta MaxEnt Chi2kink SJ entropy" begin
     for T in [Float64, Float32]
         alg = MaxEnt(; model_type="Gaussian")
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
@@ -131,7 +131,7 @@ end
 
 # Test BR entropy
 # T = Float32 would cause too much numerical instability, so we don't test it here.
-@testset "maxent br entropy" begin
+@testset "maxent BR entropy" begin
     T = Float64
     for method in ["chi2kink", "classic", "bryan", "historic"]
         alg = MaxEnt(; model_type="Gaussian", stype=BR(), method=method)

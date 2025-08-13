@@ -397,8 +397,8 @@ function invΛ(α::T, H::Matrix{T}) where {T<:Real}
     idx = findall(S .> strict_tol(T))
     S = S[idx]
     U = U[:, idx]
-    n = length(S)
-    return I(n)/α - U * Diagonal((α^2 ./ S + α * ones(n)) .^ (-1)) * U'
+    m, n = size(U)
+    return I(m)/α - U * Diagonal((α^2 ./ S + α * ones(T, n)) .^ (-1)) * U'
 end
 
 # ============= historic ===================
@@ -429,6 +429,7 @@ function classicdiff(mec::MaxEntContext{R}, alg::MaxEnt) where {R<:Real}
     α = sol[:α]
     A = sol[:A]
     u = sol[:u]
+    S = sol[:S]
     if mec.stype isa SJ
         T = sqrt.(A ./ mec.δ)
         ∂TDiv∂A = Diagonal(1 ./ (2 * sqrt.(A ./ mec.δ)))
@@ -440,7 +441,7 @@ function classicdiff(mec::MaxEntContext{R}, alg::MaxEnt) where {R<:Real}
     else
         error("Unsupported entropy type")
     end
-    ∂SDiv∂A = -Diagonal(mec.δ)*mec.V*u
+    ∂SDiv∂A = -(Diagonal(mec.δ)*mec.V*u)'
     # construct Λ
     H = Diagonal(mec.δ) * mec.kernel' * mec.kernel * Diagonal(mec.δ)
     Λ = H * Diagonal(T) * invΛ(α, Diagonal(T) * H * Diagonal(T))^2

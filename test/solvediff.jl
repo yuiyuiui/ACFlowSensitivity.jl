@@ -10,7 +10,7 @@
     end
 end
 
-@testset "differentiation of MaxEnt Chi2kink with Cont spectrum, specific method" begin
+@testset "differentiation of MaxEnt Chi2kink with Cont spectrum and SJ entropy, specific method" begin
     jac_rtol = 1e-2
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     for T in [Float32, Float64]
@@ -24,7 +24,7 @@ end
     end
 end
 
-@testset "differentiation of MaxEnt Chi2kink with Cont spectrum, general method" begin
+@testset "differentiation of MaxEnt Chi2kink with Cont spectrum and SJ entropy, general method" begin
     jac_rtol = 1e-1
     for T in [Float32, Float64]
         solve_tol = T == Float32 ? 2e-1 : 5.1e-3
@@ -45,7 +45,7 @@ end
     end
 end
 
-@testset "differentiation of MaxEnt Chi2kink with Delta spectrum" begin
+@testset "differentiation of MaxEnt Chi2kink with Delta spectrum and SJ entropy" begin
     T = Float64
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
@@ -61,6 +61,33 @@ end
     G2γ = G -> solve(G, ctx, alg)[2][2]
     @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+end
+
+@testset "test invΛ" begin
+    for T in [Float32, Float64]
+        n = 10
+        α = T(2.1)
+        H = randn(T, n, n)
+        H = H * H'
+        λ = α * I(n) + H
+        Λ⁻¹ = ACFlowSensitivity.invΛ(α, H)
+        @test Λ⁻¹ isa Matrix{T}
+        @test norm(Λ⁻¹ - inv(λ)) < strict_tol(T)
+    end
+end
+
+@testset "test classicdiff" begin
+    for T in [Float32, Float64]
+        alg = MaxEnt(; model_type="Gaussian", method="classic")
+        A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
+        @test ∂ADiv∂G isa Matrix{Complex{T}}
+        if T == Float64
+            G2A = G -> solve(G, ctx, alg)
+            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+        end
+    end
 end
 
 @testset "differentiation of BarRat with Cont spectrum" begin
