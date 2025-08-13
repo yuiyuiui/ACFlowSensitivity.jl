@@ -509,7 +509,7 @@ function init_context(SE::StochSKElement{I,T},
     θvec = zeros(T, nwarm)
 
     # Build kernel matrix
-    _, _, _, U, S, V = SingularSpace(GFV, ctx.iwn * ctx.σ, fine_mesh * ctx.σ)
+    _, _, _, U, S, V = SingularSpace(GFV, ctx.wn * ctx.σ, fine_mesh * ctx.σ)
 
     # Get new kernel matrix
     kernel = Diagonal(S) * V'

@@ -424,7 +424,7 @@ function historicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
 end
 
 # ============= classic ===================
-function classicdiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
+function classicdiff(mec::MaxEntContext{R}, alg::MaxEnt) where {R<:Real}
     _, sol = classic(mec, alg)
     α = sol[:α]
     A = sol[:A]

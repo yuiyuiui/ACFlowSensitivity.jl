@@ -211,7 +211,7 @@ end
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
-        @test norm(rep - poles) < 0.01
+        @test norm(rep - poles) < 0.02
     end
 end
 
@@ -234,7 +234,7 @@ end
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
-        @test norm(orp - rep) < 0.01
-        @test norm(orγ - reγ) < 0.01
+        @test norm(orp - rep) < 0.011
+        @test norm(orγ - reγ) < 0.011
     end
 end

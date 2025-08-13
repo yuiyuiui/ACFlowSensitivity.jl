@@ -495,7 +495,7 @@ function init_context(SE::StochACElement,
     Δ = calc_delta(fine_mesh, ϕ)
 
     # Build kernel matrix
-    _, _, _, U, S, V = SingularSpace(GFV, ctx.iwn*ctx.σ, fine_mesh*ctx.σ)
+    _, _, _, U, S, V = SingularSpace(GFV, ctx.wn*ctx.σ, fine_mesh*ctx.σ)
 
     # Get new kernel matrix
     kernel = Diagonal(S) * V'

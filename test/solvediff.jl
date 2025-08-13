@@ -15,8 +15,8 @@ end
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-        Aout, ∂ADiv∂G, tt = solvediff(GFV, ctx,
-                                      MaxEnt(; model_type="Gaussian"))
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx,
+                                  MaxEnt(; model_type="Gaussian"))
         @test Aout isa Vector{T}
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         G2A = G -> solve(G, ctx, MaxEnt())
