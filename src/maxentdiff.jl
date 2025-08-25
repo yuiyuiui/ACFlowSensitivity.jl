@@ -313,8 +313,9 @@ end
 function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     G = mec.Gᵥ
     m = length(mec.δ)
-    nalph = alg.nalph
     solvec, sol = bryan(mec, alg)
+    nalph = length(solvec)
+    αvec = [solvec[i][:α] for i in 1:nalph]
     ∂PαvecDiv∂G = zeros(T, nalph, length(G))
     _∇Aχ² = func∇Aχ²(mec) # A,G ->
     _∇AS = func∇AS(mec) # u ->
@@ -334,7 +335,6 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         error("Unsupported entropy type")
     end
     H = Diagonal(mec.δ) * mec.kernel' * mec.kernel * Diagonal(mec.δ)
-    @show norm(H - mec.hess)
     Pvec = T[]
     Aαvec = Vector{T}[]
 
@@ -357,7 +357,7 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         else
             error("Unsupported entropy type")
         end
-        ∂PαvecDiv∂G[i, :] .= (∇GPᵢ)' + (∇APᵢ)' * ∂ADiv∂uᵢ * ∂uαDiv∂Gᵢ
+        ∂PαvecDiv∂G[i, :] = ∇GPᵢ' + ∇APᵢ' * ∂ADiv∂uᵢ * ∂uαDiv∂Gᵢ
         ∂uαvecDiv∂G[((i - 1) * nsvd + 1):(i * nsvd), :] .= ∂uαDiv∂Gᵢ
     end
 
@@ -368,10 +368,10 @@ function bryandiff(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
         return Aopt
     end
 
-    Aout = last(Aαvec..., Pvec)
-    ∂AsumDiv∂Avec, ∂AsumDiv∂Pᵥ = Zygote.jacobian(last, Aαvec..., Pvec)
+    Aout = last(vcat(Aαvec...), Pvec)
+    ∂AsumDiv∂Avec, ∂AsumDiv∂Pᵥ = Zygote.jacobian(last, vcat(Aαvec...), Pvec)
     ∂AsumDiv∂uvec = zeros(T, m, nsvd * nalph)
-    for i in 1:length
+    for i in 1:nalph
         if alg.stype isa SJ
             ∂AsumDiv∂uvec[:, ((i - 1) * nsvd + 1):(i * nsvd)] .= ∂AsumDiv∂Avec[:,
                                                                                ((i - 1) * m + 1):(i * m)] *

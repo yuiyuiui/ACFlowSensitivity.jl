@@ -24,8 +24,8 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |:---|:---|:---|:---|:---|:---|:---|
 |BarRat|✅|✅||✅|✅|
 |MaxEnt Chi2kink|✅|✅||✅|✅||
-|MaxEnt Bryan|✅|✅|||||
-|MaxEnt Classic|✅|✅|||||
+|MaxEnt Bryan|✅|✅||✅|✅||
+|MaxEnt Classic|✅|✅||✅|✅||
 |MaxEnt Historic|✅|✅|||||
 |SSK|✅|✅||✅|✅||
 |SAC|✅|✅||✅|✅||

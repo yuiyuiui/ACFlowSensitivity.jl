@@ -63,6 +63,7 @@ end
     @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
 end
 
+# Diff of other maxent methods for Delta spectrum is also just calling `pγdiff` just like `chi2kink` so we ignore their Delta spectrum diff tests here.
 @testset "test invΛ" begin
     for T in [Float32, Float64]
         n = 10
@@ -76,9 +77,37 @@ end
     end
 end
 
-@testset "test classicdiff" begin
+@testset "test classicdiff with SJ entropy and Cont spectrum" begin
     for T in [Float32, Float64]
         alg = MaxEnt(; model_type="Gaussian", method="classic")
+        A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
+        @test ∂ADiv∂G isa Matrix{Complex{T}}
+        if T == Float64
+            G2A = G -> solve(G, ctx, alg)
+            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+        end
+    end
+end
+
+@testset "test bryandiff with SJ entropy and Cont spectrum" begin
+    for T in [Float32, Float64]
+        alg = MaxEnt(; model_type="Gaussian", method="bryan")
+        A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
+        @test ∂ADiv∂G isa Matrix{Complex{T}}
+        if T == Float64
+            G2A = G -> solve(G, ctx, alg)
+            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+        end
+    end
+end
+
+@testset "test historicdiff with SJ entropy and Cont spectrum" begin
+    for T in [Float32, Float64]
+        alg = MaxEnt(; model_type="Gaussian", method="historic")
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
         Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
         @test Aout isa Vector{T}
