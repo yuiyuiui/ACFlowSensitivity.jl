@@ -131,7 +131,7 @@ end
 
 # Test BR entropy
 # T = Float32 would cause too much numerical instability, so we don't test it here.
-@testset "maxent BR entropy" begin
+@testset "maxent BR entropy with Cont spectrum" begin
     T = Float64
     for method in ["chi2kink", "classic", "bryan", "historic"]
         alg = MaxEnt(; model_type="Gaussian", stype=BR(), method=method)

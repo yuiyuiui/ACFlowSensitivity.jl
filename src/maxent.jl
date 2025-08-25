@@ -83,6 +83,9 @@ It seems that the MaxEnt solver is hard to create δ-like spectra.
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                alg::MaxEnt) where {T<:Real}
     println("[ MaxEnt ]")
+    if ctx.spt isa Cont && alg.stype isa BR
+        @warn("It's recommended to use BR for Delta spectrum")
+    end
     mec = init(GFV, ctx, alg)
     _, sol = run!(mec, alg)
     Aout = sol[:A]

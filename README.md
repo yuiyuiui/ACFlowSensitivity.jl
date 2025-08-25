@@ -26,7 +26,7 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |MaxEnt Chi2kink|✅|✅||✅|✅||
 |MaxEnt Bryan|✅|✅||✅|✅||
 |MaxEnt Classic|✅|✅||✅|✅||
-|MaxEnt Historic|✅|✅|||||
+|MaxEnt Historic|✅|✅||✅|✅||
 |SSK|✅|✅||✅|✅||
 |SAC|✅|✅||✅|✅||
 |SPX|✅|✅||✅|✅||
