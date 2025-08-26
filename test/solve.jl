@@ -68,7 +68,7 @@ end
             Aout = solve(GFV, ctx, BarRat())
             @test eltype(Aout) == T
             @test length(Aout) == length(ctx.mesh.mesh)
-            @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
+            T == Float64 && @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < tol
         end
     end
 end

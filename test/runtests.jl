@@ -17,8 +17,6 @@ end
 @testset "model" begin
     include("model.jl")
 end
-# Note: Running tests via Pkg.test() shows slightly higher errors compared to running tests line by line in the REPL.
-# This is likely due to differences in how the test environment is initialized.
 @testset "solve" begin
     include("solve.jl")
 end
