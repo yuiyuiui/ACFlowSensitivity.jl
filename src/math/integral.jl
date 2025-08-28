@@ -25,7 +25,7 @@ end
 
 function Lp(f::Function, p::Real, a::T, b::T; h::T=T(1e-4)) where {T<:Real}
     Tp = T(p)
-    return integral(x->abs(f(x))^Tp, a, b; h=h)^(1/Tp)
+    return integral(x -> abs(f(x))^Tp, a, b; h=h)^(1 / Tp)
 end
 
 # === Trapz ===
@@ -64,7 +64,7 @@ function trapz(x::AbstractVector{S},
         dx = view(x, 2:len) .- view(x, 1:(len - 1))
         y_forward = view(y, 2:len)
         y_backward = view(y, 1:(len - 1))
-        value = sum((1//2) * (y_forward .+ y_backward) .* dx)
+        value = sum((1 // 2) * (y_forward .+ y_backward) .* dx)
     end
 
     return value
@@ -78,8 +78,7 @@ end
         y::AbstractVector{T}
     ) where {S<:Number, T<:Number}
 
-Perform numerical integration by using the simpson rule. Note that the
-length of `x` and `y` must be odd numbers. And `x` must be a linear and
+Perform numerical integration by using the simpson rule. And `x` must be a linear and
 uniform mesh.
 
 ### Arguments
@@ -93,17 +92,18 @@ See also: [`trapz`](@ref).
 """
 function simpson(x::AbstractVector{S},
                  y::AbstractVector{T}) where {S<:Number,T<:Number}
-    h = (x[2] - x[1]) / 3
+    n = length(x)
+    @assert n == length(y)
 
-    even_sum = 0
-    odd_sum = 0
-    for i in 2:(length(x) - 1)
-        if iseven(i)
-            even_sum = even_sum + y[i]
-        else
-            odd_sum = odd_sum + y[i]
-        end
+    if isodd(n)
+        even_sum = sum(view(y, 2:2:(n - 1)))
+        odd_sum = sum(view(y, 3:2:(n - 1)))
+        return (y[1] + y[end] + 4 * even_sum + 2 * odd_sum) * (x[2] - x[1]) / 3
+    else
+        even_sum = sum(view(y, 2:2:(n - 4)))
+        odd_sum = sum(view(y, 3:2:(n - 4)))
+        res = (y[1] + y[end - 3] + 4 * even_sum + 2 * odd_sum) * 1 // 3
+        res += 3 // 8 * (y[end - 3] + y[end]) + 9 // 8 * (y[end - 2] + y[end - 1])
+        return res * (x[2] - x[1])
     end
-
-    return h * (y[1] + y[end] + 4 * even_sum + 2 * odd_sum)
 end

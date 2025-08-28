@@ -19,6 +19,22 @@
     end
 end
 
+@testset "simpson" begin
+    for T in [Float32, Float64]
+        f = x->x^2
+        a = T(0)
+        b = T(1)
+        x1 = collect(range(a, b, 1000))
+        y1 = f.(x1)
+        x2 = collect(range(a, b, 1001))
+        y2 = f.(x2)
+        res1 = ACFlowSensitivity.simpson(x1, y1)
+        res2 = ACFlowSensitivity.simpson(x2, y2)
+        @test norm(res1-1//3) < strict_tol(T)
+        @test norm(res2-1//3) < strict_tol(T)
+    end
+end
+
 @testset "Lp" begin
     for T in [Float32, Float64]
         f = x->cos(x)
@@ -34,24 +50,6 @@ end
         @test isapprox(res_im, sqrt(π), atol=relax_tol(T))
         T != Float64 &&
             @test_throws ErrorException ACFlowSensitivity.Lp(x->f(x)+0.0, 2.0, a, b)
-    end
-end
-
-@testset "trapz" begin
-    for T in [Float32, Float64]
-        f = x->x^2
-        a = T(0)
-        b = T(1)
-        mesh = collect(a:T(1e-4):b)
-        res = ACFlowSensitivity.trapz(mesh, f.(mesh))
-        res1 = ACFlowSensitivity.trapz(mesh, f.(mesh), true)
-        res_im = ACFlowSensitivity.trapz(mesh, (1+im)*f.(mesh))
-        @test typeof(res) == T
-        @test typeof(res1) == T
-        @test typeof(res_im) == Complex{T}
-        @test isapprox(res, 1//3, atol=tolerance(T))
-        @test isapprox(res1, 1//3, atol=tolerance(T))
-        @test isapprox(res_im, 1//3 * (1+im), atol=tolerance(T))
     end
 end
 

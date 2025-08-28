@@ -33,8 +33,6 @@ struct CtxData{T<:Real}
                      σ::T=T(1e-4),
                      fp_ww::Real=T(0.01),
                      fp_mp::Real=T(0.1)) where {T<:Real}
-        ((mesh_length % 2) == 0) &&
-            @warn("The number of output mesh should be odd for simpson method")
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
         mesh = make_mesh(T(mesh_bound), mesh_length, mesh_type)
