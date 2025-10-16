@@ -205,6 +205,7 @@ end
 # solve differentiation
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                 alg::Solver; equalγ::Bool=true) where {T<:Real}
+    @assert ctx.spt isa Delta
     N = ctx.N
     Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)

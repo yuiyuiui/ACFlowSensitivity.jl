@@ -18,3 +18,4 @@ $$\left<A(w)\right> = \left<n(\phi(w))\right>m(w)$$
 Even for delta type, it's effect is far worse than `ssk`.
 ![alt text](sac_delta_2p.svg)
 ![alt text](sac_delta_512p.svg)
+
