@@ -89,6 +89,8 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
                mb=T(8)::T,
                ml=801::Int,
                npole::Int=2,
+               poles=T[]::Vector{T},
+               γ=T[]::Vector{T},
                fp_ww::Real=T(0.01),
                fp_mp::Real=T(0.1),
                seed::Int=6)
@@ -102,8 +104,11 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
         GFV = generate_GFV_cont(β, N, orA; noise=noise)
         return orA, ctx, GFV
     elseif spt isa Delta
-        poles = collect(1:npole) .+ rand(T, npole) * T(1 // 2)
-        γ = ones(T, npole) ./ npole
+        if length(poles) == 0
+            poles = collect(1:npole) .+ rand(T, npole) * T(1 // 2)
+            γ = ones(T, npole) ./ npole
+        end
+        @assert length(poles) == length(γ)
         GFV = generate_GFV_delta(β, N, poles, γ; noise=noise)
         return (poles, γ), ctx, GFV
     end
