@@ -72,7 +72,7 @@ $$J\frac{\partial u_{\alpha}}{\partial G} + \frac{\partial f}{\partial G} = 0$$
 $$\Longrightarrow \frac{\partial u_{\alpha}}{\partial G} = -J^{-1}\frac{\partial f}{\partial G}$$
 
 And
-$$\frac{\partial \alpha_{opt}}{\partial \alpha} = -J^{-1}\frac{\partial f}{\partial \alpha}$$
+$$\frac{\partial u_{\alpha}}{\partial \alpha} = -J^{-1}\frac{\partial f}{\partial \alpha}$$
 
 # 1. Chi2kink
 ![alt text](chi2kink.png)
@@ -141,13 +141,13 @@ $$(\alpha I + USU')^{-1} = I/α - U(\alpha^2S^{-1} + αI)^{-1}U'$$
 
 resize $P_{vec}$:
 
-$$P^{norm}_{vec} = \text{trapz}(P_{vec}, \alpha_{vec})$$
+$$P^{norm}_{vec} = \left[P_j\right]_j / \text{trapz}(P_{vec}, \alpha_{vec})$$
 
 Here the $\text{trapz}(y, x)$ is the integration of $y$ on $x$
 
-The the final $u_{opt}$ is:
+The the final $A_{opt}$ is:
 
-$$A_{opt} = \text{trapz}(A\circ(u_{\alpha vec}), \alpha_{vec})$$
+$$A_{opt} = \text{trapz}(\left[A(u_{\alpha vec}[j])P^{norm}_{vec}[j]\right]_j, \alpha_{vec})$$
 
 The jacobian of the function:
 
