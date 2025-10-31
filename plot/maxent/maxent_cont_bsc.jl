@@ -1,7 +1,7 @@
 # A(w) = 1/ W |w|/sqrt{w²-Δ²}, W = 6, Δ = 0.5, Δ < |w| < W/2
 
 using ACFlowSensitivity, Plots, LinearAlgebra, Random
-include("../../plot_method.jl")
+include("../plot_method.jl")
 
 W = 6.0
 Δ = 0.5
@@ -17,8 +17,8 @@ GFV = generate_GFV_cont(β, N, A; noise=5e-5)
 
 ctx = ACFlowSensitivity.CtxData(Cont(), β, N; mesh_bound=4, mesh_length=2000)
 
-alg = MaxEntChi2kink()
+alg = MaxEnt(; method="chi2kink", model_type="Gaussian")
 
-p = plot_errorbound_cont(GFV, ctx, alg; perm=5e-5)
+p = plot_errorbound_cont(GFV, ctx, alg; perm=5e-5, title="Chi2kink, Cont-type, perm=5e-5")
 
-plot(p, ctx.mesh.mesh, A.(ctx.mesh.mesh); label="origin A(w)", ylim=(0.0, 0.8))
+plot(p, ctx.mesh.mesh, A.(ctx.mesh.mesh); label="Origin A(w)", ylim=(0.0, 0.8))

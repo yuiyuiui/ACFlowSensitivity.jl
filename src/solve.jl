@@ -83,7 +83,7 @@ function NAC(; pick=true,
              hardy=true,
              hmax=50,
              alpha=1e-4,
-             eta=1e-2,)
+             eta=0.0,)
     @info("For delta type spectrum, `pick = false` and `hardy = false` are recommended")
     return NAC(pick, hardy, hmax, alpha, eta)
 end
@@ -128,6 +128,7 @@ mutable struct SSK <: Solver
     nstep::Int
     retry::Int
     θ::Real
+    eta::Real
     ratio::Real
     method::String
 end
@@ -137,9 +138,10 @@ function SSK(npole::Int;
              nstep::Int=20000,
              retry::Int=10,
              θ::Real=1e6,
+             eta::Real=1e-4,
              ratio::Real=0.9,
              method::String="chi2min")
-    return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method)
+    return SSK(nfine, npole, nwarm, nstep, retry, θ, eta, ratio, method)
 end
 
 # SAC ==========================

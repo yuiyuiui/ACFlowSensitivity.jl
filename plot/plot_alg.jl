@@ -10,17 +10,17 @@ alg = BarRat()
 plot_alg_delta(alg)
 
 # MaxEntChi2kink
-alg = MaxEntChi2kink()
+alg = MaxEnt(; method="chi2kink", model_type="Gaussian")
 plot_alg_cont(alg; nwave=1, noise_num=5)
 plot_alg_cont(alg; nwave=2, noise_num=5)
 plot_alg_cont(alg; nwave=3, noise_num=5)
 
-alg = MaxEntChi2kink(; model_type="flat")
+alg = MaxEnt(; method="chi2kink", model_type="flat")
 plot_alg_delta(alg)
 
 # SSK
 alg = SSK(500)
-plot_alg_cont(alg)
+plot_alg_cont(alg;noise_num=1)
 
 alg = SSK(2)
 plot_alg_delta(alg)
