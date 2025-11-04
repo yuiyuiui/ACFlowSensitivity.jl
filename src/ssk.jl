@@ -133,17 +133,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
 
         return Aout, (p, γ)
     elseif ctx.spt isa Cont
-        Z = sum(Aout)
-        Aout ./= Z
-        𝐀 = zero(mesh)
-        for i=1:length(mesh)
-            tmp = Complex{T}(0)
-            for j=1:length(Aout)
-                tmp += Aout[j] /(mesh[i] + im * alg.eta - mesh[j])
-            end
-            𝐀[i] = real(tmp)
-        end
-        return 𝐀
+        return Aout
     else
         error("Unsupported spectral function type")
     end

@@ -128,7 +128,6 @@ mutable struct SSK <: Solver
     nstep::Int
     retry::Int
     θ::Real
-    eta::Real
     ratio::Real
     method::String
 end
@@ -138,10 +137,9 @@ function SSK(npole::Int;
              nstep::Int=20000,
              retry::Int=10,
              θ::Real=1e6,
-             eta::Real=1e-4,
              ratio::Real=0.9,
              method::String="chi2min")
-    return SSK(nfine, npole, nwarm, nstep, retry, θ, eta, ratio, method)
+    return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method)
 end
 
 # SAC ==========================

@@ -20,7 +20,7 @@ plot_alg_delta(alg)
 
 # SSK
 alg = SSK(500)
-plot_alg_cont(alg;noise_num=1)
+plot_alg_cont(alg; noise_num=1)
 
 alg = SSK(2)
 plot_alg_delta(alg)

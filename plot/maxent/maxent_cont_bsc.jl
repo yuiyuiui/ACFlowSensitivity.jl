@@ -19,6 +19,6 @@ ctx = ACFlowSensitivity.CtxData(Cont(), β, N; mesh_bound=4, mesh_length=2000)
 
 alg = MaxEnt(; method="chi2kink", model_type="Gaussian")
 
-p = plot_errorbound_cont(GFV, ctx, alg; perm=5e-5, title="Chi2kink, Cont-type, perm=5e-5")
+p = plot_errorbound_cont(GFV, ctx, alg; perm=1e-4, title="Chi2kink, Cont-type, perm=1e-4")
 
 plot(p, ctx.mesh.mesh, A.(ctx.mesh.mesh); label="Origin A(w)", ylim=(0.0, 0.8))
