@@ -935,5 +935,11 @@ end
 #---------------------------------
 # solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
-    return pγdiff(GFV, ctx, alg)
+    if ctx.spt isa Cont
+        return Adiff(GFV, ctx, alg)
+    elseif ctx.spt isa Delta
+        return pγdiff(GFV, ctx, alg)
+    else
+        error("Unsupported spectral function type")
+    end
 end

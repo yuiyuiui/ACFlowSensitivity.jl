@@ -790,17 +790,8 @@ end
 #---------------------------------
 # solve differentiation
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
-    d = ctx.mesh.weight
-    w = ctx.mesh.mesh
-    wn = ctx.wn
-    K = [d[k]/(im*wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
-    Kʳ, Kⁱ = real(K), imag(K)
-    K⁰ = (Kʳ'*Kʳ + Kⁱ'*Kⁱ)
-    invK⁰ = pinv(K⁰)
-    ∂ADiv∂G = invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
     if ctx.spt isa Cont
-        Aout = solve(GFV, ctx, alg)
-        return Aout, ∂ADiv∂G
+        return Adiff(GFV, ctx, alg)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg; equalγ=false)
     else
