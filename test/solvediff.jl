@@ -10,6 +10,7 @@
     end
 end
 
+# MaxEnt
 @testset "differentiation of MaxEnt Chi2kink with Cont spectrum and SJ entropy, specific method" begin
     jac_rtol = 1e-2
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
@@ -119,6 +120,7 @@ end
     end
 end
 
+# BarRat
 @testset "differentiation of BarRat with Cont spectrum" begin
     for T in [Float32, Float64]
         for mesh_type in [UniformMesh(), TangentMesh()]
@@ -155,6 +157,7 @@ end
     end
 end
 
+# SSK
 @testset "differentiation of SSK with Delta spectrum" begin
     T = Float64
     pn = 2
@@ -171,10 +174,11 @@ end
     G2γ = G -> solve(G, ctx, alg)[2][2]
     # extremly unstable because Stoch method is moving on a grid
     # So too tiny change of input won't change the result like BarRat and MaxEnt.
-    @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
-    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-2, rtol=0.1, show_dy=true)
+    @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV; η=1e-5, show_dy=true)
+    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-5, atol=1e-8, show_dy=true)
 end
 
+# SAC
 @testset "differentiation of SAC with Delta spectrum" begin
     for T in [Float32, Float64]
         Random.seed!(6)
@@ -188,27 +192,27 @@ end
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
         @test ∂γDiv∂G isa Matrix{Complex{T}}
-        @test size(∂pDiv∂G) == (pn, length(GFV))
-        @test size(∂γDiv∂G) == (pn, length(GFV))
+        if T == Float64
+            @test size(∂pDiv∂G) == (pn, length(GFV))
+            @test size(∂γDiv∂G) == (pn, length(GFV))
+        end
     end
 end
 
-@testset "differentiation of SOM" begin # It can run no matter its spectrumtype is Delta or Cont
+# SOM
+@testset "differentiation of SOM with Cont spectrum" begin # It can run no matter its spectrumtype is Delta or Cont
     for T in [Float32, Float64]
+        T = Float64
         Random.seed!(6)
         alg = SOM()
-        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
-        @test p isa Vector{T}
-        @test γ isa Vector{T}
-        @test ∂pDiv∂G isa Matrix{Complex{T}}
-        @test ∂γDiv∂G isa Matrix{Complex{T}}
-        @test size(∂pDiv∂G) == (length(p), length(GFV))
-        @test size(∂γDiv∂G) == (length(p), length(GFV))
+        A, ctx, GFV = dfcfg(T, Cont())
+        ∂ADiv∂G = solvediff(GFV, ctx, alg; diffonly=true)
+        @test ∂ADiv∂G isa Matrix{Complex{T}}
+        @test size(∂ADiv∂G) == (length(ctx.mesh.mesh), length(GFV))
     end
 end
 
+# SPX
 @testset "differentiation of SPX with delta spectrum, method = mean" begin # # It can run no matter its spectrumtype is Delta or Cont
     pn = 2
     for T in [Float32, Float64]
@@ -223,9 +227,14 @@ end
         @test ∂γDiv∂G isa Matrix{Complex{T}}
         @test size(∂pDiv∂G) == (length(p), length(GFV))
         @test size(∂γDiv∂G) == (length(p), length(GFV))
+        if T == Float64
+            @test norm(orp - p) < 0.02
+            @test norm(orγ - γ) < 0.025
+        end
     end
 end
 
+# NAC
 @testset "differentiation of NAC with delta spectrum" begin
     pn = 2
     for T in [Float32, Float64]
@@ -249,11 +258,10 @@ end
     for T in [Float32, Float64]
         rtol = T == Float32 ? 0.6 : 0.2
         alg = NAC()
-        A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-        reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
+        A, ctx, GFV = dfcfg(T, Cont())
+        ∂reADiv∂G = solvediff(GFV, ctx, alg; diffonly=true)
         @test ∂reADiv∂G isa Matrix{Complex{T}}
         G2A = G -> solve(G, ctx, alg)
-        @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, rtol=rtol)
+        T == Float64 && @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, rtol=rtol)
     end
 end

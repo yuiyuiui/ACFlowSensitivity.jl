@@ -8,7 +8,7 @@ export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed, SJ, BR
 export Solver, BarRat, NAC, MaxEnt, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
-export fdgradient, ∇L2loss
+export fdgradient, ∇L2loss, find_peaks, pγdiff
 export bfgs, newton
 
 include("globalset.jl")

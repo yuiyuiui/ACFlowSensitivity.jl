@@ -1,3 +1,4 @@
+# BarRat
 @testset "aaa" begin
     N = 10
     for T in [Float32, Float64, ComplexF32, ComplexF64]
@@ -89,6 +90,7 @@ end
     end
 end
 
+# MaxEnt
 @testset "cont MaxEnt SJ entropy" begin
     tol = 0.1
     T = Float32
@@ -107,7 +109,6 @@ end
                 @test eltype(Aout) == T
                 @test length(Aout) == length(ctx.mesh.mesh)
                 lsres = loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight)
-                @show method, mesh_type, model_type, lsres
                 @test lsres < tol
             end
         end
@@ -141,6 +142,7 @@ end
     end
 end
 
+# SSK
 @testset "serve functions in ssk" begin
     pn = 2
     T = Float64
@@ -156,7 +158,7 @@ end
 
 # I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
 # But in some random case I don't record it does succeed and the result is type stable.
-@testset "ssk for delta" begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for ssk and we don't have accuracy need now. So ignore Cont.
+@testset "ssk for delta" begin
     Random.seed!(6)
     T = Float64
     pn = 2
@@ -167,11 +169,24 @@ end
     @test Aout isa Vector{T}
     @test rep isa Vector{T}
     @test reγ isa Vector{T}
-    @test norm(poles - rep) < 5 * relax_tol(T)
-    @test norm(γ - reγ) == 0
+    @test norm(poles - rep) < 1e-4
+    @test norm(γ - reγ) < 1e-5
 end
 
-@testset "sac for delta" begin # It can run no matter its spectrumtype is Delta or Cont. Cont is slow for sac and we don't have accuracy need now. So ignore Cont.
+@testset "ssk for cont" begin
+    Random.seed!(6)
+    T = Float64
+    pn = 500
+    alg = SSK(pn)
+    A, ctx, GFV = dfcfg(T, Cont())
+    Aout = solve(GFV, ctx, alg)
+    @test Aout isa Vector{T}
+    @test sum(Aout .* ctx.mesh.weight) ≈ 1.0
+    @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.1
+end
+
+# SAC
+@testset "sac for delta" begin
     for T in [Float32, Float64]
         Random.seed!(6)
         pn = 2
@@ -183,20 +198,36 @@ end
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
         @test norm(poles - rep) < 0.25
-        @test norm(γ - reγ) == 0
+        @test norm(γ - reγ) < 0.1
     end
 end
 
+@testset "sac for cont" begin
+    Random.seed!(6)
+    T = Float64
+    pn = 512
+    alg = SAC(pn)
+    A, ctx, GFV = dfcfg(T, Cont())
+    Aout = solve(GFV, ctx, alg)
+    @test Aout isa Vector{T}
+    @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.1
+end
+
+# SOM
 @testset "som for delta" begin
     pn = 2
     for T in [Float32, Float64]
         Random.seed!(6)
         alg = SOM()
-        _, ctx, GFV = dfcfg(T, Delta(); fp_mp=0.3, fp_ww=0.5, npole=pn)
+        (orp, orγ), ctx, GFV = dfcfg(T, Delta(); fp_mp=1.25, fp_ww=0.07, npole=pn, mb=T(5))
         Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
+        if T == Float64
+            @show norm(orp - rep)
+            @show norm(orγ - reγ)
+        end
     end
 end
 
@@ -208,10 +239,12 @@ end
         A, ctx, GFV = dfcfg(T, Cont())
         Aout = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
+        @test abs(sum(Aout .* ctx.mesh.weight) - 1) < 1e-3
         @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.5
     end
 end
 
+# SPX
 # It's recommended to use best method for spx.
 @testset "spx for delta with best " begin
     pn = 2
@@ -227,6 +260,19 @@ end
     end
 end
 
+@testset "spx for cont with mean " begin
+    pn = 2
+    T = Float64
+    alg = SPX(pn; method="mean", ntry=100)
+    A, ctx, GFV = dfcfg(T, Cont())
+    Random.seed!(6)
+    Aout = solve(GFV, ctx, alg)
+    @test Aout isa Vector{T}
+    #@test abs(sum(Aout .* ctx.mesh.weight) - 1.0) < 0.1
+    #@test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.1
+end
+
+# NAC
 @testset "nac for cont" begin
     for T in [Float32, Float64]
         alg = T == Float32 ? NAC(; hardy=false) : NAC()
@@ -240,13 +286,13 @@ end
 
 @testset "nac for delta" begin
     for T in [Float32, Float64]
-        alg = NAC(; pick=false, hardy=false)
+        alg = NAC(; pick=false, hardy=false, eta=1e-4)
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); mb=T(5))
         Aout, (rep, reγ) = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test rep isa Vector{T}
         @test reγ isa Vector{T}
-        @test norm(orp - rep) < 0.011
+        @test norm(orp - rep) < 0.007
         @test norm(orγ - reγ) < 0.011
     end
 end

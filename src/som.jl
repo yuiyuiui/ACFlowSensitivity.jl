@@ -141,7 +141,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Rea
         return Aout
     elseif ctx.spt isa Delta
         p = ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
-        γ = ones(T, length(p)) ./ length(p)
+        γ = pG2γ(p, GFV, ctx.iwn)
         return Aout, (p, γ)
     else
         error("Unsupported spectral function type")
@@ -1314,9 +1314,10 @@ function Pdx(xmin::T, xmax::T, rng::AbstractRNG) where {T<:Real}
 end
 
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM;
+                   diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg)
+        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

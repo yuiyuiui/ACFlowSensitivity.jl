@@ -135,7 +135,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Rea
     if ctx.spt isa Delta
         p = mesh[find_peaks(mesh, Asum, ctx.fp_mp; wind=ctx.fp_ww)]
         length(p) != alg.npole && @warn("Number of poles is not correct")
-        γ = ones(T, alg.npole) / alg.npole
+        γ = pG2γ(p, GFV, ctx.iwn)
         return Asum, (p, γ)
     elseif ctx.spt isa Cont
         return Asum
@@ -934,9 +934,10 @@ end
 
 #---------------------------------
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC;
+                   diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg)
+        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

@@ -217,7 +217,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::MaxEnt) where 
     alg.stype isa BR && ctx.spt isa Cont &&
         error("It's recommended to use BR for Delta spectrum")
 
-    ctx.spt isa Delta && return pγdiff(GFV, ctx, alg; equalγ=false)
+    ctx.spt isa Delta && return pγdiff(GFV, ctx, alg)
     !(ctx.spt isa Cont) && error("Maxent now only support continuous and delta spectrum")
 
     mec = init(GFV, ctx, alg)

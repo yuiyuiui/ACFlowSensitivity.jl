@@ -152,16 +152,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData, alg::SPX) where {T<:Real}
                         Λ, Θ, χ², χ²ᵥ, Pᵥ, Aᵥ, 𝕊ᵥ)
     println("Initialize context for the StochPX solver")
 
-    Aout, _, _ = run!(MC, SE, SC, alg)
-    if ctx.spt isa Cont
-        return Aout
-    elseif ctx.spt isa Delta
-        p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
-        γ = ones(T, length(p)) ./ length(p)
-        return Aout, (p, γ)
-    else
-        error("Unsupported spectral function type")
-    end
+    return run!(MC, SE, SC, alg)
 end
 
 """
@@ -260,6 +251,7 @@ function average!(SC::StochPXContext{I,T}, alg::SPX) where {I<:Int,T<:Real}
         Gᵣ = calc_green(p, SC, false, alg)
         #
         # Collect the `good` solutions and calculate their average.
+        return -imag.(Gout) / π, (SC.fmesh[SC.Pᵥ[p]], SC.Aᵥ[p])
     else
         # Calculate the median of SC.χ²ᵥ
         chi2_med = median(SC.χ²ᵥ)
@@ -297,9 +289,8 @@ function average!(SC::StochPXContext{I,T}, alg::SPX) where {I<:Int,T<:Real}
         println("Mean value of χ²: $(chi2_ave)")
         println("Median value of χ²: $(chi2_med)")
         println("Accumulate $(round(Int,c)) solutions to get the spectral density")
+        return -imag.(Gout) / π
     end
-
-    return -imag.(Gout) / π, Gout, Gᵣ
 end
 
 #=
@@ -1213,11 +1204,12 @@ function try_move_x!(t::I,
 end
 
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SPX) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SPX;
+                   diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg)
+        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
     elseif ctx.spt isa Delta
-        return pγdiff(GFV, ctx, alg)
+        return pγdiff(GFV, ctx, alg; ns=true)
     else
         error("Unsupported spectral function type")
     end

@@ -204,12 +204,12 @@ end
 
 # solve differentiation
 function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-                alg::Solver; equalγ::Bool=true) where {T<:Real}
+                alg::Solver; ns::Bool=false) where {T<:Real}
     @assert ctx.spt isa Delta
     N = ctx.N
     Aout, (rep, reγ) = solve(GFV, ctx, alg)
     n = length(rep)
-    function f(p, γ, G)
+    function f0(p, γ, G)
         @assert length(p) == length(γ)
         res = 0
         for j in 1:N
@@ -217,35 +217,55 @@ function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         end
         return res
     end
-    if equalγ
-        f₁(p, G) = Zygote.gradient(p₁ -> f(p₁, reγ, G), p)[1]
-        f₁₁(p, G) = Zygote.jacobian(p₁ -> f₁(p₁, G), p)[1]
-        f₁₂(p, G) = Zygote.jacobian(G₁ -> f₁(p, G₁), G)[1]
-        return Aout, (rep, reγ),
-               (-pinv(f₁₁(rep, GFV)) * f₁₂(rep, GFV), zeros(Complex{T}, n, N))
-    else
-        repγ = vcat(rep, reγ)
-        g(pγ, G) = f(pγ[1:n], pγ[(n + 1):end], G)
-        g₁(pγ, G) = Zygote.gradient(pγ₁ -> g(pγ₁, G), pγ)[1]
-        g₁₁(pγ, G) = Zygote.jacobian(pγ₁ -> g₁(pγ₁, G), pγ)[1]
-        g₁₂(pγ, G) = Zygote.jacobian(G₁ -> g₁(pγ, G₁), G)[1]
-        ∂pγDiv∂G = -pinv(g₁₁(repγ, GFV)) * g₁₂(repγ, GFV)
-        return Aout, (rep, reγ),
-               (∂pγDiv∂G[1:n, :], ∂pγDiv∂G[(n + 1):end, :])
+    function f1(p, γ, G)
+        @assert length(p) == length(γ) + 1
+        res = 0
+        for j in 1:N
+            tmp = 0
+            for k in 1:(n - 1)
+                tmp += γ[k]/(ctx.iwn[j] - p[k])
+            end
+            tmp += (1-sum(γ))/(ctx.iwn[j] - p[n])
+            res += abs2(tmp - G[j])
+        end
+        return res
     end
+    if !ns
+        f = f0
+        repγ = vcat(rep, reγ)
+    else
+        f = f1
+        repγ = vcat(rep, reγ[1:(end - 1)])
+    end
+
+    g(pγ, G) = f(pγ[1:n], pγ[(n + 1):end], G)
+    g₁(pγ, G) = Zygote.gradient(pγ₁ -> g(pγ₁, G), pγ)[1]
+    g₁₁(pγ, G) = Zygote.jacobian(pγ₁ -> g₁(pγ₁, G), pγ)[1]
+    g₁₂(pγ, G) = Zygote.jacobian(G₁ -> g₁(pγ, G₁), G)[1]
+    ∂pγDiv∂G = -pinv(g₁₁(repγ, GFV)) * g₁₂(repγ, GFV)
+    Jp = ∂pγDiv∂G[1:n, :]
+    Jγ = ∂pγDiv∂G[(n + 1):end, :]
+    if ns
+        Jγ = [Jγ; -sum(Jγ; dims=1)]
+    end
+    return Aout, (rep, reγ), (Jp, Jγ)
 end
 
 function Adiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
-               alg::Solver) where {T<:Real}
+               alg::Solver; ns::Bool=false, diffonly::Bool=false) where {T<:Real}
+    @show ns, diffonly
     @assert ctx.spt isa Cont
     d = ctx.mesh.weight
     w = ctx.mesh.mesh
     wn = ctx.wn
-    K = [d[k]/(im*wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
+    K = [d[k] / (im * wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
+    ns && (K = [K; d'])
     Kʳ, Kⁱ = real(K), imag(K)
-    K⁰ = (Kʳ'*Kʳ + Kⁱ'*Kⁱ)
+    K⁰ = (Kʳ' * Kʳ + Kⁱ' * Kⁱ)
     invK⁰ = pinv(K⁰)
-    ∂ADiv∂G = invK⁰ * Kʳ' + invK⁰ * Kⁱ' * im
+    N = length(GFV)
+    ∂ADiv∂G = invK⁰ * (Kʳ'[:, 1:N]) + invK⁰ * (Kⁱ'[:, 1:N]) * im
+    diffonly && (return ∂ADiv∂G)
     Aout = solve(GFV, ctx, alg)
     return Aout, ∂ADiv∂G
 end

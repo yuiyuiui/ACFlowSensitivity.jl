@@ -120,17 +120,8 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
     Aout, _, _ = run!(MC, SE, SC, alg)
     if ctx.spt isa Delta
         p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
-        # If length(p) != npole, then we just use SE.P
-        if length(p) != alg.npole
-            p = T[]
-            for p_fine in SE.P
-                idx = nearest(SC.mesh.mesh, p_fine / alg.nfine)
-                push!(p, SC.mesh.mesh[idx])
-            end
-            sort!(p)
-        end
-        γ = ones(T, alg.npole) / alg.npole
-
+        length(p) != alg.npole && @warn("Number of poles is not correct")
+        γ = pG2γ(p, GFV, ctx.iwn)
         return Aout, (p, γ)
     elseif ctx.spt isa Cont
         return Aout
@@ -939,9 +930,10 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK;
+                   diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg)
+        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

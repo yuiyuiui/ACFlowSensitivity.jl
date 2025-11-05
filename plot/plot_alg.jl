@@ -48,7 +48,7 @@ alg = SAC(2)
 plot_alg_delta(alg; fp_ww=0.2, fp_mp=2.0)
 
 # SPX
-alg = SPX(2; method="mean", ntry=100)
+alg = SPX(200; method="mean", ntry=100)
 plot_alg_cont(alg)
 
 alg = SPX(2; method="best")

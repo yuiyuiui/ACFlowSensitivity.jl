@@ -93,13 +93,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
     elseif ctx.spt isa Delta
         idx = find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)
         p = ctx.mesh.mesh[idx]
-        function pG2γ(x, y) # x is p, y is G
-            ker = [1/(ctx.iwn[i] - x[j]) for i in 1:length(ctx.iwn), j in eachindex(x)]
-            K = real(ker)'*real(ker) + imag(ker)'*imag(ker)
-            G = real(ker)'*real(y) + imag(ker)'*imag(y)
-            return pinv(K)*G
-        end
-        γ = pG2γ(p, GFV)
+        γ = pG2γ(p, GFV, ctx.iwn)
         println("poles: ", p)
         println("gamma: ", γ)
         return T.(Aout), (p, γ)
@@ -789,11 +783,12 @@ end
 
 #---------------------------------
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC;
+                   diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg)
+        return Adiff(GFV, ctx, alg; diffonly=diffonly)
     elseif ctx.spt isa Delta
-        return pγdiff(GFV, ctx, alg; equalγ=false)
+        return pγdiff(GFV, ctx, alg)
     else
         error("Unsupported spectral function type")
     end
