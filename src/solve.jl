@@ -223,9 +223,9 @@ function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         for j in 1:N
             tmp = 0
             for k in 1:(n - 1)
-                tmp += γ[k]/(ctx.iwn[j] - p[k])
+                tmp += γ[k] / (ctx.iwn[j] - p[k])
             end
-            tmp += (1-sum(γ))/(ctx.iwn[j] - p[n])
+            tmp += (1 - sum(γ)) / (ctx.iwn[j] - p[n])
             res += abs2(tmp - G[j])
         end
         return res
@@ -253,7 +253,6 @@ end
 
 function Adiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
                alg::Solver; ns::Bool=false, diffonly::Bool=false) where {T<:Real}
-    @show ns, diffonly
     @assert ctx.spt isa Cont
     d = ctx.mesh.weight
     w = ctx.mesh.mesh

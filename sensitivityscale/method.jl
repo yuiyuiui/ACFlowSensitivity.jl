@@ -16,10 +16,15 @@ end
 
 function generate_sst(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::Solver) where {T<:Real}
     if ctx.spt isa Cont
-        _, J = solvediff(GFV, ctx, alg)
+        if alg isa Union{NAC,SSK,SAC,SOM,SPX}
+            J = solvediff(GFV, ctx, alg; diffonly=true)
+        else
+            _, J = solvediff(GFV, ctx, alg)
+        end
         return sst(J, ctx.spt)
     elseif ctx.spt isa Delta
-        _, _, (J, _) = solvediff(GFV, ctx, alg)
+        _, (p, γ), (J, _) = solvediff(GFV, ctx, alg)
+        @show p, γ
         return sst(J, ctx.spt)
     else
         error("Unsupported spectrum type")

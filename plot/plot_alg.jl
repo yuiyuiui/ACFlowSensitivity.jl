@@ -26,12 +26,6 @@ plot_alg_delta(alg)
 
 alg = MaxEnt(; method="historic", model_type="flat")
 plot_alg_delta(alg)
-#=
-(poles, γ), ctx, GFV = dfcfg(Float64, Delta(); npole=2)
-alg = MaxEnt(; method="historic", model_type="flat")
-reA, (rep,reγ) = solve(GFV, ctx, alg)
-plot(ctx.mesh.mesh, reA)
-=#
 
 # SSK
 alg = SSK(500)

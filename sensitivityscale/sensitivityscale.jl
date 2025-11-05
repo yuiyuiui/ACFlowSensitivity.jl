@@ -1,10 +1,10 @@
 include("method.jl")
 using JLD2
-# sst_mat = Matrix{Float64}(undef, 3, 10)
+sst_mat = Matrix{Float64}(undef, 3, 10)
 
 FILE = "/Users/syyui/projects/ACFlowSensitivity.jl/sensitivityscale/sst.jld2"
 
-@load FILE sst_mat
+# @load FILE sst_mat
 
 #1 Cont
 alg_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"),
@@ -12,7 +12,6 @@ alg_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"
 _, ctx, GFV = dfcfg(Float64, Cont(); mesh_type=TangentMesh(), noise=1e-5)
 for i in 1:6
     @show "begin $i"
-    i==2 && continue
     sst_mat[1, i] = generate_sst(deepcopy(GFV), deepcopy(ctx), deepcopy(alg_vec[i]))
     @show "end $i"
 end
@@ -31,23 +30,34 @@ alg_vec = [BarRat(), NAC(; pick=false, hardy=false, eta=1e-4),
            MaxEnt(; method="classic", model_type="flat", stype=BR()),
            MaxEnt(; method="historic", model_type="flat"), SSK(2), SAC(2), SOM(),
            SPX(2; method="best")]
-_, ctx0, GFV = dfcfg(Float64, Delta(); npole=2)
+_, ctx0, GFV = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000)
 ctx_vec = CtxData[]
-# BarRat, NAC, MaxEnt(chi2kink, bryan, classic, historic), SSK
-for _ in 1:7
-    push!(ctx_vec, deepcopy(ctx0))
-end
+# BarRat, NAC
+push!(ctx_vec, deepcopy(ctx0))
+push!(ctx_vec, deepcopy(ctx0))
+# Chi2kink, Bryan, Classic
+ctx_chi2kink = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000, fp_ww=0.1, fp_mp=1.0)[2]
+push!(ctx_vec, deepcopy(ctx_chi2kink))
+push!(ctx_vec, deepcopy(ctx_chi2kink))
+push!(ctx_vec, deepcopy(ctx_chi2kink))
+push!(ctx_vec, deepcopy(ctx_chi2kink))
+
+# SSK
+push!(ctx_vec, deepcopy(ctx0))
+
 # SAC
-ctx_sac = dfcfg(Float64, Delta(); npole=2, fp_ww=0.2, fp_mp=2.0)[2]
+ctx_sac = dfcfg(Float64, Delta(); npole=2, fp_ww=0.2, fp_mp=5.0, mb=4, ml=2000)[2]
 push!(ctx_vec, deepcopy(ctx_sac))
 # SOM
-ctx_som = dfcfg(Float64, Delta(); fp_ww=0.07, fp_mp=1.05)[2]
+ctx_som = dfcfg(Float64, Delta(); fp_ww=0.05, fp_mp=1.0, mb=4, ml=2000)[2]
 push!(ctx_vec, deepcopy(ctx_som))
 # SPX
 push!(ctx_vec, deepcopy(ctx0))
 for i in 1:10
     @show "begin $i"
     sst_mat[2, i] = generate_sst(deepcopy(GFV), deepcopy(ctx_vec[i]), deepcopy(alg_vec[i]))
+    @show alg_vec[i]
+    @show sst_mat[2, i]
     @show "end $i"
 end
 
@@ -82,4 +92,15 @@ end
 2. for every data, give a vector of alg
 
 3. for all data, calculate sst_max and sst_ave
+=#
+
+#= help judge parameters
+(poles, γ), ctx, GFV = dfcfg(Float64, Delta(); npole=2, mb = 4, ml = 2000)
+alg = SSK(2)
+reA, (rep,reγ) = solve(GFV, ctx, alg)
+rep
+using Plots
+plot(ctx.mesh.mesh, reA)
+
+ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, reA, 1.0; wind=0.1)]
 =#
