@@ -162,3 +162,17 @@ function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     @show dy_expect
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
+
+function cal_chi2(A::Vector{T}, G::Vector{Complex{T}}, ctx::CtxData{T}) where {T<:Real}
+    d = ctx.mesh.weight
+    w = ctx.mesh.mesh
+    wn = ctx.wn
+    K = [d[k] / (im * wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
+    return sum(abs2.((K*A-G)/ctx.σ))
+end
+
+function cal_chi2(p::Vector{T}, γ::Vector{T}, G::Vector{Complex{T}}, ctx::CtxData{T}) where {T<:Real}
+    wn = ctx.wn
+    K = [1 / (im * wn[j] - p[k]) for j in 1:length(wn), k in 1:length(p)]
+    return sum(abs2.((K*γ-G)/ctx.σ))
+end

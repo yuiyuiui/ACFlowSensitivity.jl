@@ -143,11 +143,11 @@ function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
                                fp_ww::Real=0.01, fp_mp::Real=0.1,
                                perm_num::Int=4, p=[1.0, 2], γ=[0.5, 0.5],
                                title::String="",
-                               mesh_type::ACFlowSensitivity.MeshMethod=TangentMesh())
+                               mesh_type::ACFlowSensitivity.MeshMethod=TangentMesh(), mb::Real = 8.0, ml::Int = 801)
     T = Float64
     Random.seed!(6)
     _, ctx, GFV = dfcfg(T, Delta(); mesh_type=mesh_type, noise=noise, poles=p, γ=γ,
-                        fp_ww=fp_ww, fp_mp=fp_mp)
+                        fp_ww=fp_ww, fp_mp=fp_mp, mb=mb, ml=ml)
     GFV_perm = Vector{Vector{ComplexF64}}(undef, perm_num)
     reP = Vector{Tuple{T,T}}[]
     N = ctx.N
