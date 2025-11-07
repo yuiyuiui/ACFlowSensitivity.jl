@@ -171,7 +171,8 @@ function cal_chi2(A::Vector{T}, G::Vector{Complex{T}}, ctx::CtxData{T}) where {T
     return sum(abs2.((K*A-G)/ctx.σ))
 end
 
-function cal_chi2(p::Vector{T}, γ::Vector{T}, G::Vector{Complex{T}}, ctx::CtxData{T}) where {T<:Real}
+function cal_chi2(p::Vector{T}, γ::Vector{T}, G::Vector{Complex{T}},
+                  ctx::CtxData{T}) where {T<:Real}
     wn = ctx.wn
     K = [1 / (im * wn[j] - p[k]) for j in 1:length(wn), k in 1:length(p)]
     return sum(abs2.((K*γ-G)/ctx.σ))
