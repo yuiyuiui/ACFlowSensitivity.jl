@@ -1,5 +1,5 @@
-using ACFlowSensitivity, Plots, Random, LinearAlgebra
-include("../test/testsetup.jl")#= BarRat for smooth type =#
+using ACFlowSensitivity, CairoMakie, Random, LinearAlgebra
+include("../test/testsetup.jl")
 
 function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     T = Float64
@@ -20,21 +20,26 @@ function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     end
     mesh = ctx.mesh.mesh
 
-    p = plot(mesh,
-             A.(mesh);
-             label="origin A(w)",
-             title="$(typeof(alg)) for cont type",
-             xlabel="w",
-             ylabel="A(w)",
-             legend=:topleft)
+    fig = Figure()
+    ax = Axis(fig[1, 1];
+              title="$(typeof(alg)) for cont type",
+              xlabel="ω",
+              ylabel="A(ω)")
+
+    # Plot original data
+    lines!(ax, mesh, A.(mesh); label="origin A(ω)", linewidth=1.5, color=:black)
+
+    # Plot reconstructed data
+    colors = [:blue, :red, :green, :orange, :purple]
     for i in 1:length(noise_vec)
-        plot!(p,
-              mesh,
-              reA_vec[i];
-              label="reconstruct A$i(w), noise: $(noise_vec[i])",
-              linewidth=0.5)
+        lines!(ax, mesh, reA_vec[i];
+               label="reconstruct A$i(ω), noise: $(noise_vec[i])",
+               linewidth=1.0,
+               color=colors[mod1(i, length(colors))])
     end
-    return p
+
+    axislegend(ax; position=:lt)
+    return fig
 end
 
 function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::Real=0.1,
@@ -56,24 +61,32 @@ function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::
         rep_vec[i] = rep
         reγ_vec[i] = reγ
     end
-    p = scatter(orp, fill(0.0, length(orp));
-                title="$(typeof(alg)) for delta type",
-                xlabel="w",
-                ylabel="A(w)",
-                label="original poles",
-                markershape=:circle,
-                markersize=4,
-                markercolor=:red,
-                xlims=(1, 3),
-                ylims=(-0.02, 1.0))
+    fig = Figure()
+    ax = Axis(fig[1, 1];
+              title="$(typeof(alg)) for delta type",
+              xlabel="ω",
+              ylabel="A(ω)",
+              limits=((1, 3), (-0.02, 1.0)))
+
+    # Plot original poles
+    scatter!(ax, orp, fill(0.0, length(orp));
+             label="original poles",
+             markersize=12,
+             color=:red,
+             marker=:circle)
+
+    # Plot reconstructed poles
+    colors = [:blue, :green, :orange, :purple, :brown]
     for i in 1:length(noise_vec)
-        scatter!(rep_vec[i], fill(0.02, length(rep_vec[i]));
+        scatter!(ax, rep_vec[i], fill(0.02, length(rep_vec[i]));
                  label="reconstruct poles, noise: $(noise_vec[i])",
-                 markershape=:circle,
-                 markersize=3,
-                 markercolor=:blue)
+                 markersize=10,
+                 color=colors[mod1(i, length(colors))],
+                 marker=:circle)
     end
-    return p
+
+    axislegend(ax)
+    return fig
 end
 
 function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
@@ -107,21 +120,29 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         reA_perm[i] = solve(GFV_perm[i], ctx, alg)
     end
     mesh = ctx.mesh.mesh
-    title = title == "" ? "$(typeof(alg)), Cont-type, perm=$(perm)" : title
-    p = plot(mesh,
-             reA;
-             label="Reconstructed A(w)",
-             title=title,
-             xlabel="w",
-             ylabel="A(w)",
-             legend=:topleft)
+    title_str = title == "" ? "$(typeof(alg)), Cont-type, perm=$(perm)" : title
+
+    fig = Figure()
+    ax = Axis(fig[1, 1];
+              title=title_str,
+              xlabel="ω",
+              ylabel="A(ω)",
+              xgridvisible=false,
+              ygridvisible=false)
+
+    # Plot reconstructed A(ω)
+    lines!(ax, mesh, reA; label="Reconstructed A(ω)", linewidth=1.2, color=:black)
+
+    # Plot permuted reconstructions
+    colors = [:blue, :yellow, :green, :orange, :purple]
     for i in 1:perm_num
-        plot!(p,
-              mesh,
-              reA_perm[i];
-              label="Permuted reA: $i",
-              linewidth=0.5)
+        lines!(ax, mesh, reA_perm[i];
+               label="Permuted reA: $i",
+               linewidth=0.7,
+               color=colors[mod1(i, length(colors))])
     end
+
+    # Calculate and plot error bounds
     _, ∂reADiv∂G = solvediff(GFV, ctx, alg)
     max_error = zeros(T, length(mesh))
     for i in 1:length(mesh)
@@ -129,14 +150,19 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     end
     Aupper = reA .+ max_error
     Alower = max.(0.0, reA .- max_error)
-    plot!(p,
-          mesh,
-          Aupper;
-          fillrange=Alower,
-          fillalpha=0.3,
+
+    # Plot variation region using band
+    band!(ax, mesh, Alower, Aupper;
           label="Variation region",
-          linewidth=0)
-    return p
+          color=(:steelblue, 0.4))
+
+    # Set y-axis to start from 0
+    ymin = min(0.0, minimum(Alower))
+    ymax = maximum(Aupper)*1.1
+    ylims!(ax, ymin, ymax)
+
+    axislegend(ax; position=:lt)
+    return fig
 end
 
 function plot_errorbound_delta(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
@@ -201,32 +227,55 @@ function plot_points_with_regions(P::Vector{Tuple{T,T}},
 
     # Generate colors
     if isempty(colors)
-        colors = [palette(:default, length(Pvec) + 1)...]
+        default_colors = [:blue, :red, :green, :orange, :purple, :brown, :pink, :gray]
+        colors = default_colors[1:min(length(Pvec) + 1, length(default_colors))]
     end
 
     # Create plot
-    p = plot(; title=title,
-             xlabel="ω",
-             ylabel="γ",
-             legend=:topleft,
-             grid=true,
-             size=(800, 600))
+    fig = Figure(; size=(800, 600))
+
+    # Set fixed display limits
+    xlims = (0.5, 2.5)
+    ylims = (0.2, 0.7)
+
+    ax = Axis(fig[1, 1];
+              title=title,
+              xlabel="ω",
+              ylabel="γ",
+              limits=(xlims, ylims),
+              xgridvisible=false,
+              ygridvisible=false)
 
     # Plot main points group P
     x_coords = [point[1] for point in P]
     y_coords = [point[2] for point in P]
 
+    # Filter out NaN and Inf values
+    valid_indices = [i
+                     for i in 1:length(x_coords)
+                     if isfinite(x_coords[i]) && isfinite(y_coords[i])]
+    x_coords_valid = [x_coords[i] for i in valid_indices]
+    y_coords_valid = [y_coords[i] for i in valid_indices]
+
     # Plot main points
-    scatter!(p, x_coords, y_coords;
-             label="Reconstructed poles and γ",
-             color=:red,
-             markersize=6,
-             markerstrokewidth=2)
+    if !isempty(x_coords_valid)
+        scatter!(ax, x_coords_valid, y_coords_valid;
+                 label="Reconstructed poles and γ",
+                 color=:red,
+                 markersize=12,
+                 marker=:circle,
+                 strokewidth=2)
+    end
 
     # Plot main points region
     for i in 1:length(P)
         p_i, r_i = P[i]
         DX_i, DY_i = D[i]
+
+        # Skip if any value is NaN or Inf
+        if !(isfinite(p_i) && isfinite(r_i) && isfinite(DX_i) && isfinite(DY_i))
+            continue
+        end
 
         # Calculate the four corners of the square region
         x_left = p_i - DX_i
@@ -234,38 +283,58 @@ function plot_points_with_regions(P::Vector{Tuple{T,T}},
         y_bottom = r_i - DY_i
         y_top = r_i + DY_i
 
-        # Plot square region (rectangle)
-        plot!(p, [x_left, x_right, x_right, x_left, x_left],
-              [y_bottom, y_bottom, y_top, y_top, y_bottom];
-              color=:red,
-              linewidth=2,
-              alpha=0.3,
-              fill=true,
-              fillalpha=0.1,
+        # Check if all corners are finite
+        if !(isfinite(x_left) && isfinite(x_right) && isfinite(y_bottom) && isfinite(y_top))
+            continue
+        end
+
+        # Plot square region (rectangle) using poly
+        rect_points = Point2f[(x_left, y_bottom), (x_right, y_bottom),
+                              (x_right, y_top), (x_left, y_top)]
+        poly!(ax, rect_points;
+              color=(:red, 0.1),
+              strokecolor=:red,
+              strokewidth=2,
               label=i == 1 ? "Variation Region" : "")
 
         # Add coordinate axis dashed lines
         # Vertical line (x-axis direction)
-        plot!(p, [p_i, p_i], [0, r_i];
-              color=:gray,
-              linestyle=:dash,
-              linewidth=1, label="")
+        if isfinite(p_i) && isfinite(r_i) && r_i != 0
+            lines!(ax, [p_i, p_i], [0, r_i];
+                   color=:gray,
+                   linestyle=:dash,
+                   linewidth=1)
+        end
 
         # Horizontal line (y-axis direction)
-        plot!(p, [0, p_i], [r_i, r_i];
-              color=:gray,
-              linestyle=:dash,
-              linewidth=1, label="")
+        if isfinite(p_i) && isfinite(r_i) && p_i != 0
+            lines!(ax, [0, p_i], [r_i, r_i];
+                   color=:gray,
+                   linestyle=:dash,
+                   linewidth=1)
+        end
 
         # Add coordinate annotations
-        annotate!(p, p_i, -0.1, text("$(round(p_i, digits=2))", 8, :center))
-        annotate!(p, -0.1, r_i, text("$(round(r_i, digits=2))", 8, :center))
+        if isfinite(p_i)
+            text!(ax, "$(round(p_i, digits=2))"; position=(p_i, -0.1),
+                  align=(:center, :top), fontsize=8)
+        end
+        if isfinite(r_i)
+            text!(ax, "$(round(r_i, digits=2))"; position=(-0.1, r_i),
+                  align=(:right, :center), fontsize=8)
+        end
 
         # Add DX and DY annotations
         # DX annotation (at the bottom of the square region)
-        annotate!(p, p_i, y_bottom - 0.1, text("DX=$(round(DX_i, digits=2))", 8, :center))
+        if isfinite(p_i) && isfinite(y_bottom) && isfinite(DX_i)
+            text!(ax, "DX=$(round(DX_i, digits=2))"; position=(p_i, y_bottom - 0.1),
+                  align=(:center, :top), fontsize=8)
+        end
         # DY annotation (at the left of the square region)
-        annotate!(p, x_left - 0.1, r_i, text("DY=$(round(DY_i, digits=2))", 8, :center))
+        if isfinite(x_left) && isfinite(r_i) && isfinite(DY_i)
+            text!(ax, "DY=$(round(DY_i, digits=2))"; position=(x_left - 0.1, r_i),
+                  align=(:right, :center), fontsize=8)
+        end
     end
 
     # Plot other points groups Pvec
@@ -274,17 +343,33 @@ function plot_points_with_regions(P::Vector{Tuple{T,T}},
             x_coords_group = [point[1] for point in point_group]
             y_coords_group = [point[2] for point in point_group]
 
-            # Plot each points group with different colors
-            color_idx = (group_idx % length(colors)) + 1
-            current_color = colors[color_idx]
+            # Filter out NaN and Inf values
+            valid_indices = [i
+                             for i in 1:length(x_coords_group)
+                             if isfinite(x_coords_group[i]) && isfinite(y_coords_group[i])]
+            x_coords_valid = [x_coords_group[i] for i in valid_indices]
+            y_coords_valid = [y_coords_group[i] for i in valid_indices]
 
-            scatter!(p, x_coords_group, y_coords_group;
-                     label="Perturbed poles and γ $(group_idx)",
-                     color=current_color,
-                     markersize=4,
-                     markerstrokewidth=1)
+            if !isempty(x_coords_valid)
+                # Plot each points group with different colors
+                color_idx = mod1(group_idx, length(colors))
+                current_color = colors[color_idx]
+
+                scatter!(ax, x_coords_valid, y_coords_valid;
+                         label="Perturbed poles and γ $(group_idx)",
+                         color=current_color,
+                         markersize=8,
+                         marker=:circle,
+                         strokewidth=1)
+            end
         end
     end
 
-    return p
+    # Only create legend if there are valid plots
+    try
+        axislegend(ax; position=:lt)
+    catch e
+        @warn "Failed to create legend: $e"
+    end
+    return fig
 end

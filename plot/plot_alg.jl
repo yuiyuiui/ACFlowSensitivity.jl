@@ -2,12 +2,10 @@ include("plot_method.jl")
 
 # BarRat
 alg = BarRat()
-plot_alg_cont(alg; nwave=1)
-plot_alg_cont(alg; nwave=2)
-plot_alg_cont(alg; nwave=3, noise_num=2)
+fig = plot_alg_cont(alg; nwave=2)
 
 alg = BarRat()
-plot_alg_delta(alg)
+fig = plot_alg_delta(alg)
 
 # MaxEnt
 alg = MaxEnt(; method="chi2kink", model_type="Gaussian")
