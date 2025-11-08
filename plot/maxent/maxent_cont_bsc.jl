@@ -32,3 +32,5 @@ ylims!(ax, (0.0, 0.8))
 # Update the legend to include the new line
 axislegend(ax; position=:lt)
 display(fig)
+
+save("eb-cont-chi2kink.pdf", fig)
