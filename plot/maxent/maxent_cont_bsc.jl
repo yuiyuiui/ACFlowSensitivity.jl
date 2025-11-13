@@ -19,7 +19,7 @@ ctx = ACFlowSensitivity.CtxData(Cont(), β, N; mesh_bound=4, mesh_length=2000)
 
 alg = MaxEnt(; method="chi2kink", model_type="Gaussian")
 
-fig = plot_errorbound_cont(GFV, ctx, alg; perm=1e-4, title="Chi2kink, Cont-type, perm=1e-4")
+fig = plot_errorbound_cont(GFV, ctx, alg; perm=5e-5, title="Chi2kink, Cont-type, perm=5e-5")
 
 # Get the axis from the figure and add the original A(w) line
 ax = fig.content[1]
@@ -33,4 +33,4 @@ ylims!(ax, (0.0, 0.8))
 axislegend(ax; position=:lt)
 display(fig)
 
-save("eb-cont-chi2kink.pdf", fig)
+save("eb-bsc-chi2kink.pdf", fig)

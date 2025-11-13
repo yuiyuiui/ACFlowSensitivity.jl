@@ -1,6 +1,7 @@
 include("method.jl")
 using JLD2
 sst_mat = Matrix{Float64}(undef, 3, 10)
+chi2_mat = Matrix{Float64}(undef, 3, 10)
 
 FILE = "/Users/syyui/projects/ACFlowSensitivity.jl/sensitivityscale/sst_paper.jld2"
 
@@ -12,14 +13,16 @@ alg_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"
 _, ctx, GFV = dfcfg(Float64, Cont(); mesh_type=TangentMesh(), noise=1e-5)
 for i in 1:6
     @show "begin $i"
-    sst_mat[1, i] = generate_sst(deepcopy(GFV), deepcopy(ctx), deepcopy(alg_vec[i]))
+    sst_mat[1, i], chi2_mat[1, i] = generate_sst(deepcopy(GFV), deepcopy(ctx),
+                                                 deepcopy(alg_vec[i]))
     @show "end $i"
 end
 
 alg_s = [SSK(500), SAC(512), SOM(), SPX(2; method="mean", ntry=100)]
 for i in 1:4
     @show "begin $i"
-    sst_mat[1, i+6] = generate_sst(deepcopy(GFV), deepcopy(ctx), deepcopy(alg_s[i]))
+    sst_mat[1, i+6], chi2_mat[1, i+6] = generate_sst(deepcopy(GFV), deepcopy(ctx),
+                                                     deepcopy(alg_s[i]))
     @show "end $i"
 end
 
@@ -55,7 +58,8 @@ push!(ctx_vec, deepcopy(ctx_som))
 push!(ctx_vec, deepcopy(ctx0))
 for i in 1:10
     @show "begin $i"
-    sst_mat[2, i] = generate_sst(deepcopy(GFV), deepcopy(ctx_vec[i]), deepcopy(alg_vec[i]))
+    sst_mat[2, i], chi2_mat[2, i] = generate_sst(deepcopy(GFV), deepcopy(ctx_vec[i]),
+                                                 deepcopy(alg_vec[i]))
     @show alg_vec[i]
     @show sst_mat[2, i]
     @show "end $i"
@@ -80,11 +84,12 @@ alg_vec = [BarRat(), NAC(; eta=1e-4), MaxEnt(; method="chi2kink"), MaxEnt(; meth
 ctx = dfcfg(Float64, Cont(); mb=4, ml=2000)[2]
 for i in 1:10
     @show "begin $i"
-    sst_mat[3, i] = generate_sst(deepcopy(GFV), deepcopy(ctx), deepcopy(alg_vec[i]))
+    sst_mat[3, i], chi2_mat[3, i] = generate_sst(deepcopy(GFV), deepcopy(ctx),
+                                                 deepcopy(alg_vec[i]))
     @show "end $i"
 end
 
-@save FILE sst_mat
+@save FILE sst_mat chi2_mat
 
 #=
 1. generate 3 origin data
