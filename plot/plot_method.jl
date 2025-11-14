@@ -1,6 +1,9 @@
 using ACFlowSensitivity, CairoMakie, Random, LinearAlgebra
 include("../test/testsetup.jl")
 
+const title_size = 32
+const label_size = 24
+
 function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     T = Float64
     Random.seed!(6)
@@ -24,7 +27,10 @@ function plot_alg_cont(alg::Solver; noise_num::Int=3, nwave::Int=2)
     ax = Axis(fig[1, 1];
               title="$(typeof(alg)) for cont type",
               xlabel="ω",
-              ylabel="A(ω)")
+              ylabel="A(ω)",
+              titlesize=title_size,
+              xlabelsize=label_size,
+              ylabelsize=label_size)
 
     # Plot original data
     lines!(ax, mesh, A.(mesh); label="origin A(ω)", linewidth=1.5, color=:black)
@@ -66,7 +72,10 @@ function plot_alg_delta(alg::Solver; noise_num::Int=1, fp_ww::Real=0.01, fp_mp::
               title="$(typeof(alg)) for delta type",
               xlabel="ω",
               ylabel="A(ω)",
-              limits=((1, 3), (-0.02, 1.0)))
+              limits=((1, 3), (-0.02, 1.0)),
+              titlesize=title_size,
+              xlabelsize=label_size,
+              ylabelsize=label_size)
 
     # Plot original poles
     scatter!(ax, orp, fill(0.0, length(orp));
@@ -99,7 +108,6 @@ function plot_errorbound_cont(alg::Solver; noise::Real=0.0, perm::Real=1e-4,
     amplitudes = [T(1), T(3 // 10), T(2 // 5)][1:nwave]
     _, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type, noise=noise, μ=μ, σ=σ,
                         amplitudes=amplitudes)
-    @show ctx
     return plot_errorbound_cont(GFV, ctx, alg; perm=perm, perm_num=perm_num, title=title)
 end
 
@@ -128,7 +136,10 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
               xlabel="ω",
               ylabel="A(ω)",
               xgridvisible=false,
-              ygridvisible=false)
+              ygridvisible=false,
+              titlesize=title_size,
+              xlabelsize=label_size,
+              ylabelsize=label_size)
 
     # Plot reconstructed A(ω)
     lines!(ax, mesh, reA; label="Reconstructed A(ω)", linewidth=1.2, color=:black)
@@ -238,13 +249,19 @@ function plot_points_with_regions(P::Vector{Tuple{T,T}},
     xlims = (0.5, 2.5)
     ylims = (0.2, 0.7)
 
+    @show label_size
+    @show title_size
+
     ax = Axis(fig[1, 1];
               title=title,
               xlabel="ω",
               ylabel="γ",
               limits=(xlims, ylims),
               xgridvisible=false,
-              ygridvisible=false)
+              ygridvisible=false,
+              titlesize=title_size,
+              xlabelsize=label_size,
+              ylabelsize=label_size)
 
     # Plot main points group P
     x_coords = [point[1] for point in P]
