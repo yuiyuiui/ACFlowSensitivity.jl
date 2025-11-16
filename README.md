@@ -27,11 +27,11 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |MaxEnt Bryan|✅|✅||✅|✅||
 |MaxEnt Classic|✅|✅||✅|✅||
 |MaxEnt Historic|✅|✅||✅|✅||
-|SSK|✅|✅||✅|✅||
-|SAC|✅|✅||✅|✅||
-|SPX|✅|✅||✅|✅||
-|SOM|✅|✅||✅|✅||
-|NAC|✅|✅||✅|✅||
+|SSK|✅|✅|||✅||
+|SAC|✅|✅|||✅||
+|SPX|✅|✅|||✅||
+|SOM|✅|✅|||✅||
+|NAC|✅|✅|||✅||
 
 Example of using `ACFlowSensitivity` to plot the error bound of a specific method is shown in the file folder `plot`.
 

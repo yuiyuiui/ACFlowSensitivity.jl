@@ -133,8 +133,8 @@ function plot_errorbound_cont(GFV::Vector{Complex{T}}, ctx::CtxData{T},
     fig = Figure()
     ax = Axis(fig[1, 1];
               title=title_str,
-              xlabel="ω",
-              ylabel="A(ω)",
+              xlabel=L"\omega",
+              ylabel=L"A(\omega)",
               xgridvisible=false,
               ygridvisible=false,
               titlesize=title_size,

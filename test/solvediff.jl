@@ -178,6 +178,21 @@ end
     @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-5, atol=1e-8, show_dy=true)
 end
 
+@testset "differentiation of SSK with Cont spectrum" begin
+    T = Float64
+    pn = 500
+    alg = SSK(pn)
+    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+    Random.seed!(6)
+    Aout, SC = ACFlowSensitivity.init_run(GFV, ctx, alg)
+    Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+    @test Aout isa Vector{T}
+    @test ∂ADiv∂G isa Matrix{Complex{T}}
+    @test size(∂ADiv∂G) == (length(ctx.mesh.mesh), length(GFV))
+    #G2A = G -> solve(G, ctx, alg)
+    #@test jacobian_check_v2v(G2A, -∂ADiv∂G, GFV; η=1e-5, show_dy=true)
+end
+
 # SAC
 @testset "differentiation of SAC with Delta spectrum" begin
     for T in [Float32, Float64]

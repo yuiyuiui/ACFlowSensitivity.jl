@@ -31,13 +31,17 @@ Mutable struct. It is used within the StochSK solver only.
 * allow  -> Allowable indices.
 * grid   -> Imaginary axis grid for input data.
 * mesh   -> Real frequency mesh for output spectrum.
+* Kor    -> original kernel function. Different from the adapted "kernel".
 * kernel -> Default kernel function.
+* Amesh  -> A on mesh.
 * Aout   -> Calculated spectral function.
 * χ²     -> Current goodness-of-fit function.
 * χ²min  -> Mininum goodness-of-fit function.
 * χ²vec  -> Vector of goodness-of-fit function.
 * Θ      -> Current Θ parameter.
 * Θvec   -> Vector of Θ parameter.
+* E1     -> First-order origin moment, E(KA).
+* E2     -> Second-order origin moment, E(FAA'K').
 """
 mutable struct StochSKContext{I<:Int,T<:Real}
     Gᵥ::Vector{T}
@@ -47,12 +51,16 @@ mutable struct StochSKContext{I<:Int,T<:Real}
     grid::Vector{T}
     mesh::Mesh{T}
     kernel::Array{T,2}
+    Kor::Array{T,2}
+    Amesh::Vector{T}
     Aout::Vector{T}
     χ²::T
     χ²min::T
     χ²vec::Vector{T}
     Θ::T
     Θvec::Vector{T}
+    E1::Vector{T}
+    E2::Array{T,2}
 end
 
 """
@@ -101,6 +109,11 @@ Main driver function for the StochSK solver.
 * Aout -> Spectral function.
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+    Aout, _ = init_run(GFV, ctx, alg)
+    return last!(Aout, GFV, ctx, alg)
+end
+
+function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     println("[ StochSK ]")
     mesh = ctx.mesh.mesh
     fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # ssk needs high-precise linear grid
@@ -118,6 +131,13 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Rea
     println("Initialize context for the StochSK solver")
 
     Aout, _, _ = run!(MC, SE, SC, alg)
+
+    return Aout, SC
+end
+
+function last!(Aout::Vector{T}, GFV::Vector{Complex{T}}, ctx::CtxData{T},
+               alg::SSK) where {T<:Real}
+    mesh = ctx.mesh.mesh
     if ctx.spt isa Delta
         p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
         length(p) != alg.npole && @warn("Number of poles is not correct")
@@ -201,7 +221,9 @@ continuation simulations. It will generate the spectral functions.
 * Θvec -> List of Θ parameters.
 """
 function average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
-    SC.Aout = SC.Aout ./ (step * SC.mesh.weight)
+    @. SC.E1 = SC.E1 / step
+    @. SC.Aout = SC.Aout / (step * SC.mesh.weight)
+    @. SC.E2 = SC.E2 / step
     return SC.Aout, SC.χ²vec, SC.Θvec
 end
 
@@ -326,6 +348,7 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                   alg::SSK) where {I<:Int,T<:Real}
     nfine = alg.nfine
     pn = alg.npole
+    SC.Amesh .= T(0)
 
     for j in 1:pn
         d_pos = SE.P[j]
@@ -338,8 +361,15 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
         #
         # Note that nearest() is defined in mesh.jl.
         s_pos = nearest(SC.mesh.mesh, d_pos / nfine)
-        SC.Aout[s_pos] = SC.Aout[s_pos] + SE.A
+        SC.Aout[s_pos] += SE.A
+        SC.Amesh[s_pos] += SE.A
     end
+
+    𝐴 = fill(SE.A, length(SE.P))
+    𝐾 = SC.Kor[:, SE.P]
+    reG = 𝐾 * 𝐴
+    SC.E1 .+= reG
+    return mul!(SC.E2, SC.Amesh, reG', 1, 1)
 end
 
 """
@@ -491,9 +521,11 @@ function init_context(SE::StochSKElement{I,T},
     nmesh = length(ctx.mesh.mesh)
     nwarm = alg.nwarm
     θ = T(alg.θ)
+    mesh = ctx.mesh.mesh
 
     # Allocate memory for spectral function, A(ω)
     Aout = zeros(T, nmesh)
+    Amesh = zeros(T, nmesh)
 
     # Allocate memory for χ² and Θ
     χ²vec = zeros(T, nwarm)
@@ -505,6 +537,10 @@ function init_context(SE::StochSKElement{I,T},
     # Get new kernel matrix
     kernel = Diagonal(S) * V'
 
+    K = [1 / (im * ctx.wn[i] - fine_mesh[j])
+         for i in 1:length(ctx.wn), j in 1:length(fine_mesh)]
+    Kor = [real(K); imag(K)]
+
     # Get new (input) correlator
     Gᵥ = U' * (vcat(real(GFV), imag(GFV)) .* 1 / ctx.σ)
 
@@ -515,9 +551,12 @@ function init_context(SE::StochSKElement{I,T},
     𝚾 = calc_goodness(Gᵧ, Gᵥ)
     χ², χ²min = 𝚾, 𝚾
 
+    E1 = zeros(T, length(Gᵥ))
+    E2 = zeros(T, nmesh, length(Gᵥ))
+
     return StochSKContext(Gᵥ, Gᵧ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh,
-                          kernel, Aout,
-                          χ², χ²min, χ²vec, θ, θvec)
+                          kernel, Kor, Amesh, Aout,
+                          χ², χ²min, χ²vec, θ, θvec, E1, E2)
 end
 
 """
@@ -933,7 +972,10 @@ end
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK;
                    diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
+        Aout, SC = init_run(GFV, ctx, alg)
+        ∂ADiv∂G = SC.σinv^2 / SC.Θ * (SC.E2 ./ SC.mesh.weight - Aout * SC.E1')
+        N = length(GFV)
+        return Aout, ∂ADiv∂G[:, 1:N] + im * ∂ADiv∂G[:, (N + 1):end]
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

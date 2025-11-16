@@ -1,6 +1,6 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra, Zygote, Random, Einsum
+using LinearAlgebra, Zygote, Random, Einsum, SparseArrays
 
 # export interfaces
 export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed

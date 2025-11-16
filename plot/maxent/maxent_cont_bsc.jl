@@ -34,3 +34,4 @@ axislegend(ax; position=:lt)
 display(fig)
 
 save("eb-bsc-chi2kink.pdf", fig)
+save("eb-bsc-chi2kink.svg", fig)

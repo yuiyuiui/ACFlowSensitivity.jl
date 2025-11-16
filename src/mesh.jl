@@ -120,3 +120,26 @@ function nearest(mesh::Vector{T}, r::Real) where {T<:Real}
         return right
     end
 end
+
+#=
+"""
+    nearest_mat(x::Vector{T}, y::Vector{T}) where {T<:Real}
+
+Given two vectors `x` and `y`, return a sparse matrix `F` such that `F[i, j] = 1` if `x[i]` is the nearest point to `y[j]`.
+"""
+function nearest_mat(x::Vector{T}, y::Vector{T}) where {T<:Real}
+    n1 = length(x)
+    n2 = length(y)
+    F = spzeros(T, n1, n2)
+    idx1=1 # idx on mesh
+    idx2=1 # idx on fine mesh
+    while idx2 <= n2
+        while idx1 < n1 && abs(x[idx1]-y[idx2]) > abs(x[idx1+1]-y[idx2])
+            idx1 += 1
+        end
+        F[idx1, idx2] = T(1)
+        idx2 += 1
+    end
+    return F
+end
+=#
