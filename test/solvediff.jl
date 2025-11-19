@@ -182,15 +182,16 @@ end
     T = Float64
     pn = 500
     alg = SSK(pn)
-    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
+    A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), ml=2000)
     Random.seed!(6)
-    Aout, SC = ACFlowSensitivity.init_run(GFV, ctx, alg)
     Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
     @test Aout isa Vector{T}
     @test ∂ADiv∂G isa Matrix{Complex{T}}
     @test size(∂ADiv∂G) == (length(ctx.mesh.mesh), length(GFV))
     #G2A = G -> solve(G, ctx, alg)
     #@test jacobian_check_v2v(G2A, -∂ADiv∂G, GFV; η=1e-5, show_dy=true)
+    #err = 1.6786279766194467
+    #rel_err = 14.298733141006547
 end
 
 # SAC

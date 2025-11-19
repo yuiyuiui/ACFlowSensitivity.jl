@@ -1,5 +1,5 @@
 """
-	StochSKElement
+    StochSKElement
 
 Mutable struct. It is used to record the field configurations, which will
 be sampled by Monte Carlo sweeping procedure.
@@ -20,7 +20,7 @@ mutable struct StochSKElement{I<:Int,T<:Real}
 end
 
 """
-	StochSKContext
+    StochSKContext
 
 Mutable struct. It is used within the StochSK solver only.
 
@@ -64,7 +64,7 @@ mutable struct StochSKContext{I<:Int,T<:Real}
 end
 
 """
-	StochSKMC
+    StochSKMC
 
 Mutable struct. It is used within the StochSK solver. It includes random
 number generator and some counters.
@@ -81,6 +81,7 @@ number generator and some counters.
 See also: [`StochSKSolver`](@ref).
 """
 mutable struct StochSKMC{I<:Int}
+    seed::Int
     rng::AbstractRNG
     Sacc::I
     Stry::I
@@ -90,12 +91,24 @@ mutable struct StochSKMC{I<:Int}
     Qtry::I
 end
 
+"""
+    StochSKSSTP
+
+Elements in SC used for sensitivity calculation.
+"""
+struct StochSKSSTP{T<:Real}
+    Aout::Vector{T}
+    Θ::T
+    E1::Vector{T}
+    E2::Array{T,2}
+end
+
 #=
 ### *Global Drivers*
 =#
 
 """
-	solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
+    solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
 
 Main driver function for the StochSK solver.
 
@@ -130,9 +143,37 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
     println("Initialize context for the StochSK solver")
 
-    Aout, _, _ = run!(MC, SE, SC, alg)
-
-    return Aout, SC
+    n = alg.nchain
+    m = nworkers()
+    SPVEC = StochSKSSTP[]
+    while n>0
+        println("Remaining chains to run: $n, current process number: $m")
+        MC.seed += m * 10001 + 1
+        if nworkers() > 1
+            nproc = min(n, m)
+            println("Running in parallel mode, nworkers = $(nproc)")
+            𝐹 = Future[]
+            for i in 1:nproc
+                𝑓 = @spawnat i + 1 run!(MC, SE, SC, alg)
+                push!(𝐹, 𝑓)
+            end
+            for i in 1:nproc
+                wait(𝐹[i])
+                push!(SPVEC, fetch(𝐹[i]))
+            end
+            n -= nproc
+        else
+            SP = run!(deepcopy(MC), deepcopy(SE), deepcopy(SC), alg)
+            push!(SPVEC, deepcopy(SP))
+            n -= 1
+        end
+    end
+    Aout = zeros(T, length(mesh))
+    for SP in SPVEC
+        @. Aout += SP.Aout
+    end
+    Aout ./= length(SPVEC)
+    return Aout, SPVEC
 end
 
 function last!(Aout::Vector{T}, GFV::Vector{Complex{T}}, ctx::CtxData{T},
@@ -151,7 +192,7 @@ function last!(Aout::Vector{T}, GFV::Vector{Complex{T}}, ctx::CtxData{T},
 end
 
 """
-	run!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    run!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Perform stochastic analytic continuation simulation, sequential version.
 
@@ -163,12 +204,16 @@ Perform stochastic analytic continuation simulation, sequential version.
 
 ### Returns
 * Aout -> Spectral function, A(ω).
-* χ²vec -> Θ-dependent χ², χ²(Θ).
-* Θvec -> List of Θ parameters.
+* SP -> StochSKSSTP struct.
 """
 function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
               alg::SSK) where {I<:Int,T<:Real}
-
+    if nworkers() > 1
+        @show myid()
+        MC.rng = MersenneTwister(MC.seed + rand(1:10000) * myid() + 2007)
+    else
+        MC.rng = MersenneTwister(MC.seed + rand(1:10000) + 2007)
+    end
     # Setup essential parameters
     nstep = alg.nstep
     retry = alg.retry
@@ -196,7 +241,7 @@ function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T}
             measure!(SE, SC, alg)
         end
 
-        if iter % 200 == 0
+        if iter % 5000 == 0
             prog = round(Int, iter / nstep * 100)
             println("step = $iter, progress = $prog%", " χ² = $(SC.χ²)")
         end
@@ -206,7 +251,7 @@ function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T}
 end
 
 """
-	average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
+    average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
 
 Postprocess the results generated during the stochastic analytic
 continuation simulations. It will generate the spectral functions.
@@ -217,14 +262,13 @@ continuation simulations. It will generate the spectral functions.
 
 ### Returns
 * Aout -> Spectral function, A(ω).
-* χ²vec -> Θ-dependent χ², χ²(Θ).
-* Θvec -> List of Θ parameters.
+* SP -> StochSKSSTP struct.
 """
 function average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
     @. SC.E1 = SC.E1 / step
     @. SC.Aout = SC.Aout / (step * SC.mesh.weight)
     @. SC.E2 = SC.E2 / step
-    return SC.Aout, SC.χ²vec, SC.Θvec
+    return StochSKSSTP(SC.Aout, SC.Θ, SC.E1, SC.E2)
 end
 
 #=
@@ -232,7 +276,7 @@ end
 =#
 
 """
-	warmup(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    warmup(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Warmup the Monte Carlo engine to acheieve thermalized equilibrium. Then
 it will try to figure out the optimized Θ and the corresponding Monte
@@ -269,7 +313,9 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 
         # Check whether the equilibrium state is reached
         δχ² = SC.χ² - SC.χ²min
-        println("step : $i, χ² - χ²min -> $δχ²")
+        if i%25==0
+            println("step : $i, χ² - χ²min -> $δχ²")
+        end
         if δχ² < threshold
             println("Reach equilibrium state")
             break
@@ -304,7 +350,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 end
 
 """
-	sample!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
+    sample!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext)
 
 Perform Monte Carlo sweeps and sample the field configurations.
 
@@ -330,7 +376,7 @@ function sample!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I
 end
 
 """
-	measure!(SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    measure!(SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Accumulate the final spectral functions A(ω).
 
@@ -373,7 +419,7 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
 end
 
 """
-	shuffle(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    shuffle(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Try to shuffle the Monte Carlo field configuration via the Metropolis
 algorithm. Then the window for shifting the δ functions is adjusted.
@@ -442,7 +488,7 @@ end
 =#
 
 """
-	init_mc(S::SSK)
+    init_mc(S::SSK)
 
 Try to create a StochSKMC struct. Some counters for Monte Carlo updates
 are initialized here.
@@ -459,6 +505,7 @@ function init_mc(alg::SSK)
     seed = rand(1:100000000)
     rng = MersenneTwister(seed)
     #
+    seed = 1
     Sacc = 0
     Stry = 0
     Pacc = 0
@@ -466,17 +513,17 @@ function init_mc(alg::SSK)
     Qacc = 0
     Qtry = 0
     #
-    MC = StochSKMC(rng, Sacc, Stry, Pacc, Ptry, Qacc, Qtry)
+    MC = StochSKMC(seed, rng, Sacc, Stry, Pacc, Ptry, Qacc, Qtry)
 
     return MC
 end
 
 """
-	init_element(
-		alg::SSK,
-		rng::AbstractRNG,
-		ctx::CtxData{T}
-	)
+    init_element(
+        alg::SSK,
+        rng::AbstractRNG,
+        ctx::CtxData{T}
+    )
 
 Randomize the configurations for future Monte Carlo sampling. It will
 return a StochSKElement struct.
@@ -560,7 +607,7 @@ function init_context(SE::StochSKElement{I,T},
 end
 
 """
-	calc_correlator(SE::StochSKElement, kernel::Array{F64,2})
+    calc_correlator(SE::StochSKElement, kernel::Array{F64,2})
 
 Try to calculate correlator with the kernel function and the Monte Carlo
 field configuration. This correlator will then be used to evaluate the
@@ -583,7 +630,7 @@ function calc_correlator(SE::StochSKElement{I,T}, kernel::Array{T,2}) where {I<:
 end
 
 """
-	calc_goodness(Gₙ::Vector{F64}, Gᵥ::Vector{F64})
+    calc_goodness(Gₙ::Vector{F64}, Gᵥ::Vector{F64})
 
 Try to calculate the goodness-of-fit function (i.e, χ²), which measures
 the distance between input and regenerated correlators.
@@ -603,7 +650,7 @@ function calc_goodness(Gₙ::Vector{T}, Gᵥ::Vector{T}) where {T<:Real}
 end
 
 """
-	calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T<:Real}
+    calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T<:Real}
 
 Try to locate the optimal Θ and χ². This function implements the `chi2min`
 and `chi2kink` algorithms. Note that the `chi2min` algorithm is preferred.
@@ -652,7 +699,7 @@ function calc_theta(len::Int, SC::StochSKContext{I,T}, alg::SSK) where {I<:Int,T
 end
 
 """
-	try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
+    try_move_s!(MC::StochSKMC, SE::StochSKElement, SC::StochSKContext, alg::SSK)
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, only single δ function is shifted.
@@ -735,8 +782,8 @@ function try_move_s!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 """
-	try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-			   alg::SSK) where {I<:Int,T<:Real}
+    try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+               alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, only a pair of δ functions are shifted.
@@ -837,8 +884,8 @@ function try_move_p!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 """
-	try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
-			   alg::SSK) where {I<:Int,T<:Real}
+    try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
+               alg::SSK) where {I<:Int,T<:Real}
 
 Try to update the Monte Carlo field configurations via the Metropolis
 algorithm. In each update, four different δ functions are shifted.
@@ -972,9 +1019,13 @@ end
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK;
                    diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        Aout, SC = init_run(GFV, ctx, alg)
-        ∂ADiv∂G = SC.σinv^2 / SC.Θ * (SC.E2 ./ SC.mesh.weight - Aout * SC.E1')
         N = length(GFV)
+        Aout, SPvec = init_run(GFV, ctx, alg)
+        ∂ADiv∂G = zeros(T, length(ctx.mesh.mesh), 2 * N)
+        for SP in SPvec
+            ∂ADiv∂G += (SP.E2 ./ ctx.mesh.weight - SP.Aout * SP.E1') / (SP.Θ * ctx.σ^2)
+        end
+        ∂ADiv∂G ./= length(SPvec)
         return Aout, ∂ADiv∂G[:, 1:N] + im * ∂ADiv∂G[:, (N + 1):end]
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)

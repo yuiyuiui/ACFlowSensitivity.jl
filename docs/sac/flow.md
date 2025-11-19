@@ -13,9 +13,7 @@ $$\left<A(w)\right> = \left<n(\phi(w))\right>m(w)$$
 6. Improvement: do average over configurations of MC: $$\left<\left<n(x)\right>\right> = ...$$
 
 7. Shortage: Although we introduce the smooth item, it's practical effect is bad.
-![alt text](sac_cont.svg)
 
 Even for delta type, it's effect is far worse than `ssk`.
-![alt text](sac_delta_2p.svg)
-![alt text](sac_delta_512p.svg)
+
 

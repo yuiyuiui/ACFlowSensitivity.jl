@@ -23,6 +23,7 @@ struct CtxData{T<:Real}
     σ::T
     fp_ww::Real # find peaks window width
     fp_mp::Real # find peaks minimum peak height
+    nproc::Int
     function CtxData(spt::SpectrumType,
                      β::T,
                      N::Int;
@@ -36,7 +37,7 @@ struct CtxData{T<:Real}
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
         mesh = make_mesh(T(mesh_bound), mesh_length, mesh_type)
-        return new{T}(spt, β, N, wn, iwn, mesh, η, σ, fp_ww, fp_mp)
+        return new{T}(spt, β, N, wn, iwn, mesh, η, σ, fp_ww, fp_mp, nworkers())
     end
 end
 
@@ -130,6 +131,7 @@ mutable struct SSK <: Solver
     θ::Real
     ratio::Real
     method::String
+    nchain::Int
 end
 function SSK(npole::Int;
              nfine::Int=100000,
@@ -138,8 +140,9 @@ function SSK(npole::Int;
              retry::Int=10,
              θ::Real=1e6,
              ratio::Real=0.9,
-             method::String="chi2min")
-    return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method)
+             method::String="chi2min",
+             nchain::Int=nworkers()-1)
+    return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method, nchain)
 end
 
 # SAC ==========================

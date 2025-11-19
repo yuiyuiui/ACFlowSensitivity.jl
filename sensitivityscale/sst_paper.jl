@@ -1,15 +1,26 @@
 include("method.jl")
 using JLD2
+
+alg_num = 10
+
 sst_mat = Matrix{Float64}(undef, 3, 10)
 chi2_mat = Matrix{Float64}(undef, 3, 10)
 
-FILE = "/Users/syyui/projects/ACFlowSensitivity.jl/sensitivityscale/sst_paper.jld2"
+Aout_cont = Vector{Vector{Float64}}(undef, alg_num)
+Aout_delta = Vector{Vector{Float64}}(undef, alg_num)
+Aout_mixed = Vector{Vector{Float64}}(undef, alg_num)
+p_delta = Vector{Float64}(undef, alg_num)
+γ_delta = Vector{Float64}(undef, alg_num)
+J_cont = Vector{Matrix{Float64}}(undef, alg_num)
+J_delta = Vector{Matrix{Float64}}(undef, alg_num)
+J_mixed = Vector{Matrix{Float64}}(undef, alg_num)
 
 # @load FILE sst_mat
 
 #1 Cont
 alg_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"),
-           MaxEnt(; method="classic"), MaxEnt(; method="historic")]
+           MaxEnt(; method="classic"), MaxEnt(; method="historic"), SSK(500), SAC(512),
+           SOM(), SPX(2; method="mean", ntry=100)]
 _, ctx, GFV = dfcfg(Float64, Cont(); mesh_type=TangentMesh(), noise=1e-5)
 for i in 1:6
     @show "begin $i"
@@ -18,7 +29,6 @@ for i in 1:6
     @show "end $i"
 end
 
-alg_s = [SSK(500), SAC(512), SOM(), SPX(2; method="mean", ntry=100)]
 for i in 1:4
     @show "begin $i"
     sst_mat[1, i+6], chi2_mat[1, i+6] = generate_sst(deepcopy(GFV), deepcopy(ctx),

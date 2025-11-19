@@ -26,15 +26,15 @@ Denote $p_0 = e^{-\chi^2(A,G)/(2\Theta)}$
 
 Then
 $$\mathbb{E}(\frac{\partial}{\partial G^R}\log(p)) = 0\\
-=\mathbb{E}(\frac{\partial}{\partial G^R}\log(p_0)) -\log(\frac{\partial}{\partial G^R}Z_G)\\
-\Longrightarrow \mathbb{E}(\frac{\partial}{\partial G^R}\log(p_0)) = \log(\frac{\partial}{\partial G^R}Z_G)
+=\mathbb{E}(\frac{\partial}{\partial G^R}\log(p_0)) -\frac{\partial}{\partial G^R}\log(Z_G)\\
+\Longrightarrow \mathbb{E}(\frac{\partial}{\partial G^R}\log(p_0)) = \frac{\partial}{\partial G^R}\log(Z_G)
 $$
 
 So
 $$\frac{\partial}{\partial G^R}\mathbb{E}(A)\\
 =\mathbb{E}(A\frac{\partial}{\partial G^R}\log(p))\\
-=\mathbb{E}(A\frac{\partial}{\partial G^R}\log(p_0)) - \mathbb{E}(A)\log(\frac{\partial}{\partial G^R}Z_G)\\
-=\mathbb{E}(A\frac{\partial}{\partial G^R}\log(p_0)) - \mathbb{E}(A)\log(\frac{\partial}{\partial G^R}\log(p_0))\\
+=\mathbb{E}(A\frac{\partial}{\partial G^R}\log(p_0)) - \mathbb{E}(A)\frac{\partial}{\partial G^R}\log(Z_G)\\
+=\mathbb{E}(A\frac{\partial}{\partial G^R}\log(p_0)) - \mathbb{E}(A)\frac{\partial}{\partial G^R}\log(\log(p_0))\\
 =\text{Cov}(A, \frac{\partial}{\partial G^R}\log(p_0))\\
 =\text{Cov}\left(A, -\frac{\partial}{\partial G^R}\sum_{j=1}^N(G^R_j-K_jA)^2/\left(2\sigma_j^2\Theta\right)\right)\\
 =\frac{1}{\Theta}\text{Cov}\left(A, -\left[\frac{G^R_j-K_jA}{\sigma_j^2}\right]_j\right)\\

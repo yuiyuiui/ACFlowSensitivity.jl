@@ -1,5 +1,5 @@
 using Test, Random, TestExtras
-using LinearAlgebra, Zygote
+using LinearAlgebra, Zygote, Distributed
 using ACFlowSensitivity
 
 Random.seed!(6)

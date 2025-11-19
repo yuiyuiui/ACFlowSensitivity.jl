@@ -17,11 +17,10 @@ end
 function generate_sst(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::Solver) where {T<:Real}
     if ctx.spt isa Cont
         Aout, J = solvediff(GFV, ctx, alg)
-        return sst(J, ctx.spt), cal_chi2(Aout, GFV, ctx)
+        return sst(J, ctx.spt), cal_chi2(Aout, GFV, ctx), Aout, J
     elseif ctx.spt isa Delta
-        _, (p, γ), (J, _) = solvediff(GFV, ctx, alg)
-        @show p, γ
-        return sst(J, ctx.spt), cal_chi2(p, γ, GFV, ctx)
+        Aout, (p, γ), (J, _) = solvediff(GFV, ctx, alg)
+        return sst(J, ctx.spt), cal_chi2(p, γ, GFV, ctx), Aout, (p, γ), J
     else
         error("Unsupported spectrum type")
     end
