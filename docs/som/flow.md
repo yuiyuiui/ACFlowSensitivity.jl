@@ -12,17 +12,17 @@ $$D[\mathcal{C}] = \sum_{j=1}^N \left\|G_j - \sum_{k=1}^m h_k\log\left(\frac{i\o
 e_k^1 = c_k-w_k/2, e_k^2 = c_k+w_k/2
 $$
 
-3. two step transition respectively with probability:
+3. Two step transition respectively with probability:
 
 $$P(\mathcal{C}\to \mathcal{C}') = \left(\frac{D[\mathcal{C}]}{D[\mathcal{C}']}\right)^{1 + \mathcal{U}(0,1)}\\
 P(\mathcal{C}\to \mathcal{C}') = \left(\frac{D[\mathcal{C}]}{D[\mathcal{C}']}\right)^{2 + \mathcal{U}(0,1)}
 $$
 
-4. check whether the new configuration owns a smaller $\chi^2$ and if so, record it.
+4. Check whether the new configuration owns a smaller $\chi^2$ and if so, record it.
 
 Then get a criterion to decide what configurations to be saved:
 
-$$\mathrm{good} = \mathrm{median}(\chi^2_{\mathrm{vec}})/\mathrm{factor},~\mathrm{factor} = 1.2 $$
+$$\mathrm{good} = \mathrm{median}(\chi^2_{\mathrm{vec}})/\mathrm{factor},~\mathrm{factor} = 1.2 ~\mathrm{or}~ 1.0$$
 
 $$\mathcal{C}_{\mathrm{vec}} \leftarrow \mathcal{C}\in\mathcal{C}_{\mathrm{vec}}:\chi^2(\mathcal{C}) < \mathrm{good}$$
 
@@ -32,4 +32,4 @@ $$A_{\text{out}} = \frac{1}{|\mathcal{C}_{\mathrm{vec}}|}\sum_{\mathcal{C}\in\ma
 
 # Differentiation
 
-Difficult: it does not follow a general MCMC and it's hard to get any information about its distribution and thus it's hard to get the derivative of the expectation: $A_{\text{out}}$.
+Difficulty: it does not follow a general MCMC and it's hard to get any information about its distribution and thus it's hard to get the derivative of the expectation: $A_{\text{out}}$.
