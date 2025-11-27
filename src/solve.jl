@@ -141,7 +141,7 @@ function SSK(npole::Int;
              θ::Real=1e6,
              ratio::Real=0.9,
              method::String="chi2min",
-             nchain::Int=nworkers()-1)
+             nchain::Int=nworkers())
     return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method, nchain)
 end
 
@@ -178,9 +178,9 @@ struct SOM <: Solver
 end
 function SOM(;
              ntry::Int=3000,
-             nstep::Int=1000,
-             nbox::Int=200,
-             sbox::Real=0.0025,
+             nstep::Int=10000,
+             nbox::Int=100,
+             sbox::Real=0.005,
              wbox::Real=0.02)
     return SOM(ntry, nstep, nbox, sbox, wbox)
 end

@@ -146,7 +146,7 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:
     n = alg.nchain
     m = nworkers()
     SPVEC = StochSKSSTP[]
-    while n>0
+    while n > 0
         println("Remaining chains to run: $n, current process number: $m")
         MC.seed += m * 10001 + 1
         if nworkers() > 1
@@ -313,7 +313,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
 
         # Check whether the equilibrium state is reached
         δχ² = SC.χ² - SC.χ²min
-        if i%25==0
+        if i % 25 == 0
             println("step : $i, χ² - χ²min -> $δχ²")
         end
         if δχ² < threshold

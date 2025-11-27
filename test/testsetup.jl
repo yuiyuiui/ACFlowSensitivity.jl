@@ -31,15 +31,14 @@ addnoise(G::Vector{Complex{T}}, noise::T) where {T<:Real} = addnoise!(deepcopy(G
 # generate values of G(iw_n)
 function generate_GFV_cont(β::T,
                            N::Int,
-                           A::Function;
-                           int_low::T=(-T(20)),
-                           int_up::T=T(20),
-                           noise::T=T(0),) where {T<:Real}
+                           Avec::Vector{T},
+                           mesh::Mesh{T};
+                           noise::T=T(0)) where {T<:Real}
     grid = (collect(0:(N - 1)) .+ 1 // 2) * T(2π) / β
     n = length(grid)
     res = zeros(Complex{T}, n)
     for i in 1:n
-        res[i] = ACFlowSensitivity.integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
+        res[i] = sum(Avec .* mesh.weight ./ (im * grid[i] .- mesh.mesh))
     end
     addnoise!(res, noise)
     return res
@@ -101,7 +100,7 @@ function dfcfg(T::Type{<:Real}, spt::SpectrumType;
         A = continous_spectral_density(μ, σ, amplitudes)
         Asum = sum(A.(ctx.mesh.mesh) .* ctx.mesh.weight)
         orA = x -> A(x) / Asum
-        GFV = generate_GFV_cont(β, N, orA; noise=noise)
+        GFV = generate_GFV_cont(β, N, orA.(ctx.mesh.mesh), ctx.mesh; noise=noise)
         return orA, ctx, GFV
     elseif spt isa Delta
         if length(poles) == 0

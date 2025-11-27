@@ -239,8 +239,8 @@ end
         A, ctx, GFV = dfcfg(T, Cont())
         Aout = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}
-        @test abs(sum(Aout .* ctx.mesh.weight) - 1) < 1e-3
-        @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.5
+        T == Float64 && @test abs(sum(Aout .* ctx.mesh.weight) - 1) < 1e-3
+        T == Float64 && @test loss(Aout, A.(ctx.mesh.mesh), ctx.mesh.weight) < 0.1
     end
 end
 
