@@ -156,6 +156,7 @@ struct SAC <: Solver
     nalph::Int
     alpha::Real
     ratio::Real
+    nchain::Int
 end
 function SAC(npole::Int;
              nfine::Int=10000,
@@ -164,8 +165,9 @@ function SAC(npole::Int;
              ndump::Int=40000,
              nalph::Int=20,
              alpha::Real=1.0,
-             ratio::Real=1.2)
-    return SAC(nfine, npole, nwarm, nstep, ndump, nalph, alpha, ratio)
+             ratio::Real=1.2,
+             nchain::Int=nworkers())
+    return SAC(nfine, npole, nwarm, nstep, ndump, nalph, alpha, ratio, nchain)
 end
 
 # SOM ==========================
@@ -203,6 +205,58 @@ function SPX(npole::Int;
              theta::Real=1e6,
              eta::Real=1e-4)
     return SPX(method, nfine, npole, ntry, nstep, theta, eta)
+end
+
+# ================================
+# output format
+function output_format(Aout::Vector{T}, GFV::Vector{Complex{T}}, ctx::CtxData{T},
+                       alg::Solver) where {T<:Real}
+    mesh = ctx.mesh.mesh
+    if ctx.spt isa Delta
+        p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
+        hasfield(typeof(alg), :npole) && length(p) != alg.npole &&
+            @warn("Number of poles is not correct")
+        γ = pG2γ(p, GFV, ctx.iwn)
+        return Aout, (p, γ)
+    elseif ctx.spt isa Cont
+        return Aout
+    else
+        error("Unsupported spectral function type")
+    end
+end
+
+# multiple process
+abstract type SST end # store information for sensitivity calculation
+abstract type SMC end # Monte Carlo engine
+function nproc_run!(alg::Solver, MC::SMC, args...)
+    n = alg.nchain
+    m = nworkers()
+    STVEC = SST[]
+    while n > 0
+        println("Remaining chains to run: $n, current process number: $m")
+        if nworkers() > 1
+            nproc = min(n, m)
+            println("Running in parallel mode, nworkers = $(nproc)")
+            𝐹 = Future[]
+            for i in 1:nproc
+                MC.seed += RandomSeed1 + 1
+                𝑓 = @spawnat i + 1 run!(MC, args..., alg)
+                push!(𝐹, 𝑓)
+            end
+            for i in 1:nproc
+                wait(𝐹[i])
+                push!(STVEC, fetch(𝐹[i]))
+            end
+            n -= nproc
+        else
+            MC.seed += RandomSeed1 + 1
+            ST = run!(deepcopy(MC), deepcopy.(args)..., alg)
+            push!(STVEC, deepcopy(ST))
+            n -= 1
+        end
+    end
+
+    return STVEC
 end
 
 # solve differentiation

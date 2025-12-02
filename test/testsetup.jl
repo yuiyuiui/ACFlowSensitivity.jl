@@ -148,6 +148,34 @@ function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
     end
     return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
 end
+
+function jcv2v0(f, J::Matrix{T}, x::Vector{T}, y0::Vector{S}; η=1e-5, rtol=1e-2,
+                atol=1e-8, show_err::Bool=true,
+                show_dy::Bool=false, randdx::Bool=false) where {T<:Number,S<:Number}
+    η = T(η)
+    if randdx
+        Random.seed!(1234)
+        dx = rand(T, length(x))
+        dx = dx / norm(dx) * η
+    else
+        dx = η * x / norm(x)
+    end
+    y1 = f(x + dx)
+    dy = y1 - y0
+    dy_expect = real(conj(J) * dx)
+    err = norm(dy - dy_expect)
+    rel_err = err / min(norm(dy), norm(dy_expect))
+    if show_err
+        @show err
+        @show rel_err
+    end
+    if show_dy
+        @show dy
+        @show dy_expect
+    end
+    return isapprox(dy, dy_expect; rtol=rtol, atol=atol)
+end
+
 # vector to number
 function gradient_check(f, J::Vector{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
                         atol=tolerance(T)) where {T<:Number}
@@ -167,12 +195,12 @@ function cal_chi2(A::Vector{T}, G::Vector{Complex{T}}, ctx::CtxData{T}) where {T
     w = ctx.mesh.mesh
     wn = ctx.wn
     K = [d[k] / (im * wn[j] - w[k]) for j in 1:length(wn), k in 1:length(w)]
-    return sum(abs2.((K*A-G)/ctx.σ))
+    return sum(abs2.((K * A - G) / ctx.σ))
 end
 
 function cal_chi2(p::Vector{T}, γ::Vector{T}, G::Vector{Complex{T}},
                   ctx::CtxData{T}) where {T<:Real}
     wn = ctx.wn
     K = [1 / (im * wn[j] - p[k]) for j in 1:length(wn), k in 1:length(p)]
-    return sum(abs2.((K*γ-G)/ctx.σ))
+    return sum(abs2.((K * γ - G) / ctx.σ))
 end

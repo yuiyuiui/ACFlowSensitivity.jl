@@ -20,7 +20,7 @@ $$
 
 And to get the spectrum:
 $$A = F\mathbb{E}(n)\\
-F[n](\omega) = m(\omega)^{-1}\frac{1}{\pi}\sum_{k}\frac{a_k\eta}{(\phi(\omega)-p_k)^2+\eta^2}
+F[n](\omega) = m(\omega)\frac{1}{\pi}\sum_{k}\frac{a_k\eta}{(\phi(\omega)-p_k)^2+\eta^2}
 $$
 
 Then use two lines to fine the first several $(\Theta_j, u_j)$ and the final several $(\Theta_j, u_j)$ by linear fitting. The intersection of the two lines is minimum acceptable $\Theta_0$. We only choos those $\Theta_j > \Theta_0$ and do an integral of $(u,A)$ and then normalize it to get the final spectrum.
@@ -52,91 +52,7 @@ $$\mathbb{E}[f(x,\theta)] = \int f(x,\theta)p(x,\theta)dx\\
 = \mathrm{Cov}(f,\frac{\partial}{\partial \theta}\log(p_0)) + \mathbb{E}[\frac{\partial f(x,\theta)}{\partial \theta}]\\
 $$
 
-$$\Longrightarrow \frac{\partial \mathbb{E}(\chi^2(A,G))}{\partial G^R} = \mathrm{Cov}(A, \frac{\partial}{\partial G^R}\log(p_0)) + \mathbb{E}(\frac{\partial \chi^2}{\partial G^R})\\
-= \mathrm{Cov}(\chi^2, -2\Theta h) + 2\mathbb{E}(h)\\
- = -2\Theta\mathbb{E}(\chi^2 h) + 2\left(\Theta\mathbb{E}(\chi^2)+1 \right)\mathbb{E}(h)
+$$\Longrightarrow \frac{\partial \mathbb{E}(\chi^2(A,G))}{\partial G^R} = \mathrm{Cov}(\chi^2, \frac{\partial}{\partial G^R}\log(p_0)) + \mathbb{E}(\frac{\partial \chi^2}{\partial G^R})\\
+= \mathrm{Cov}(\chi^2, -2\Theta \Sigma^{-1}h) + 2\Sigma^{-1}\mathbb{E}(h)\\
+ = 2\Sigma^{-1}\left[-\Theta\mathbb{E}(\chi^2 h) + \left(\Theta\mathbb{E}(\chi^2)+1 \right)\mathbb{E}(h)\right]
 $$
-
-
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-11
-1
-1
-1
-1
-1
-1
-1
-1

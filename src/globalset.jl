@@ -2,6 +2,9 @@ tolerance(T) = eps(real(T))^(1 // 2)
 strict_tol(T) = eps(real(T))^(2 // 3)
 relax_tol(T) = eps(real(T))^(1 // 4)
 
+const RandomSeed1 = 10000
+const RandomSeed2 = 2007
+
 """
     APC
 

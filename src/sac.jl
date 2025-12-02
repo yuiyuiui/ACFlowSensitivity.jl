@@ -26,7 +26,8 @@ number generator and some counters.
 
 See also: [`StochACSolver`](@ref).
 """
-mutable struct StochACMC{I<:Int}
+mutable struct StochACMC{I<:Int} <: SMC
+    seed::Int
     rng::AbstractRNG
     Macc::Vector{I}
     Mtry::Vector{I}
@@ -61,6 +62,7 @@ Mutable struct. It is used within the StochAC solver only.
 * grid   -> Imaginary axis grid for input data.
 * mesh   -> Real frequency mesh for output spectrum.
 * model  -> Default model function.
+* Kor    -> original kernel function. Different from the adapted "kernel".
 * kernel -> Default kernel function.
 * Aout   -> Calculated spectral function, it is actually ⟨n(x)⟩.
 * Δ      -> Precomputed δ functions.
@@ -68,6 +70,10 @@ Mutable struct. It is used within the StochAC solver only.
 * Hα     -> α-resolved Hc.
 * Uα     -> α-resolved internal energy, it is actually ⟨Hα⟩.
 * αₗ     -> Vector of the α parameters.
+* E1     -> First-order origin moment, E(Kn).
+* E2     -> Second-order origin moment, E(Fnn'K').
+* Eh     -> E(h).
+* Echi2h -> E(χ²h).
 """
 mutable struct StochACContext{I<:Int,T<:Real}
     Gᵥ::Vector{T}
@@ -77,12 +83,43 @@ mutable struct StochACContext{I<:Int,T<:Real}
     mesh::Mesh{T}
     model::Vector{T}
     kernel::Array{T,2}
+    Kor::Array{T,2}
     Aout::Array{T,2}
     Δ::Array{T,2}
     hτ::Array{T,2}
     Hα::Vector{T}
     Uα::Vector{T}
     αₗ::Vector{T}
+    E1::Array{T,2}
+    E2::Array{T,3}
+    Eh::Array{T,2}
+    Echi2h::Array{T,2}
+end
+
+"""
+    StochACSST
+
+Elements in SC used for sensitivity calculation.
+
+### Members
+* αvec -> α parameters.
+* Aout -> α-dependent spectral functions.
+* Uα -> α-dependent internal energies.
+* E1 -> E(Kn).
+* E2 -> E(Fnn'K').
+* Eh -> E(h).
+* Echi2h -> E(χ²h).
+* j₀ -> The minimum index of the α parameter contributing to the final Asum.
+"""
+struct StochACSST{T<:Real} <: SST
+    αvec::Vector{T}
+    Aout::Array{T,2}
+    Uα::Vector{T}
+    E1::Array{T,2}
+    E2::Array{T,3}
+    Eh::Array{T,2}
+    Echi2h::Array{T,2}
+    j₀::Vector{Int}
 end
 
 #=
@@ -114,6 +151,12 @@ Now the StochAC solver supports both continuous and δ-like spectra.
 * Gout -> Retarded Green's function, G(ω).
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
+    Aout, _ = init_run(GFV, ctx, alg)
+    return output_format(Aout, GFV, ctx, alg)
+end
+
+function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
+    println("[ StochAC ]")
     mesh = ctx.mesh.mesh
     fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # ssk needs high-precise linear grid
 
@@ -129,19 +172,36 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Rea
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
     println("Initialize context for the StochSK solver")
 
-    Aout, Uα = run!(MC, SE, SC, alg)
-    Asum = last!(SC, Aout, Uα)   # Average on α
+    Aout = zeros(T, length(mesh), alg.nalph)
+    N = length(GFV)
+    Uα = zeros(T, alg.nalph)
+    E1 = zeros(T, 2 * N, alg.nalph)
+    E2 = zeros(T, length(ctx.mesh.mesh), 2 * N, alg.nalph)
+    Eh = zeros(T, 2 * N, alg.nalph)
+    Echi2h = zeros(T, 2 * N, alg.nalph)
 
-    if ctx.spt isa Delta
-        p = mesh[find_peaks(mesh, Asum, ctx.fp_mp; wind=ctx.fp_ww)]
-        length(p) != alg.npole && @warn("Number of poles is not correct")
-        γ = pG2γ(p, GFV, ctx.iwn)
-        return Asum, (p, γ)
-    elseif ctx.spt isa Cont
-        return Asum
-    else
-        error("Unsupported spectral function type")
+    STVEC = nproc_run!(alg, MC, SE, SC)
+    println("Number of runned chains: $(length(STVEC))")
+
+    for ST in STVEC
+        @. Aout += ST.Aout
+        @. Uα += ST.Uα
+        @. E1 += ST.E1
+        @. E2 += ST.E2
+        @. Eh += ST.Eh
+        @. Echi2h += ST.Echi2h
     end
+    Aout ./= length(STVEC)
+    Uα ./= length(STVEC)
+    E1 ./= length(STVEC)
+    E2 ./= length(STVEC)
+    Eh ./= length(STVEC)
+    Echi2h ./= length(STVEC)
+
+    ST0 = StochACSST(SC.αₗ, Aout, Uα, E1, E2, Eh, Echi2h, Int[])
+
+    Asum = last!(ST0)   # Average on α
+    return Asum, ST0
 end
 
 """
@@ -160,6 +220,12 @@ Perform stochastic analytic continuation simulation, sequential version.
 """
 function run!(MC::StochACMC{I}, SE::StochACElement{I,T}, SC::StochACContext{I,T},
               alg::SAC) where {I<:Int,T<:Real}
+    if nworkers() > 1
+        @show myid()
+        MC.rng = MersenneTwister(MC.seed + rand(1:RandomSeed1) * myid() + RandomSeed2)
+    else
+        MC.rng = MersenneTwister(MC.seed + rand(1:RandomSeed1) + RandomSeed2)
+    end
     # By default, we should write the analytic continuation results
     # into the external files.
 
@@ -215,51 +281,50 @@ function average(step::T, SC::StochACContext{I,T}) where {I<:Int,T<:Real}
 
     # Renormalize the spectral functions
     Aout = zeros(T, nmesh, nalph)
-    for i in 1:nalph
-        for j in 1:nmesh
-            Aout[j, i] = SC.Aout[j, i] * SC.model[j] / T(π) / step
-        end
-    end
+    @. Aout = SC.Aout / step
+    @. SC.E1 = SC.E1 / step
+    @. SC.E2 = SC.E2 / step
+    @. SC.Eh = SC.Eh / step
+    @. SC.Echi2h = SC.Echi2h / step
 
     # Renormalize the internal energies
     Uα = SC.Uα / step
 
-    return Aout, Uα
+    return StochACSST(SC.αₗ, Aout, Uα, SC.E1, SC.E2, SC.Eh, SC.Echi2h, Int[])
 end
 
 """
-    last!(SC::StochACContext{I,T}, Aout::Array{T,2}, Uα::Vector{T}) where {I<:Int,T<:Real}
+    last!(ST::StochACSST{T}) where {T<:Real}
 
 It will process and write the calculated results by the StochAC solver,
 including effective hamiltonian, final spectral function, reproduced
 correlator.
 
 ### Arguments
-* SC   -> A StochACContext struct.
-* Aout -> α-dependent spectral functions.
-* Uα   -> α-dependent internal energies.
+* ST -> A StochACSST struct.
 
 ### Returns
 * Asum -> Final spectral function (α-averaged), A(ω).
 * G -> Retarded Green's function, G(ω).
 """
-function last!(SC::StochACContext{I,T}, Aout::Array{T,2},
-               Uα::Vector{T}) where {I<:Int,T<:Real}
+function last!(ST::StochACSST{T}) where {T<:Real}
     function fitfun(x, p)
         return @. p[1] * x + p[2]
     end
+    Aout = ST.Aout
+    Uα = ST.Uα
 
     # Get dimensional parameters
     nmesh, nalph = size(Aout)
 
     # Try to fit the internal energies to find out optimal α
     guess = [T(1), T(1)]
-    fit_l = curve_fit(fitfun, SC.αₗ[1:5], log10.(Uα[1:5]), guess)
-    fit_r = curve_fit(fitfun, SC.αₗ[(end - 4):end], log10.(Uα[(end - 4):end]), guess)
+    fit_l = curve_fit(fitfun, ST.αvec[1:5], log10.(Uα[1:5]), guess)
+    fit_r = curve_fit(fitfun, ST.αvec[(end - 4):end], log10.(Uα[(end - 4):end]), guess)
     a, b = fit_l.param
     c, d = fit_r.param
     aopt = (d - b) / (a - c)
-    close = argmin(abs.(SC.αₗ .- aopt))
+    close = argmin(abs.(ST.αvec .- aopt))
     println("Fitting parameters [a,b] are: [ $a, $b ]")
     println("Fitting parameters [c,d] are: [ $c, $d ]")
     println("Perhaps the optimal α is: ", aopt)
@@ -267,9 +332,11 @@ function last!(SC::StochACContext{I,T}, Aout::Array{T,2},
     # Calculate final spectral functions and write them
     Asum = zeros(T, nmesh)
     for i in close:(nalph - 1)
-        @. Asum = Asum + (Uα[i] - Uα[i+1]) * Aout[:, i]
+        @. Asum = Asum + (Uα[i] - Uα[i + 1]) * Aout[:, i]
     end
     @. Asum = Asum / (Uα[close] - Uα[end])
+
+    push!(ST.j₀, close)
 
     return Asum
 end
@@ -368,13 +435,20 @@ N/A
 function measure!(SE::StochACElement{I,T}, SC::StochACContext{I,T},
                   alg::SAC) where {I<:Int,T<:Real}
     nalph = alg.nalph
+    Amesh = zeros(T, size(SC.Aout, 1))
 
     # Loop over each α parameter
     for ia in 1:nalph
         da = view(SE.Γₐ, :, ia)
         dp = view(SE.Γₚ, :, ia)
-        SC.Aout[:, ia] = SC.Aout[:, ia] .+ SC.Δ[:, dp] * da
+        Amesh .= SC.Δ[:, dp] * da
+        SC.Aout[:, ia] = SC.Aout[:, ia] .+ Amesh
         SC.Uα[ia] = SC.Uα[ia] + SC.Hα[ia]
+        reG = SC.Kor[:, dp] * da
+        SC.E1[:, ia] .+= reG
+        SC.E2[:, :, ia] .= SC.E2[:, :, ia] .+ Amesh * reG'
+        SC.Eh[:, ia] .+= SC.hτ[:, ia]
+        SC.Echi2h[:, ia] .+= SC.hτ[:, ia] * SC.Hα[ia]
     end
 end
 
@@ -407,7 +481,7 @@ function init_mc(alg::SAC)
     Sacc = zeros(Int64, nalph)
     Stry = zeros(Int64, nalph)
     #
-    MC = StochACMC(rng, Macc, Mtry, Sacc, Stry)
+    MC = StochACMC(1, rng, Macc, Mtry, Sacc, Stry)
 
     return MC
 end
@@ -437,7 +511,7 @@ function init_element(alg::SAC,
     nalph = alg.nalph
     pn = alg.npole
 
-    Γₚ = rand(rng, collect(1:alg.nfine), (pn, nalph))
+    Γₚ = rand(rng, collect(1:(alg.nfine)), (pn, nalph))
     Γₐ = rand(rng, T, (pn, nalph))
 
     for j in 1:nalph
@@ -492,13 +566,17 @@ function init_context(SE::StochACElement,
 
     # Precompute δ functions
     ϕ = cumsum(model .* ctx.mesh.weight)
-    Δ = calc_delta(fine_mesh, ϕ)
+    Δ = calc_delta(fine_mesh, ϕ, model)
 
     # Build kernel matrix
-    _, _, _, U, S, V = SingularSpace(GFV, ctx.wn*ctx.σ, fine_mesh*ctx.σ)
+    _, _, _, U, S, V = SingularSpace(GFV, ctx.wn * ctx.σ, fine_mesh * ctx.σ)
 
     # Get new kernel matrix
     kernel = Diagonal(S) * V'
+
+    K = [1 / (im * ctx.wn[i] - fine_mesh[j])
+         for i in 1:length(ctx.wn), j in 1:length(fine_mesh)]
+    Kor = [real(K); imag(K)]
 
     # Get new (input) correlator
     Gᵥ = U' * (vcat(real(GFV), imag(GFV)) .* 1 / ctx.σ)
@@ -509,8 +587,13 @@ function init_context(SE::StochACElement,
     # Precompute α parameters
     αₗ = calc_alpha(alg, T)
 
-    return StochACContext(Gᵥ, 1/ctx.σ, collect(1:alg.nfine), ctx.wn, ctx.mesh, model,
-                          kernel, Aout, Δ, hτ, Hα, Uα, αₗ)
+    E1 = zeros(T, length(Gᵥ), nalph)
+    E2 = zeros(T, nmesh, length(Gᵥ), nalph)
+    Eh = zeros(T, length(Gᵥ), nalph)
+    Echi2h = zeros(T, length(Gᵥ), nalph)
+
+    return StochACContext(Gᵥ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh, model,
+                          kernel, Kor, Aout, Δ, hτ, Hα, Uα, αₗ, E1, E2, Eh, Echi2h)
 end
 
 """
@@ -530,7 +613,7 @@ See above explanations.
 
 See also: [`calc_phi`](@ref).
 """
-function calc_delta(fine_mesh::Vector{T}, ϕ::Vector{T}) where {T<:Real}
+function calc_delta(fine_mesh::Vector{T}, ϕ::Vector{T}, model::Vector{T}) where {T<:Real}
     nmesh = length(ϕ)
     #
     nfine = length(fine_mesh)
@@ -538,15 +621,15 @@ function calc_delta(fine_mesh::Vector{T}, ϕ::Vector{T}) where {T<:Real}
     wmin = fine_mesh[1]
     #
     η₁ = T(0.001)
-    η₂ = T(0.001) ^ 2
+    η₂ = T(0.001)^2
 
     Δ = zeros(T, nmesh, nfine)
     s = similar(ϕ)
     for i in 1:nfine
         # We should convert the mesh `fmesh` from [wmin,wmax] to [0,1].
         𝑥 = (fine_mesh[i] - wmin) / (wmax - wmin)
-        @. s = (ϕ - 𝑥) ^ 2 + η₂
-        @. Δ[:, i] = η₁ / s
+        @. s = (ϕ - 𝑥)^2 + η₂
+        @. Δ[:, i] = η₁ / s * model / T(π)
     end
 
     return Δ
@@ -644,7 +727,7 @@ function calc_alpha(alg::SAC, T::Type{<:Real})
     alpha = alg.alpha
     ratio = alg.ratio
 
-    αₗ = collect(T(alpha) * (T(ratio) ^ (x - 1)) for x in 1:nalph)
+    αₗ = collect(T(alpha) * (T(ratio)^(x - 1)) for x in 1:nalph)
 
     return αₗ
 end
@@ -934,10 +1017,35 @@ end
 
 #---------------------------------
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC;
-                   diffonly::Bool=false) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
+        N = length(GFV)
+        M = length(ctx.mesh.mesh)
+        Aout, ST = init_run(GFV, ctx, alg)
+        j0 = ST.j₀[1]
+        n = length(ST.Uα) - j0 + 1
+        AJ = zeros(T, M, 2 * N, n)
+        UJ = zeros(T, n, 2 * N)
+        for j in j0:length(ST.Uα)
+            AJ[:, :, j - j0 + 1] = 2 * ST.αvec[j] *
+                                   (ST.E2[:, :, j] - ST.Aout[:, j] * ST.E1[:, j]') / ctx.σ^2
+            UJ[j - j0 + 1, :] = 2 / ctx.σ * ((ST.αvec[j] * ST.Uα[j] + 1) * ST.Eh[:, j] -
+                                             ST.αvec[j] * ST.Echi2h[:, j])
+        end
+        function AU2A(Amat, Uvec)
+            res = zero(Amat[:, 1])
+            for i in 1:(size(Amat, 2) - 1)
+                res += Amat[:, i] * (Uvec[i] - Uvec[i + 1])
+            end
+            res1 = res / (Uvec[1] - Uvec[end])
+            return res1
+        end
+        JA, JU = Zygote.jacobian(AU2A, ST.Aout[:, j0:end], ST.Uα[j0:end])
+        J = JU * UJ
+        for j in 1:n
+            J .+= JA[:, (M * (j - 1) + 1):(M * j)] * AJ[:, :, j]
+        end
+        return Aout, J[:, 1:N] + im * J[:, (N + 1):end]
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

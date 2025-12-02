@@ -137,15 +137,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM) where {T<:Rea
 
     Aout = run!(MC, SC, alg)
 
-    if ctx.spt isa Cont
-        return Aout
-    elseif ctx.spt isa Delta
-        p = ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
-        γ = pG2γ(p, GFV, ctx.iwn)
-        return Aout, (p, γ)
-    else
-        error("Unsupported spectral function type")
-    end
+    return output_format(Aout, GFV, ctx, alg)
 end
 
 """

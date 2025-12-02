@@ -33,7 +33,6 @@ Mutable struct. It is used within the StochSK solver only.
 * mesh   -> Real frequency mesh for output spectrum.
 * Kor    -> original kernel function. Different from the adapted "kernel".
 * kernel -> Default kernel function.
-* Amesh  -> A on mesh.
 * Aout   -> Calculated spectral function.
 * χ²     -> Current goodness-of-fit function.
 * χ²min  -> Mininum goodness-of-fit function.
@@ -52,7 +51,6 @@ mutable struct StochSKContext{I<:Int,T<:Real}
     mesh::Mesh{T}
     kernel::Array{T,2}
     Kor::Array{T,2}
-    Amesh::Vector{T}
     Aout::Vector{T}
     χ²::T
     χ²min::T
@@ -80,7 +78,7 @@ number generator and some counters.
 
 See also: [`StochSKSolver`](@ref).
 """
-mutable struct StochSKMC{I<:Int}
+mutable struct StochSKMC{I<:Int} <: SMC
     seed::Int
     rng::AbstractRNG
     Sacc::I
@@ -92,11 +90,11 @@ mutable struct StochSKMC{I<:Int}
 end
 
 """
-    StochSKSSTP
+    StochSKSST
 
 Elements in SC used for sensitivity calculation.
 """
-struct StochSKSSTP{T<:Real}
+struct StochSKSST{T<:Real} <: SST
     Aout::Vector{T}
     Θ::T
     E1::Vector{T}
@@ -123,7 +121,7 @@ Main driver function for the StochSK solver.
 """
 function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     Aout, _ = init_run(GFV, ctx, alg)
-    return last!(Aout, GFV, ctx, alg)
+    return output_format(Aout, GFV, ctx, alg)
 end
 
 function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
@@ -143,52 +141,15 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
     println("Initialize context for the StochSK solver")
 
-    n = alg.nchain
-    m = nworkers()
-    SPVEC = StochSKSSTP[]
-    while n > 0
-        println("Remaining chains to run: $n, current process number: $m")
-        MC.seed += m * 10001 + 1
-        if nworkers() > 1
-            nproc = min(n, m)
-            println("Running in parallel mode, nworkers = $(nproc)")
-            𝐹 = Future[]
-            for i in 1:nproc
-                𝑓 = @spawnat i + 1 run!(MC, SE, SC, alg)
-                push!(𝐹, 𝑓)
-            end
-            for i in 1:nproc
-                wait(𝐹[i])
-                push!(SPVEC, fetch(𝐹[i]))
-            end
-            n -= nproc
-        else
-            SP = run!(deepcopy(MC), deepcopy(SE), deepcopy(SC), alg)
-            push!(SPVEC, deepcopy(SP))
-            n -= 1
-        end
-    end
+    STVEC = nproc_run!(alg, MC, SE, SC)
+    println("Number of runned chains: $(length(STVEC))")
     Aout = zeros(T, length(mesh))
-    for SP in SPVEC
-        @. Aout += SP.Aout
+    for ST in STVEC
+        @. Aout += ST.Aout
     end
-    Aout ./= length(SPVEC)
-    return Aout, SPVEC
-end
+    Aout ./= length(STVEC)
 
-function last!(Aout::Vector{T}, GFV::Vector{Complex{T}}, ctx::CtxData{T},
-               alg::SSK) where {T<:Real}
-    mesh = ctx.mesh.mesh
-    if ctx.spt isa Delta
-        p = mesh[find_peaks(mesh, Aout, ctx.fp_mp; wind=ctx.fp_ww)]
-        length(p) != alg.npole && @warn("Number of poles is not correct")
-        γ = pG2γ(p, GFV, ctx.iwn)
-        return Aout, (p, γ)
-    elseif ctx.spt isa Cont
-        return Aout
-    else
-        error("Unsupported spectral function type")
-    end
+    return Aout, STVEC
 end
 
 """
@@ -204,15 +165,15 @@ Perform stochastic analytic continuation simulation, sequential version.
 
 ### Returns
 * Aout -> Spectral function, A(ω).
-* SP -> StochSKSSTP struct.
+* ST -> StochSKSST struct.
 """
 function run!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
               alg::SSK) where {I<:Int,T<:Real}
     if nworkers() > 1
         @show myid()
-        MC.rng = MersenneTwister(MC.seed + rand(1:10000) * myid() + 2007)
+        MC.rng = MersenneTwister(MC.seed + rand(1:RandomSeed1) * myid() + RandomSeed2)
     else
-        MC.rng = MersenneTwister(MC.seed + rand(1:10000) + 2007)
+        MC.rng = MersenneTwister(MC.seed + rand(1:RandomSeed1) + RandomSeed2)
     end
     # Setup essential parameters
     nstep = alg.nstep
@@ -262,13 +223,13 @@ continuation simulations. It will generate the spectral functions.
 
 ### Returns
 * Aout -> Spectral function, A(ω).
-* SP -> StochSKSSTP struct.
+* ST -> StochSKSST struct.
 """
 function average(step::T, SC::StochSKContext{I,T}) where {I<:Int,T<:Real}
     @. SC.E1 = SC.E1 / step
     @. SC.Aout = SC.Aout / (step * SC.mesh.weight)
     @. SC.E2 = SC.E2 / step
-    return StochSKSSTP(SC.Aout, SC.Θ, SC.E1, SC.E2)
+    return StochSKSST(SC.Aout, SC.Θ, SC.E1, SC.E2)
 end
 
 #=
@@ -321,7 +282,7 @@ function warmup(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKContext{I,
             break
         else
             if i == nwarm
-                error("Fail to reach equilibrium state")
+                @warn("Fail to reach equilibrium state")
             end
         end
 
@@ -394,7 +355,7 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
                   alg::SSK) where {I<:Int,T<:Real}
     nfine = alg.nfine
     pn = alg.npole
-    SC.Amesh .= T(0)
+    Amesh = zero(SC.Aout)
 
     for j in 1:pn
         d_pos = SE.P[j]
@@ -408,14 +369,14 @@ function measure!(SE::StochSKElement{I,T}, SC::StochSKContext{I,T},
         # Note that nearest() is defined in mesh.jl.
         s_pos = nearest(SC.mesh.mesh, d_pos / nfine)
         SC.Aout[s_pos] += SE.A
-        SC.Amesh[s_pos] += SE.A
+        Amesh[s_pos] += SE.A
     end
 
     𝐴 = fill(SE.A, length(SE.P))
     𝐾 = SC.Kor[:, SE.P]
     reG = 𝐾 * 𝐴
     SC.E1 .+= reG
-    return mul!(SC.E2, SC.Amesh, reG', 1, 1)
+    return mul!(SC.E2, Amesh, reG', 1, 1)
 end
 
 """
@@ -572,7 +533,6 @@ function init_context(SE::StochSKElement{I,T},
 
     # Allocate memory for spectral function, A(ω)
     Aout = zeros(T, nmesh)
-    Amesh = zeros(T, nmesh)
 
     # Allocate memory for χ² and Θ
     χ²vec = zeros(T, nwarm)
@@ -602,7 +562,7 @@ function init_context(SE::StochSKElement{I,T},
     E2 = zeros(T, nmesh, length(Gᵥ))
 
     return StochSKContext(Gᵥ, Gᵧ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh,
-                          kernel, Kor, Amesh, Aout,
+                          kernel, Kor, Aout,
                           χ², χ²min, χ²vec, θ, θvec, E1, E2)
 end
 
@@ -1016,16 +976,15 @@ function try_move_q!(MC::StochSKMC{I}, SE::StochSKElement{I,T}, SC::StochSKConte
 end
 
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK;
-                   diffonly::Bool=false) where {T<:Real}
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SSK) where {T<:Real}
     if ctx.spt isa Cont
         N = length(GFV)
-        Aout, SPvec = init_run(GFV, ctx, alg)
+        Aout, STvec = init_run(GFV, ctx, alg)
         ∂ADiv∂G = zeros(T, length(ctx.mesh.mesh), 2 * N)
-        for SP in SPvec
-            ∂ADiv∂G += (SP.E2 ./ ctx.mesh.weight - SP.Aout * SP.E1') / (SP.Θ * ctx.σ^2)
+        for ST in STvec
+            ∂ADiv∂G += (ST.E2 ./ ctx.mesh.weight - ST.Aout * ST.E1') / (ST.Θ * ctx.σ^2)
         end
-        ∂ADiv∂G ./= length(SPvec)
+        ∂ADiv∂G ./= length(STvec)
         return Aout, ∂ADiv∂G[:, 1:N] + im * ∂ADiv∂G[:, (N + 1):end]
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
