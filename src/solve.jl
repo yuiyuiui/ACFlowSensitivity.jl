@@ -19,7 +19,7 @@ struct CtxData{T<:Real}
     wn::Vector{T}
     iwn::Vector{Complex{T}}
     mesh::Mesh{T}
-    η::T
+    mesh_type::MeshMethod
     σ::T
     fp_ww::Real # find peaks window width
     fp_mp::Real # find peaks minimum peak height
@@ -30,14 +30,13 @@ struct CtxData{T<:Real}
                      mesh_bound=ACFSDefults.mesh_bound[]::Real,
                      mesh_length=ACFSDefults.mesh_length[]::Int,
                      mesh_type::MeshMethod=ACFSDefults.mesh_type[]::MeshMethod,
-                     η::T=T(1e-4),
                      σ::T=T(1e-4),
                      fp_ww::Real=T(0.01),
                      fp_mp::Real=T(0.1)) where {T<:Real}
         wn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β
         iwn = (collect(0:(N - 1)) .+ T(0.5)) * T(2π) / β * im
         mesh = make_mesh(T(mesh_bound), mesh_length, mesh_type)
-        return new{T}(spt, β, N, wn, iwn, mesh, η, σ, fp_ww, fp_mp, nworkers())
+        return new{T}(spt, β, N, wn, iwn, mesh, mesh_type, σ, fp_ww, fp_mp, nworkers())
     end
 end
 
@@ -58,6 +57,7 @@ struct BarRat <: Solver
     denoisy::Bool
     prony_tol::Real
     pcut::Real
+    eta::Real
 end
 
 function BarRat(;
@@ -67,8 +67,9 @@ function BarRat(;
                 lookaheaad::Int=10,
                 denoisy::Bool=false,
                 prony_tol::Real=-1,
-                pcut::Real=1e-3)
-    return BarRat(minsgl, aaa_tol, max_degree, lookaheaad, denoisy, prony_tol, pcut)
+                pcut::Real=1e-3,
+                eta::Real=1e-4)
+    return BarRat(minsgl, aaa_tol, max_degree, lookaheaad, denoisy, prony_tol, pcut, eta)
 end
 
 # NAC ==========================

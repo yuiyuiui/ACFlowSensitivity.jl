@@ -44,11 +44,27 @@ function generate_GFV_cont(β::T,
     return res
 end
 
+function generate_GFV_cont(β::T,
+                           N::Int,
+                           A::Function;
+                           int_low::T=(-T(20)),
+                           int_up::T=T(20),
+                           noise::T=T(0)) where {T<:Real}
+    grid = (collect(0:(N - 1)) .+ 1 // 2) * T(2π) / β
+    n = length(grid)
+    res = zeros(Complex{T}, n)
+    for i in 1:n
+        res[i] = ACFlowSensitivity.integral(x -> A(x) / (im * grid[i] - x), int_low, int_up)
+    end
+    addnoise!(res, noise)
+    return res
+end
+
 function generate_GFV_delta(β::T,
                             N::Int,
                             poles::Vector{T},
                             γ_vec::Vector{T};
-                            noise::T=T(0),) where {T<:Real}
+                            noise::T=T(0)) where {T<:Real}
     @assert length(poles) == length(γ_vec)
     wn = (collect(0:(N - 1)) .+ 1 // 2) * T(2π) / β
     res = zeros(Complex{T}, N)

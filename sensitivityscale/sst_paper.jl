@@ -1,77 +1,78 @@
 include("method.jl")
-using JLD2
 
-alg_num = 10
+alg_num = 8
+T = Float64
+S = Complex{T}
 
-sst_mat = Matrix{Float64}(undef, 3, 10)
-chi2_mat = Matrix{Float64}(undef, 3, 10)
+sst_cont = Vector{T}(undef, alg_num)
+sst_delta = Vector{T}(undef, alg_num)
+sst_mixed = Vector{T}(undef, alg_num)
+chi2_cont = Vector{T}(undef, alg_num)
+chi2_delta = Vector{T}(undef, alg_num)
+chi2_mixed = Vector{T}(undef, alg_num)
 
-Aout_cont = Vector{Vector{Float64}}(undef, alg_num)
-Aout_delta = Vector{Vector{Float64}}(undef, alg_num)
-Aout_mixed = Vector{Vector{Float64}}(undef, alg_num)
-p_delta = Vector{Float64}(undef, alg_num)
-γ_delta = Vector{Float64}(undef, alg_num)
-J_cont = Vector{Matrix{Float64}}(undef, alg_num)
-J_delta = Vector{Matrix{Float64}}(undef, alg_num)
-J_mixed = Vector{Matrix{Float64}}(undef, alg_num)
+Aout_cont = Vector{Vector{T}}(undef, alg_num)
+Aout_delta = Vector{Vector{T}}(undef, alg_num)
+Aout_mixed = Vector{Vector{T}}(undef, alg_num)
+p_delta = Vector{T}(undef, alg_num)
+γ_delta = Vector{T}(undef, alg_num)
 
-# @load FILE sst_mat
+J_cont = Vector{Matrix{S}}(undef, alg_num)
+Jp_delta = Vector{Matrix{S}}(undef, alg_num)
+Jγ_delta = Vector{Matrix{S}}(undef, alg_num)
+J_mixed = Vector{Matrix{S}}(undef, alg_num)
+
+method_name_vec = ["BarRat", "NAC", "Chi2kink", "Bryan", "Classic", "Historic", "SSK",
+                   "SAC"]
 
 #1 Cont
-alg_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"),
-           MaxEnt(; method="classic"), MaxEnt(; method="historic"), SSK(500), SAC(512),
-           SOM(), SPX(2; method="mean", ntry=100)]
-_, ctx, GFV = dfcfg(Float64, Cont(); mesh_type=TangentMesh(), noise=1e-5)
-for i in 1:6
-    @show "begin $i"
-    sst_mat[1, i], chi2_mat[1, i] = generate_sst(deepcopy(GFV), deepcopy(ctx),
-                                                 deepcopy(alg_vec[i]))
-    @show "end $i"
-end
+alg_cont_vec = [BarRat(), NAC(), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"),
+                MaxEnt(; method="classic"), MaxEnt(; method="historic"), SSK(500), SAC(512)]
+Acont, ctx_cont, GFV_cont = dfcfg(Float64, Cont(); mesh_type=TangentMesh(), noise=1e-5,
+                                  ml=2000)
+Aor_cont = Acont.(ctx_cont.mesh.mesh)
+ctx_cont_vec = [deepcopy(ctx_cont) for i in 1:alg_num]
 
-for i in 1:4
+for i in 1:alg_num
     @show "begin $i"
-    sst_mat[1, i+6], chi2_mat[1, i+6] = generate_sst(deepcopy(GFV), deepcopy(ctx),
-                                                     deepcopy(alg_s[i]))
+    Random.seed!(6)
+    sst_cont[i], chi2_cont[i], Aout_cont[i], J_cont[i] = generate_sst(GFV_cont,
+                                                                      ctx_cont_vec[i],
+                                                                      alg_cont_vec[i])
     @show "end $i"
 end
 
 #2 Delta
-alg_vec = [BarRat(), NAC(; pick=false, hardy=false, eta=1e-4),
-           MaxEnt(; method="chi2kink", model_type="flat", stype=BR()),
-           MaxEnt(; method="bryan", model_type="flat", stype=BR()),
-           MaxEnt(; method="classic", model_type="flat", stype=BR()),
-           MaxEnt(; method="historic", model_type="flat"), SSK(2), SAC(2), SOM(),
-           SPX(2; method="best")]
-_, ctx0, GFV = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000)
-ctx_vec = CtxData[]
+alg_delta_vec = [BarRat(), NAC(; pick=false, hardy=false, eta=1e-4),
+                 MaxEnt(; method="chi2kink", model_type="flat", stype=BR()),
+                 MaxEnt(; method="bryan", model_type="flat", stype=BR()),
+                 MaxEnt(; method="classic", model_type="flat", stype=BR()),
+                 MaxEnt(; method="historic", model_type="flat"), SSK(2), SAC(2)]
+(por, γor), ctx_delta, GFV_delta = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000)
+ctx_delta_vec = CtxData[]
 # BarRat, NAC
-push!(ctx_vec, deepcopy(ctx0))
-push!(ctx_vec, deepcopy(ctx0))
+push!(ctx_delta_vec, deepcopy(ctx_delta))
+push!(ctx_delta_vec, deepcopy(ctx_delta))
 # Chi2kink, Bryan, Classic
-ctx_chi2kink = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000, fp_ww=0.1, fp_mp=1.0)[2]
-push!(ctx_vec, deepcopy(ctx_chi2kink))
-push!(ctx_vec, deepcopy(ctx_chi2kink))
-push!(ctx_vec, deepcopy(ctx_chi2kink))
-push!(ctx_vec, deepcopy(ctx_chi2kink))
+ctx_delta_maxent = dfcfg(Float64, Delta(); npole=2, mb=4, ml=2000, fp_ww=0.1, fp_mp=1.0)[2]
+push!(ctx_delta_vec, deepcopy(ctx_delta_maxent))
+push!(ctx_delta_vec, deepcopy(ctx_delta_maxent))
+push!(ctx_delta_vec, deepcopy(ctx_delta_maxent))
+push!(ctx_delta_vec, deepcopy(ctx_delta_maxent))
 
 # SSK
-push!(ctx_vec, deepcopy(ctx0))
+push!(ctx_delta_vec, deepcopy(ctx_delta))
 
 # SAC
-ctx_sac = dfcfg(Float64, Delta(); npole=2, fp_ww=0.2, fp_mp=5.0, mb=4, ml=2000)[2]
-push!(ctx_vec, deepcopy(ctx_sac))
-# SOM
-ctx_som = dfcfg(Float64, Delta(); fp_ww=0.05, fp_mp=1.0, mb=4, ml=2000)[2]
-push!(ctx_vec, deepcopy(ctx_som))
-# SPX
-push!(ctx_vec, deepcopy(ctx0))
-for i in 1:10
+ctx_delta_sac = dfcfg(Float64, Delta(); npole=2, fp_ww=0.2, fp_mp=5.0, mb=4, ml=2000)[2]
+push!(ctx_delta_vec, deepcopy(ctx_delta_sac))
+
+for i in 1:alg_num
     @show "begin $i"
-    sst_mat[2, i], chi2_mat[2, i] = generate_sst(deepcopy(GFV), deepcopy(ctx_vec[i]),
-                                                 deepcopy(alg_vec[i]))
-    @show alg_vec[i]
-    @show sst_mat[2, i]
+    Random.seed!(6)
+    sst_delta[i], chi2_delta[i], Aout_delta[i], (p_delta[i], γ_delta[i]), (Jp_delta[i], Jγ_delta[i]) = generate_sst(GFV_delta,
+                                                                                                                    ctx_delta_vec[i],
+                                                                                                                    alg_delta_vec[i])
     @show "end $i"
 end
 
@@ -80,42 +81,44 @@ W = 6.0
 Δ = 0.5
 β = 10.0
 N = 20
-function A(w)
+function Amixed(w)
     abs(w)>Δ && abs(w)<W/2 && return 1/W * abs(w) / sqrt(w^2 - Δ^2)
     return 0.0
 end
 
-Random.seed!(6)
-GFV = generate_GFV_cont(β, N, A; noise=5e-5)
+GFV_mixed = generate_GFV_cont(β, N, Amixed; noise=5e-5)
 
-alg_vec = [BarRat(), NAC(; eta=1e-4), MaxEnt(; method="chi2kink"), MaxEnt(; method="bryan"),
-           MaxEnt(; method="classic"), MaxEnt(; method="historic"), SSK(500), SAC(512),
-           SOM(), SPX(2; method="mean", ntry=100)]
-ctx = dfcfg(Float64, Cont(); mb=4, ml=2000)[2]
-for i in 1:10
+alg_mixed_vec = [BarRat(), NAC(; eta=1e-4), MaxEnt(; method="chi2kink"),
+                 MaxEnt(; method="bryan"),
+                 MaxEnt(; method="classic"), MaxEnt(; method="historic"), SSK(500),
+                 SAC(512)]
+ctx_mixed = dfcfg(Float64, Cont(); mb=4, ml=2000)[2]
+Aor_mixed = Amixed.(ctx_mixed.mesh.mesh)
+ctx_mixed_vec = [deepcopy(ctx_mixed) for i in 1:alg_num]
+
+for i in 1:alg_num
     @show "begin $i"
-    sst_mat[3, i], chi2_mat[3, i] = generate_sst(deepcopy(GFV), deepcopy(ctx),
-                                                 deepcopy(alg_vec[i]))
+    Random.seed!(6)
+    sst_mixed[i], chi2_mixed[i], Aout_mixed[i], J_mixed[i] = generate_sst(GFV_mixed,
+                                                                          ctx_mixed_vec[i],
+                                                                          alg_vec[i])
     @show "end $i"
 end
 
-@save FILE sst_mat chi2_mat
+for j in 1:alg_num
+    record_cont("Cont_$(method_name_vec[j])", sst_cont[j], chi2_cont[j], Aout_cont[j],
+                J_cont[j], Aor_cont, GFV_cont, ctx_cont_vec[j], alg_cont_vec[j])
+end
 
-#=
-1. generate 3 origin data
+for j in 1:alg_num
+    record_delta("./sensitivityscale/results/Delta_$(method_name_vec[j])", sst_delta[j],
+                 chi2_delta[j], Aout_delta[j], (p_delta[i], γ_delta[i]),
+                 (Jp_delta[i], Jγ_delta[i]), (por, γor), GFV_delta, ctx_delta_vec[j],
+                 alg_delta_vec[j])
+end
 
-2. for every data, give a vector of alg
-
-3. for all data, calculate sst_max and sst_ave
-=#
-
-#= help judge parameters
-(poles, γ), ctx, GFV = dfcfg(Float64, Delta(); npole=2, mb = 4, ml = 2000)
-alg = SSK(2)
-reA, (rep,reγ) = solve(GFV, ctx, alg)
-rep
-using Plots
-plot(ctx.mesh.mesh, reA)
-
-ctx.mesh.mesh[find_peaks(ctx.mesh.mesh, reA, 1.0; wind=0.1)]
-=#
+for j in 1:alg_num
+    record_mixed("./sensitivityscale/results/Mixed_$(method_name_vec[j])", sst_mixed[j],
+                 chi2_mixed[j], Aout_mixed[j], J_mixed[j], Aor_mixed, GFV_mixed,
+                 ctx_mixed_vec[j], alg_mixed_vec[j])
+end
