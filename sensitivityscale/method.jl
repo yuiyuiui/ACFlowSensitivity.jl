@@ -48,10 +48,9 @@ function record_cont(filename::String, sst_val::T, chi2_val::T, Aout_val::Vector
     data_cfg = Dict("GFV" => GFV_val,
                     "β" => ctx.β,
                     "N" => ctx.N,
-                    "ωn" => ctx.wn,
                     "σ" => ctx.σ,
                     "process number" => ctx.nproc,
-                    "mesh_bound" => ctx.mesh.mesh[end],
+                    "mesh_bound" => "[$(ctx.mesh.mesh[1]), $(ctx.mesh.mesh[end])",
                     "mesh_length" => length(ctx.mesh.mesh),
                     "mesh_type" => mesh_type,
                     "output_format" => output_format,
@@ -67,11 +66,10 @@ function record_delta(filename::String, sst_val::T, chi2_val::T, Aout_val::Vecto
                       ctx::CtxData{T}, alg::Solver) where {T<:Real}
     data_res = Dict("sst" => sst_val,
                     "chi2" => chi2_val,
-                    "Original Poles" => (por_val, γor_val),
-                    "poles" => (p_val, γ_val),
-                    "Original Spectrum" => Aor_val,
+                    "Original Poles" => "($por_val, $γor_val)",
+                    "poles" => "($p_val, $γ_val)",
                     "Aout" => Aout_val,
-                    "Jacobian Matrix" => (Jp_val, Jγ_val))
+                    "Jacobian Matrix" => "($Jp_val, $Jγ_val)")
     open("$(filename)_result.json", "a") do f
         return JSON.print(f, data_res, 4)
     end
@@ -80,12 +78,11 @@ function record_delta(filename::String, sst_val::T, chi2_val::T, Aout_val::Vecto
     data_cfg = Dict("GFV" => GFV_val,
                     "β" => ctx.β,
                     "N" => ctx.N,
-                    "ωn" => ctx.wn,
                     "σ" => ctx.σ,
                     "find peaks window width" => ctx.fp_ww,
                     "find peaks minimum peak height" => ctx.fp_mp,
                     "process number" => ctx.nproc,
-                    "mesh_bound" => ctx.mesh.mesh[end],
+                    "mesh_bound" => "[$(ctx.mesh.mesh[1]), $(ctx.mesh.mesh[end])",
                     "mesh_length" => length(ctx.mesh.mesh),
                     "mesh_type" => mesh_type,
                     "output_format" => output_format,
