@@ -1209,7 +1209,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SPX;
     if ctx.spt isa Cont
         return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
     elseif ctx.spt isa Delta
-        return pγdiff(GFV, ctx, alg; ns=true)
+        return pγdiff(GFV, ctx, alg)
     else
         error("Unsupported spectral function type")
     end

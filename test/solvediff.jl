@@ -1,8 +1,8 @@
 @testset "pγdiff" begin
     for T in [Float32, Float64] # mesh is not uesd so no test for mesh
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = ACFlowSensitivity.pγdiff(GFV, ctx, BarRat())
-        @test reA isa Vector{T}
+        Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = ACFlowSensitivity.pγdiff(GFV, ctx, BarRat())
+        @test Aout isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -16,12 +16,12 @@ end
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     for T in [Float32, Float64]
         A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-        Aout, ∂ADiv∂G = solvediff(GFV, ctx,
-                                  MaxEnt(; model_type="Gaussian"))
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
         @test Aout isa Vector{T}
         @test ∂ADiv∂G isa Matrix{Complex{T}}
-        G2A = G -> solve(G, ctx, MaxEnt())
-        @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV; atol=tolerance(T), rtol=jac_rtol)
+        G2A = G -> solve(G, ctx, alg)
+        # @test norm(Aout - G2A(GFV)) < strict_tol(T)
+        @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout; atol=tolerance(T), rtol=jac_rtol)
     end
 end
 
@@ -33,13 +33,14 @@ end
             for model_type in ["Gaussian", "flat"]
                 alg = MaxEnt(; model_type=model_type)
                 A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-                reA, ∂reADiv∂G = solvediff(GFV, ctx, alg)
-                @test reA isa Vector{T}
-                @test ∂reADiv∂G isa Matrix{Complex{T}}
+                Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+                @test Aout isa Vector{T}
+                @test ∂ADiv∂G isa Matrix{Complex{T}}
                 if T === Float64
                     G2A = G -> solve(G, ctx, alg)
-                    @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, atol=tolerance(T),
-                                             rtol=jac_rtol)
+                    # @test norm(Aout - G2A(GFV)) < strict_tol(T)
+                    @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout; η=1e-2, atol=tolerance(T),
+                                 rtol=jac_rtol)
                 end
             end
         end
@@ -50,8 +51,8 @@ end
     T = Float64
     alg = MaxEnt(; model_type="Gaussian", method="chi2kink")
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-    reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-    @test reA isa Vector{T}
+    Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+    @test Aout isa Vector{T}
     @test p isa Vector{T}
     @test γ isa Vector{T}
     @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -60,8 +61,8 @@ end
     @test norm(orγ - γ) < 5e-3
     G2p = G -> solve(G, ctx, alg)[2][1]
     G2γ = G -> solve(G, ctx, alg)[2][2]
-    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
-    @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+    @test jcv2v0(G2p, ∂pDiv∂G, GFV, p; atol=1e-7)
+    @test jcv2v0(G2γ, ∂γDiv∂G, GFV, γ)
 end
 
 # Diff of other maxent methods for Delta spectrum is also just calling `pγdiff` just like `chi2kink` so we ignore their Delta spectrum diff tests here.
@@ -87,7 +88,7 @@ end
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         if T == Float64
             G2A = G -> solve(G, ctx, alg)
-            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+            @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout)
         end
     end
 end
@@ -101,7 +102,7 @@ end
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         if T == Float64
             G2A = G -> solve(G, ctx, alg)
-            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+            @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout)
         end
     end
 end
@@ -115,7 +116,7 @@ end
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         if T == Float64
             G2A = G -> solve(G, ctx, alg)
-            @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV)
+            @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout)
         end
     end
 end
@@ -126,13 +127,13 @@ end
         for mesh_type in [UniformMesh(), TangentMesh()]
             alg = BarRat()
             A, ctx, GFV = dfcfg(T, Cont(); mesh_type=mesh_type)
-            reA, ∂ADiv∂G = solvediff(GFV, ctx, alg)
-            @test reA isa Vector{T}
+            Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
+            @test Aout isa Vector{T}
             @test ∂ADiv∂G isa Matrix{Complex{T}}
             G2A = G -> solve(G, ctx, alg)
             T == Float64 &&
-                @test jacobian_check_v2v(G2A, ∂ADiv∂G, GFV; η=1e-2, atol=tolerance(T),
-                                         rtol=relax_tol(T))
+                @test jcv2v0(G2A, ∂ADiv∂G, GFV, Aout; η=1e-2, atol=tolerance(T),
+                             rtol=relax_tol(T))
         end
     end
 end
@@ -140,8 +141,8 @@ end
 @testset "differentiation of BarRat with Delta spectrum" begin
     for T in [Float32, Float64] # mesh is not uesd so no test for mesh
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=2)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat())
-        @test reA isa Vector{T}
+        Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, BarRat())
+        @test Aout isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -151,8 +152,8 @@ end
             @test norm(orγ - γ) < strict_tol(T)
             G2p = G -> solve(G, ctx, BarRat())[2][1]
             G2γ = G -> solve(G, ctx, BarRat())[2][2]
-            @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV)
-            @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV)
+            @test jcv2v0(G2p, ∂pDiv∂G, GFV, p)
+            @test jcv2v0(G2γ, ∂γDiv∂G, GFV, γ)
         end
     end
 end
@@ -164,8 +165,8 @@ end
     alg = SSK(pn)
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
     Random.seed!(6)
-    reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-    @test reA isa Vector{T}
+    Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+    @test Aout isa Vector{T}
     @test p isa Vector{T}
     @test γ isa Vector{T}
     @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -174,8 +175,8 @@ end
     G2γ = G -> solve(G, ctx, alg)[2][2]
     # extremly unstable because Stoch method is moving on a grid
     # So too tiny change of input won't change the result like BarRat and MaxEnt.
-    @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV; η=1e-5, show_dy=true)
-    @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; η=1e-5, atol=1e-8, show_dy=true)
+    @test jcv2v0(G2γ, ∂γDiv∂G, GFV, γ; η=1e-5, show_dy=true)
+    @test jcv2v0(G2p, ∂pDiv∂G, GFV, p; η=1e-5, atol=1e-8, show_dy=true)
 end
 
 @testset "differentiation of SSK with Cont spectrum" begin
@@ -189,7 +190,7 @@ end
     @test ∂ADiv∂G isa Matrix{Complex{T}}
     @test size(∂ADiv∂G) == (length(ctx.mesh.mesh), length(GFV))
     #G2A = G -> solve(G, ctx, alg)
-    #@test jacobian_check_v2v(G2A, -∂ADiv∂G, GFV; η=1e-5, show_dy=true)
+    #@test jcv2v0(G2A, -∂ADiv∂G, GFV, Aout; η=1e-5, show_dy=true)
     #err = 1.6786279766194467
     #rel_err = 14.298733141006547
 end
@@ -202,8 +203,8 @@ end
         alg = SAC(pn)
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine, fp_ww=0.2,
                                      fp_mp=2.0)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
+        Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -222,7 +223,7 @@ end
         Random.seed!(6)
         alg = SOM()
         A, ctx, GFV = dfcfg(T, Cont())
-        ∂ADiv∂G = solvediff(GFV, ctx, alg; diffonly=true)
+        Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg; diffonly=true)
         @test ∂ADiv∂G isa Matrix{Complex{T}}
         @test size(∂ADiv∂G) == (length(ctx.mesh.mesh), length(GFV))
     end
@@ -235,8 +236,8 @@ end
         alg = SPX(pn; method="best")
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn)
         Random.seed!(6)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
+        Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
@@ -257,26 +258,31 @@ end
         alg = NAC(; pick=false, hardy=false)
         (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=2000)
         Random.seed!(6)
-        reA, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
-        @test reA isa Vector{T}
+        Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
+        @test Aout isa Vector{T}
         @test p isa Vector{T}
         @test γ isa Vector{T}
         @test ∂pDiv∂G isa Matrix{Complex{T}}
         @test ∂γDiv∂G isa Matrix{Complex{T}}
         G2p = G -> solve(G, ctx, alg)[2][1]
         G2γ = G -> solve(G, ctx, alg)[2][2]
-        @test jacobian_check_v2v(G2γ, ∂γDiv∂G, GFV; η=1e-2, rtol=0.02)
-        @test jacobian_check_v2v(G2p, ∂pDiv∂G, GFV; atol=1e-7)
+        @test jcv2v0(G2γ, ∂γDiv∂G, GFV, γ; η=1e-2, rtol=0.02)
+        @test jcv2v0(G2p, ∂pDiv∂G, GFV, p; atol=1e-7)
     end
 end
 
 @testset "differentiation of NAC with Cont spectrum" begin
     T = Float64
-    rtol = T == Float32 ? 0.6 : 0.2
     alg = NAC()
     A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh())
-    ∂reADiv∂G = solvediff(GFV, ctx, alg; diffonly=true)
-    @test ∂reADiv∂G isa Matrix{Complex{T}}
-    # G2A = G -> solve(G, ctx, alg)
-    # T == Float64 && @test jacobian_check_v2v(G2A, ∂reADiv∂G, GFV; η=1e-2, rtol=rtol)
+
+    nac0 = ACFlowSensitivity.init(GFV, ctx, alg)
+    ACFlowSensitivity.run!(nac0, alg)
+    Aout = ACFlowSensitivity.last(nac0)[1]
+    J = Zygote.jacobian(G -> solve(G, ctx, alg, nac0), GFV)[1]
+
+    @test J isa Matrix{Complex{T}}
+    @test size(J) == (length(ctx.mesh.mesh), length(GFV))
+    # G2A = G -> solve(G, ctx, alg, nac0)
+    # @test jcv2v0(G2A, J, GFV, Aout; η = 1e-7)
 end

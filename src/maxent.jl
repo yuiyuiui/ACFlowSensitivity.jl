@@ -315,10 +315,9 @@ function bryan(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     s_vec = []
 
     maxprob = T(0)
-    while true
-        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
+    for i in 1:alg.nalph
+        sol = optimizer(mec, alpha / ratio^(i-1), u_vec, use_bayes, alg)
         push!(s_vec, sol)
-        alpha = alpha / ratio
         alpha == 0 && break
         @. u_vec = sol[:u]
         prob = sol[:prob]
@@ -393,7 +392,6 @@ function chi2kink(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     alpha = T(alg.alpha)
     ratio = T(alg.ratio)
     nalph = T(alg.nalph)
-    α_end = alpha / (ratio^nalph)
     n_svd = length(mec.Bₘ)
 
     u_vec = zeros(T, n_svd)
@@ -401,16 +399,12 @@ function chi2kink(mec::MaxEntContext{T}, alg::MaxEnt) where {T<:Real}
     χ_vec = []
     α_vec = []
 
-    while true
-        sol = optimizer(mec, alpha, u_vec, use_bayes, alg)
+    for i in 1:nalph
+        sol = optimizer(mec, alpha / ratio^(i-1), u_vec, use_bayes, alg)
         push!(s_vec, sol)
-        push!(α_vec, alpha)
+        push!(α_vec, alpha/ratio^(i-1))
         push!(χ_vec, sol[:χ²])
         @. u_vec = sol[:u]
-        alpha = alpha / ratio
-        if alpha < α_end
-            break
-        end
     end
 
     good = isfinite.(χ_vec)

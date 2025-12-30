@@ -1,6 +1,6 @@
 module ACFlowSensitivity
 # import packages
-using LinearAlgebra, Zygote, Random, Einsum, SparseArrays
+using LinearAlgebra, Zygote, ChainRulesCore, Random, Einsum, SparseArrays
 using Distributed
 
 # export interfaces
@@ -9,7 +9,7 @@ export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed, SJ, BR
 export Solver, BarRat, NAC, MaxEnt, SSK, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
-export fdgradient, ∇L2loss, find_peaks, pγdiff
+export fdgradient, ∇L2loss, find_peaks, pγdiff, pG2γ
 export bfgs, newton
 
 include("globalset.jl")

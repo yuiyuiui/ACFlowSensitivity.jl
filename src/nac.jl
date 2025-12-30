@@ -88,7 +88,7 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Rea
     nac = init(GFV, ctx, alg)
     run!(nac, alg)
     Aout, _ = last(nac)
-    return output_format(Aout, GFV, ctx, alg)
+    return output_format(T.(Aout), GFV, ctx, alg)
 end
 
 """
@@ -119,13 +119,12 @@ function init(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real
 
     # Prepera input data
     Gᵥ = calc_mobius(-Gₙ[1:ngrid])
-    reverse!(Gᵥ)
+    Gᵥ = reverse(Gᵥ)
     println("Postprocess input data: ", length(Gᵥ), " points")
 
     # Prepare grid for input data
     grid = APC.(ctx.wn)
-    resize!(grid, ngrid)
-    reverse!(grid)
+    grid = grid[ngrid:-1:1]
     println("Build grid for input data: ", length(grid), " points")
 
     # Prepare mesh for output spectrum
@@ -191,7 +190,7 @@ function last(nac::NevanACContext)
     _G = ComplexF64.(calc_green(nac.𝒜, nac.ℋ, nac.𝑎𝑏))
 
     # Calculate and write the spectral function
-    Aout = Float64.(imag.(_G) ./ π)
+    Aout = imag.(_G) ./ π
 
     return Aout, -_G
 end
@@ -772,10 +771,25 @@ end
 
 #---------------------------------
 # solve differentiation
-function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC;
-                   diffonly::Bool=false) where {T<:Real}
+Zygote.@nograd calc_hmatrix
+Zygote.@nograd calc_noptim
+
+function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC,
+               nac0::NevanACContext) where {T<:Real}
+    nac1 = init(GFV, ctx, alg)
+    nac = NevanACContext(nac1.Gᵥ, nac0.grid, nac0.mesh, nac1.Φ, nac1.𝒜, nac0.ℋ, nac0.𝑎𝑏,
+                         nac0.hmin, nac0.hopt)
+    Aout, _ = last(nac)
+    return Aout
+end
+
+function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::NAC) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg; diffonly=diffonly)
+        nac0 = init(GFV, ctx, alg)
+        run!(nac0, alg)
+        Aout = last(nac0)[1]
+        J = Zygote.jacobian(G -> solve(G, ctx, alg, nac0), GFV)[1]
+        return Aout, J
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

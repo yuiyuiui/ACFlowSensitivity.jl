@@ -1309,7 +1309,7 @@ end
 function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SOM;
                    diffonly::Bool=false) where {T<:Real}
     if ctx.spt isa Cont
-        return Adiff(GFV, ctx, alg; ns=true, diffonly=diffonly)
+        return Adiff(GFV, ctx, alg; diffonly=diffonly)
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
     else

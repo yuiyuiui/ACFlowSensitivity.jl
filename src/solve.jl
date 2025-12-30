@@ -111,8 +111,8 @@ end
 function MaxEnt(;
                 method::String="chi2kink",
                 stype::Stype=SJ(),
-                nalph::Int=13,
-                alpha::Real=1e9,
+                nalph::Int=16,
+                alpha::Real=1e12,
                 ratio::Real=10,
                 model_type::String="Gaussian",
                 offdiag::Bool=false,
@@ -288,7 +288,7 @@ function pγdiff(GFV::Vector{Complex{T}}, ctx::CtxData{T},
         end
         return res
     end
-    if !ns
+    if !ns # ns means Σ γ = 1
         f = f0
         repγ = vcat(rep, reγ)
     else

@@ -151,6 +151,7 @@ function jacobian_check_v2v(f, J::Matrix{T}, x::Vector{T}; η=1e-5, rtol=1e-2,
         dx = η * x / norm(x)
     end
     dy = f(x + dx) - f(x)
+    @show norm(dy)
     dy_expect = real(conj(J) * dx)
     err = norm(dy - dy_expect)
     rel_err = err / min(norm(dy), norm(dy_expect))
@@ -178,6 +179,7 @@ function jcv2v0(f, J::Matrix{T}, x::Vector{T}, y0::Vector{S}; η=1e-5, rtol=1e-2
     end
     y1 = f(x + dx)
     dy = y1 - y0
+    @show norm(dy)
     dy_expect = real(conj(J) * dx)
     err = norm(dy - dy_expect)
     rel_err = err / min(norm(dy), norm(dy_expect))

@@ -13,9 +13,9 @@ function solve(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where {T<:
         (GFV = (alg.prony_tol>0 ? PronyApproximation(wn, GFV, alg.prony_tol)(wn) :
                 PronyApproximation(wn, GFV)(wn)))
     brf, _ = aaa(ctx.iwn, GFV; alg=alg)
-    ctx.spt isa Cont && return brf2A(brf, ctx)
+    ctx.spt isa Cont && return brf2A(brf, ctx, alg.eta)
     ctx.spt isa Delta &&
-        return brf2A(brf, ctx), Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
+        return brf2A(brf, ctx, alg.eta), Poles(GFV, ctx.iwn, alg.pcut)(brf.w, brf.g)
     # For Mixed spectrum:
 end
 
@@ -98,9 +98,9 @@ function aaa(grid::Vector{T}, values::Vector{T}; alg::BarRat) where {T}
     return BarRatFunc(best_weight, grid[best_index], values[best_index]), best_index
 end
 
-function brf2A(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T}) where {T}
+function brf2A(brf::BarRatFunc{Complex{T}}, ctx::CtxData{T}, eta::Real) where {T}
     ctx.spt isa Cont && return -imag.(brf.(ctx.mesh.mesh))/T(π)
-    ctx.spt isa Delta && return -imag.(brf.(ctx.mesh.mesh .+ im*ctx.η))/T(π)
+    ctx.spt isa Delta && return -imag.(brf.(ctx.mesh.mesh .+ im*T(eta)))/T(π)
     return error("Now only support continuous spectrum")
 end
 
@@ -183,7 +183,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
     alg.denoisy && error("denoisy is not supported for differentiation")
     alg.minsgl > 0 && error("minsgl is not supported for differentiation")
     brf, idx = aaa(ctx.iwn, GFV; alg=alg)
-    reA = brf2A(brf, ctx)
+    reA = brf2A(brf, ctx, alg.eta)
     mesh = ctx.mesh.mesh
     if ctx.spt isa Cont
         function fc(x)
