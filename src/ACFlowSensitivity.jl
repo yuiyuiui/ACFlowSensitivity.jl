@@ -7,7 +7,7 @@ using Distributed
 export Mesh, make_mesh, UniformMesh, TangentMesh, Cont, Delta, Mixed
 export solve, solvediff, CtxData
 export SpectrumType, Cont, Delta, Mixed, SJ, BR
-export Solver, BarRat, NAC, MaxEnt, SSK, SAC, SOM, SPX
+export Solver, BarRat, NAC, MaxEnt, SAN, SAC, SOM, SPX
 export curve_fit, LsqFitResult, PronyApproximation
 export fdgradient, ∇L2loss, find_peaks, pγdiff, pG2γ
 export bfgs, newton
@@ -20,7 +20,7 @@ include("barrat.jl")
 include("model.jl")
 include("maxent.jl")
 include("maxentdiff.jl")
-include("ssk.jl")
+include("san.jl")
 include("sac.jl")
 include("som.jl")
 include("spx.jl")

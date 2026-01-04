@@ -86,7 +86,7 @@
     "σ": 0.0001,
     "mesh_type": "UniformMesh",
     "mesh_bound": "[-4.0, 4.0",
-    "algorithm": "SSK(100000, 500, 1000, 20000, 10, 1.0e6, 0.9, \"chi2min\", 8)",
+    "algorithm": "SAN(100000, 500, 1000, 20000, 10, 1.0e6, 0.9, \"chi2min\", 8)",
     "process number": 8,
     "mesh_length": 2000,
     "β": 10.0

@@ -142,28 +142,28 @@ end
     end
 end
 
-# SSK
-@testset "serve functions in ssk" begin
+# SAN
+@testset "serve functions in san" begin
     pn = 2
     T = Float64
     Random.seed!(1234)
     (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=pn)
-    alg = SSK(pn)
-    fine_mesh = collect(range(ctx.mesh.mesh[1], ctx.mesh.mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    alg = SAN(pn)
+    fine_mesh = collect(range(ctx.mesh.mesh[1], ctx.mesh.mesh[end], alg.nfine)) # san needs high-precise linear grid
     MC = @constinferred ACFlowSensitivity.init_mc(alg)
     SE = @constinferred ACFlowSensitivity.init_element(alg, MC.rng, ctx)
     SC = @constinferred ACFlowSensitivity.init_context(SE, GFV, fine_mesh, ctx, alg)
     ST = @constinferred ACFlowSensitivity.run!(MC, SE, SC, alg)
 end
 
-# I don't test type stability of ssk for Float32 because it often fails to reach equilibrium state.
+# I don't test type stability of san for Float32 because it often fails to reach equilibrium state.
 # But in some random case I don't record it does succeed and the result is type stable.
-@testset "ssk for delta" begin
+@testset "san for delta" begin
     Random.seed!(6)
     T = Float64
     pn = 2
-    alg = SSK(pn)
-    # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
+    alg = SAN(pn)
+    # It's recommended to use large mesh length for san. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
     (poles, γ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
     Aout, (rep, reγ) = solve(GFV, ctx, alg)
     @test Aout isa Vector{T}
@@ -173,11 +173,11 @@ end
     @test norm(γ - reγ) < 2e-4
 end
 
-@testset "ssk for cont" begin
+@testset "san for cont" begin
     Random.seed!(6)
     T = Float64
     pn = 500
-    alg = SSK(pn)
+    alg = SAN(pn)
     A, ctx, GFV = dfcfg(T, Cont())
     Aout = solve(GFV, ctx, alg)
     @test Aout isa Vector{T}
@@ -276,7 +276,7 @@ end
 @testset "nac for cont" begin
     for T in [Float32, Float64]
         alg = T == Float32 ? NAC(; hardy=false) : NAC()
-        # It's recommended to use large mesh length for ssk. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
+        # It's recommended to use large mesh length for san. But limited by the poles searching ability of `pind_peaks`, I temporarily set it only the default value 801
         A, ctx, GFV = dfcfg(T, Cont())
         Aout = solve(GFV, ctx, alg)
         @test Aout isa Vector{T}

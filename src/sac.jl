@@ -158,7 +158,7 @@ end
 function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:Real}
     println("[ StochAC ]")
     mesh = ctx.mesh.mesh
-    fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # ssk needs high-precise linear grid
+    fine_mesh = collect(range(mesh[1], mesh[end], alg.nfine)) # sac needs high-precise linear grid
 
     # Initialize counters for Monte Carlo engine
     MC = init_mc(alg)
@@ -170,7 +170,7 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:
 
     # Prepare some key variables
     SC = init_context(SE, GFV, fine_mesh, ctx, alg)
-    println("Initialize context for the StochSK solver")
+    println("Initialize context for the StochAC solver")
 
     Aout = zeros(T, length(mesh), alg.nalph)
     N = length(GFV)

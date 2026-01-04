@@ -25,11 +25,11 @@ plot_alg_delta(alg)
 alg = MaxEnt(; method="historic", model_type="flat")
 plot_alg_delta(alg)
 
-# SSK
-alg = SSK(500)
+# SAN
+alg = SAN(500)
 plot_alg_cont(alg; noise_num=1)
 
-alg = SSK(2)
+alg = SAN(2)
 plot_alg_delta(alg)
 
 # SAC

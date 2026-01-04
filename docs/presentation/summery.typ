@@ -85,7 +85,7 @@ And average them.
   align: (left, center, center, center),
   stroke: 0.5pt + black,
   [*Method*], [*Inverse temp*], [*Ave Spec*], [*Sample Obj*],
-  [ssk(Sandvik)], [a good], [ave all], [A(w)],
+  [san(Sandvik)], [a good], [ave all], [A(w)],
   [sac(Beach)], [ave all], [weights], [n(x)],
   [som], [❌], [all good], [A(w)],
   [spx], [a good], [ave all], [A(w)],
@@ -102,31 +102,31 @@ And average them.
   [nac], [✅], [✅], [✅(maybe)], [weak], [fast], [high],
   [maxent
   (chi2kink)], [✅], [❌], [❌], [strong], [fast], [high],
-  [ssk], [❌], [✅], [❌], [weak], [slow], [high],
+  [san], [❌], [✅], [❌], [weak], [slow], [high],
   [sac], [✅], [✅], [❌(Difficult)], [weak], [slow], [low],
   [spx], [✅(Against)], [✅], [], [weak], [extremely slow], [low],
   [som], [✅], [✅], [❌(difficult)], [weak], [little slow], [low],
 )
 
 
-== Methods Compare(show ssk)
-Why choose `ssk` in stochastic methods: It's the most accuracy method in stochastic methods.
+== Methods Compare(show san)
+Why choose `san` in stochastic methods: It's the most accuracy method in stochastic methods.
 
-#image("../ssk/ssk_cont.svg")
-#image("../ssk/ssk_delta.svg")
+#image("../san/san_cont.svg")
+#image("../san/san_delta.svg")
 
-== Methods Compare(sac vs ssk)
+== Methods Compare(sac vs san)
 #image("../sac/sac_cont.svg")
 #image("../sac/sac_delta_2p.svg")
 #image("../sac/sac_delta_512p.svg")
 
-== Methods Compare(som vs ssk)
+== Methods Compare(som vs san)
 #image("../som/som_cont.svg")
 #image("../som/som_delta.svg")
 
-== Methods Compare(spx vs ssk)
+== Methods Compare(spx vs san)
 #image("../spx/spx_delta.svg")
-Finally I choose `barrat`, `maxent(chi2kink)` and `ssk` to do sensitivity analysis.
+Finally I choose `barrat`, `maxent(chi2kink)` and `san` to do sensitivity analysis.
 == Analysis Results Show
 (Show Tests)
  #image("../../plot/maxent/chi2kink/maxent_cont_eb_2.svg")
@@ -139,5 +139,5 @@ Finally I choose `barrat`, `maxent(chi2kink)` and `ssk` to do sensitivity analys
   [*Method*], [*accuracy*], [*stability*],
   [barrat], [high], [✅],
   [maxent(chi2kink)], [moderate], [✅],
-  [ssk], [low], [❌],
+  [san], [low], [❌],
 )
