@@ -27,7 +27,7 @@ Our purpose is to implement following methods (not all) and their sensitivity an
 |MaxEnt Bryan|✅|✅||✅|✅||
 |MaxEnt Classic|✅|✅||✅|✅||
 |MaxEnt Historic|✅|✅||✅|✅||
-|SAN|✅|✅|||✅||
+|SSK|✅|✅|||✅||
 |SAC|✅|✅|||✅||
 |SPX|✅|✅|||✅||
 |SOM|✅|✅|||✅||

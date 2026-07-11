@@ -1,4 +1,4 @@
-**Flow of SAN**
+**Flow of SSK**
 
 ![alt text](flow.jpg)
 

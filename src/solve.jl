@@ -121,9 +121,9 @@ function MaxEnt(;
     return MaxEnt(method, stype, nalph, alpha, ratio, model_type, offdiag, blur, test)
 end
 
-# SAN ==========================
+# SSK ==========================
 
-mutable struct SAN <: Solver
+mutable struct SSK <: Solver
     nfine::Int
     npole::Int
     nwarm::Int
@@ -134,7 +134,7 @@ mutable struct SAN <: Solver
     method::String
     nchain::Int
 end
-function SAN(npole::Int;
+function SSK(npole::Int;
              nfine::Int=100000,
              nwarm::Int=1000,
              nstep::Int=20000,
@@ -143,7 +143,7 @@ function SAN(npole::Int;
              ratio::Real=0.9,
              method::String="chi2min",
              nchain::Int=nworkers())
-    return SAN(nfine, npole, nwarm, nstep, retry, θ, ratio, method, nchain)
+    return SSK(nfine, npole, nwarm, nstep, retry, θ, ratio, method, nchain)
 end
 
 # SAC ==========================

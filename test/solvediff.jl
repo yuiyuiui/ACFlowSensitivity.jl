@@ -158,11 +158,11 @@ end
     end
 end
 
-# SAN
-@testset "differentiation of SAN with Delta spectrum" begin
+# SSK
+@testset "differentiation of SSK with Delta spectrum" begin
     T = Float64
     pn = 2
-    alg = SAN(pn)
+    alg = SSK(pn)
     (orp, orγ), ctx, GFV = dfcfg(T, Delta(); npole=pn, ml=alg.nfine)
     Random.seed!(6)
     Aout, (p, γ), (∂pDiv∂G, ∂γDiv∂G) = solvediff(GFV, ctx, alg)
@@ -179,10 +179,10 @@ end
     @test jcv2v0(G2p, ∂pDiv∂G, GFV, p; η=1e-5, atol=1e-8, show_dy=true)
 end
 
-@testset "differentiation of SAN with Cont spectrum" begin
+@testset "differentiation of SSK with Cont spectrum" begin
     T = Float64
     pn = 500
-    alg = SAN(pn)
+    alg = SSK(pn)
     A, ctx, GFV = dfcfg(T, Cont(); mesh_type=TangentMesh(), ml=2000)
     Random.seed!(6)
     Aout, ∂ADiv∂G = solvediff(GFV, ctx, alg)
