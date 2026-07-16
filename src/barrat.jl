@@ -196,26 +196,45 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::BarRat) where 
         return reA, reAdiff
     elseif ctx.spt isa Delta
         poles = Poles(GFV, ctx.iwn, alg.pcut)
-        p, _ = poles(brf.w, brf.g)
-        function fd(x)
-            w, g, _ = aaa4diff(x, idx, ctx.iwn)
-            nnz = @. !iszero(w)
-            g1, w1 = g[nnz], w[nnz]
-            return vcat(real(w1), imag(w1), real(g1), imag(g1))
+        # Rebuild the Loewner matrix for a forward directional derivative of
+        # its smallest right singular vector.  The generic complex-SVD reverse
+        # rule is not accurate for this phase-invariant null-vector problem.
+        wait_idx = filter(i -> i ∉ idx, eachindex(GFV))
+        g = ctx.iwn[idx]
+        L = [((GFV[i] - GFV[j]) / (ctx.iwn[i] - ctx.iwn[j]))
+             for i in wait_idx, j in idx]
+        F = LinearAlgebra.svd(L)
+        S, V = F.S, Matrix(F.V)
+        w = V[:, end]
+
+        # Keep the selected complex roots for implicit differentiation.
+        # `Poles` projects them to the real axis for the public output, but the
+        # root derivative must be evaluated at the retained complex root.
+        q = bc_poles(w, g)
+        filter!(z -> abs(imag(z)) < alg.pcut, q)
+        isempty(q) && error("The number of poles is zero. You should increase pcut")
+        p = real(q)
+
+        N = length(GFV)
+        JpR = zeros(T, length(p), 2N)
+        λ = S[end]^2
+        for a in 1:(2N)
+            dG = zeros(Complex{T}, N)
+            dG[mod1(a, N)] = a <= N ? one(T) : im
+            dL = [((dG[i] - dG[j]) / (ctx.iwn[i] - ctx.iwn[j]))
+                  for i in wait_idx, j in idx]
+            dH = dL' * L + L' * dL
+            dw = zeros(Complex{T}, length(w))
+            for j in 1:(length(S) - 1)
+                gap = λ - S[j]^2
+                dw .+= V[:, j] .* (dot(V[:, j], dH * w) / gap)
+            end
+            for (i, qᵢ) in enumerate(q)
+                tmp = sum(w ./ (g .- qᵢ) .^ 2)
+                JpR[i, a] = real(sum(dw ./ (qᵢ .- g)) / tmp)
+            end
         end
-        ∂wgDiv∂G = Zygote.jacobian(fd, GFV)[1]
-        nnz = @. !iszero(brf.w)
-        pg, pw = brf.g[nnz], brf.w[nnz]
-        m = length(pw)
-        ∂pDiv∂wg = zeros(T, length(p), 4*m)
-        for (i, pᵢ) in enumerate(p)
-            tmp = sum(pw ./ (pg .- pᵢ) .^ 2)
-            ∂pDiv∂wg[i, 1:m] = real(1 ./ (pᵢ .- pg) / tmp)
-            ∂pDiv∂wg[i, (m + 1):(2 * m)] = real(im * ∂pDiv∂wg[i, 1:m])
-            ∂pDiv∂wg[i, (2 * m + 1):(3 * m)] = real(pw ./ (pg .- pᵢ) .^ 2 / tmp)
-            ∂pDiv∂wg[i, (3 * m + 1):(4 * m)] = real(im * ∂pDiv∂wg[i, (2 * m + 1):(3 * m)])
-        end
-        ∂pDiv∂G = ∂pDiv∂wg * ∂wgDiv∂G
+        ∂pDiv∂G = JpR[:, 1:N] + im * JpR[:, (N + 1):end]
         γ = pG2γ(p, GFV, poles.iwn)
         ∂γDiv∂p, ∂γDiv∂G = Zygote.jacobian((x, y) -> pG2γ(x, y, poles.iwn), p, GFV)
         return reA, (p, γ), (∂pDiv∂G, ∂γDiv∂p * ∂pDiv∂G + ∂γDiv∂G)

@@ -23,6 +23,8 @@ end
 @testset "solvediff" begin
     include("solvediff.jl")
 end
+include("barrat_delta_fd.jl")
+include("sac_svd_rank.jl")
 @testset "adrule" begin
     include("adrules/adrules.jl")
 end

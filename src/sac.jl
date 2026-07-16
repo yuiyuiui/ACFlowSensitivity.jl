@@ -82,6 +82,7 @@ mutable struct StochACContext{I<:Int,T<:Real}
     grid::Vector{T}
     mesh::Mesh{T}
     model::Vector{T}
+    U::Array{T,2}
     kernel::Array{T,2}
     Kor::Array{T,2}
     Aout::Array{T,2}
@@ -115,6 +116,7 @@ struct StochACSST{T<:Real} <: SST
     αvec::Vector{T}
     Aout::Array{T,2}
     Uα::Vector{T}
+    U::Array{T,2}
     E1::Array{T,2}
     E2::Array{T,3}
     Eh::Array{T,2}
@@ -173,12 +175,12 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:
     println("Initialize context for the StochAC solver")
 
     Aout = zeros(T, length(mesh), alg.nalph)
-    N = length(GFV)
+    nred = length(SC.Gᵥ)
     Uα = zeros(T, alg.nalph)
-    E1 = zeros(T, 2 * N, alg.nalph)
-    E2 = zeros(T, length(ctx.mesh.mesh), 2 * N, alg.nalph)
-    Eh = zeros(T, 2 * N, alg.nalph)
-    Echi2h = zeros(T, 2 * N, alg.nalph)
+    E1 = zeros(T, nred, alg.nalph)
+    E2 = zeros(T, length(ctx.mesh.mesh), nred, alg.nalph)
+    Eh = zeros(T, nred, alg.nalph)
+    Echi2h = zeros(T, nred, alg.nalph)
 
     STVEC = nproc_run!(alg, MC, SE, SC)
     println("Number of runned chains: $(length(STVEC))")
@@ -198,7 +200,7 @@ function init_run(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<:
     Eh ./= length(STVEC)
     Echi2h ./= length(STVEC)
 
-    ST0 = StochACSST(SC.αₗ, Aout, Uα, E1, E2, Eh, Echi2h, Int[])
+    ST0 = StochACSST(SC.αₗ, Aout, Uα, SC.U, E1, E2, Eh, Echi2h, Int[])
 
     Asum = last!(ST0)   # Average on α
     return Asum, ST0
@@ -290,7 +292,7 @@ function average(step::T, SC::StochACContext{I,T}) where {I<:Int,T<:Real}
     # Renormalize the internal energies
     Uα = SC.Uα / step
 
-    return StochACSST(SC.αₗ, Aout, Uα, SC.E1, SC.E2, SC.Eh, SC.Echi2h, Int[])
+    return StochACSST(SC.αₗ, Aout, Uα, SC.U, SC.E1, SC.E2, SC.Eh, SC.Echi2h, Int[])
 end
 
 """
@@ -576,7 +578,7 @@ function init_context(SE::StochACElement,
 
     K = [1 / (im * ctx.wn[i] - fine_mesh[j])
          for i in 1:length(ctx.wn), j in 1:length(fine_mesh)]
-    Kor = [real(K); imag(K)]
+    Kor = U' * [real(K); imag(K)]
 
     # Get new (input) correlator
     Gᵥ = U' * (vcat(real(GFV), imag(GFV)) .* 1 / ctx.σ)
@@ -593,7 +595,7 @@ function init_context(SE::StochACElement,
     Echi2h = zeros(T, length(Gᵥ), nalph)
 
     return StochACContext(Gᵥ, 1 / ctx.σ, collect(1:(alg.nfine)), ctx.wn, ctx.mesh, model,
-                          kernel, Kor, Aout, Δ, hτ, Hα, Uα, αₗ, E1, E2, Eh, Echi2h)
+                          U, kernel, Kor, Aout, Δ, hτ, Hα, Uα, αₗ, E1, E2, Eh, Echi2h)
 end
 
 """
@@ -1024,8 +1026,9 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<
         Aout, ST = init_run(GFV, ctx, alg)
         j0 = ST.j₀[1]
         n = length(ST.Uα) - j0 + 1
-        AJ = zeros(T, M, 2 * N, n)
-        UJ = zeros(T, n, 2 * N)
+        nred = size(ST.U, 2)
+        AJ = zeros(T, M, nred, n)
+        UJ = zeros(T, n, nred)
         for j in j0:length(ST.Uα)
             AJ[:, :, j - j0 + 1] = 2 * ST.αvec[j] *
                                    (ST.E2[:, :, j] - ST.Aout[:, j] * ST.E1[:, j]') / ctx.σ^2
@@ -1045,6 +1048,7 @@ function solvediff(GFV::Vector{Complex{T}}, ctx::CtxData{T}, alg::SAC) where {T<
         for j in 1:n
             J .+= JA[:, (M * (j - 1) + 1):(M * j)] * AJ[:, :, j]
         end
+        J = J * ST.U'
         return Aout, J[:, 1:N] + im * J[:, (N + 1):end]
     elseif ctx.spt isa Delta
         return pγdiff(GFV, ctx, alg)
